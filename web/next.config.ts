@@ -65,8 +65,9 @@ const CONTENT_SECURITY_POLICY = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https:",
   "media-src 'self' blob: https:",
-  "connect-src 'self' https: wss:",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+  "connect-src 'self' https: wss: ws:",
+  // Next.js nécessite encore unsafe-inline pour certains chunks ; unsafe-eval retiré.
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https:",
   "upgrade-insecure-requests",
 ].join("; ");

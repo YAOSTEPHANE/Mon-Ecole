@@ -1,6 +1,10 @@
 import crypto from 'crypto';
 import { uploadAccessSigningMaterial } from './jwt.util';
-import { isVercelBlobUrl } from './blob-storage.util';
+import {
+  blobPathnameFromStoredUrl,
+  isSensitiveBlobStoredUrl,
+  isVercelBlobUrl,
+} from './blob-storage.util';
 import {
   isSensitiveUploadPath,
   uploadRelativePathFromStoredUrl,
@@ -56,11 +60,25 @@ export function withUploadAccessQuery(storedUrl: string): string {
   return `${storedUrl}${sep}access=${encodeURIComponent(token)}`;
 }
 
+/** Chemin logique signé pour un blob Vercel sensible. */
+export function blobAccessLogicalPath(pathname: string): string {
+  const clean = pathname.replace(/^\/+/, '');
+  return normalizeUploadRequestPath(`/uploads/${clean}`);
+}
+
 /**
- * URL utilisable par le client (img, lien). Blob Vercel : URL CDN directe.
+ * URL utilisable par le client (img, lien).
+ * Blobs sensibles : proxy authentifié (jamais l’URL CDN brute).
  * Fichiers locaux sensibles : jeton `?access=` court.
  */
 export function resolveStoredFileAccessUrl(storedUrl: string): string {
+  if (isSensitiveBlobStoredUrl(storedUrl)) {
+    const pathname = blobPathnameFromStoredUrl(storedUrl);
+    if (!pathname) return storedUrl;
+    const logical = blobAccessLogicalPath(pathname);
+    const token = signUploadAccessToken(logical);
+    return `/api/upload/blob-content?pathname=${encodeURIComponent(pathname)}&access=${encodeURIComponent(token)}`;
+  }
   if (isVercelBlobUrl(storedUrl)) {
     return storedUrl;
   }

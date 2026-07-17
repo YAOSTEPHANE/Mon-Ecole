@@ -99,19 +99,8 @@ export async function userCanAccessSchool(
   });
   if (member) return true;
 
-  const school = (await schools.findUnique({
-    where: { id: schoolId },
-    select: { isActive: true },
-  })) as { isActive: boolean } | null;
-  if (!school?.isActive) return false;
-
-  if (role === 'ADMIN') {
-    await members.create({
-      data: { schoolId, userId, isDefault: false },
-    });
-    return true;
-  }
-
+  // Les ADMIN n’ont accès qu’aux établissements dont ils sont membres.
+  // L’accès global multi-établissements est réservé au SUPER_ADMIN.
   return false;
 }
 

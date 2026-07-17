@@ -6,7 +6,9 @@ import {
   clearAllOfflineCaches,
   loadUserSnapshot,
   saveUserSnapshot,
+  setOfflineCacheScope,
 } from '../lib/offline-storage';
+import { setMemoryAccessToken } from '../lib/auth-session';
 import toast from 'react-hot-toast';
 import {
   applyDocumentTheme,
@@ -48,7 +50,7 @@ interface AuthContextType {
   ) => Promise<{ token: string; user: User; twoFactorEnabled?: boolean }>;
   /** Finalise une session après SSO (jeton JWT déjà émis par le backend). */
   acceptSession: (sessionToken: string) => Promise<User>;
-  logout: () => void;
+  logout: () => void | Promise<void>;
   loading: boolean;
   /** Recharge le profil depuis l’API (sans message de succès). */
   refreshUser: () => Promise<void>;
@@ -67,15 +69,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        setToken(storedToken);
+      // Migration : ancien token localStorage → mémoire, puis cookie HttpOnly pour la suite
+      const legacy = localStorage.getItem('token');
+      if (legacy) {
+        setMemoryAccessToken(legacy);
+        setToken(legacy);
+      }
+      try {
         await fetchUser();
-      } else {
+      } finally {
         setLoading(false);
       }
     };
-    initAuth();
+    void initAuth();
   }, []);
 
   const uiPreferences = useMemo(
@@ -93,8 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userData = await authApi.getMe();
       if (userData) {
-        setUser(userData as User);
-        await saveUserSnapshot(userData);
+        const u = userData as User;
+        setUser(u);
+        const schoolId =
+          typeof window !== 'undefined' ? localStorage.getItem('activeSchoolId') || '' : '';
+        setOfflineCacheScope(u.id, schoolId);
+        await saveUserSnapshot(u);
       }
     } catch (error: any) {
       console.error('Erreur lors de la récupération de l\'utilisateur:', error);
@@ -110,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       localStorage.removeItem('token');
+      setMemoryAccessToken(null);
       setToken(null);
       setUser(null);
     } finally {
@@ -164,9 +175,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authApi.login(email, password, twoFactorCode);
       if (response && response.token && response.user) {
+        setMemoryAccessToken(response.token);
         setToken(response.token);
         setUser(response.user as User);
-        localStorage.setItem('token', response.token);
+        const schoolId =
+          typeof window !== 'undefined' ? localStorage.getItem('activeSchoolId') || '' : '';
+        setOfflineCacheScope((response.user as User).id, schoolId);
         await saveUserSnapshot(response.user);
         toast.success('Connexion réussie');
         return response;
@@ -223,18 +237,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const acceptSession = useCallback(async (sessionToken: string): Promise<User> => {
     const trimmed = sessionToken.trim();
     if (!trimmed) throw new Error('Jeton manquant');
-    localStorage.setItem('token', trimmed);
+    setMemoryAccessToken(trimmed);
     setToken(trimmed);
     try {
       const userData = await authApi.getMe();
       if (!userData) throw new Error('Profil introuvable');
       const u = userData as User;
       setUser(u);
+      const schoolId =
+        typeof window !== 'undefined' ? localStorage.getItem('activeSchoolId') || '' : '';
+      setOfflineCacheScope(u.id, schoolId);
       await saveUserSnapshot(u);
       setLoading(false);
       return u;
     } catch (error) {
-      localStorage.removeItem('token');
+      setMemoryAccessToken(null);
       setToken(null);
       setUser(null);
       setLoading(false);
@@ -242,13 +259,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      /* ignore */
+    }
+    setMemoryAccessToken(null);
     setToken(null);
     setUser(null);
-    localStorage.removeItem('token');
-    void clearAllOfflineCaches();
+    try {
+      await clearAllOfflineCaches();
+    } catch {
+      /* ignore */
+    }
     toast.success('Déconnexion réussie');
-    // Rediriger vers la page d'accueil
     window.location.href = '/home';
   };
 

@@ -8,6 +8,7 @@ import {
 } from '@prisma/client/runtime/library';
 import prisma from '../utils/prisma';
 import { verifyAccessToken } from '../utils/jwt.util';
+import { extractAccessToken } from '../utils/auth-cookie.util';
 
 export interface AuthRequest extends Request<ParamsFlatDictionary> {
   user?: {
@@ -31,7 +32,7 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = extractAccessToken(req);
 
     if (!token) {
       return res.status(401).json({ error: 'Token manquant' });

@@ -12,12 +12,21 @@ import { generateDigitalCardPublicId } from '../utils/digital-card.util';
 import { buildStudentEnrollmentDossierPayload } from '../utils/student-enrollment-dossier.util';
 import { deleteStoredUploadUrl, discardUploadedFile, persistUploadedFile } from '../utils/upload-persist.util';
 import { resolveStoredFileAccessUrl } from '../utils/upload-access-token.util';
+import {
+  decryptStudentRecord,
+  encryptStudentScalarsForPrismaCreate,
+  encryptStudentSensitiveWritePayload,
+} from '../utils/student-sensitive-crypto.util';
 import QRCode from 'qrcode';
 import type { SchoolContextRequest } from '../utils/school-context.util';
 import { studentScopeWhere } from '../utils/school-context.util';
 import { isObjectId } from '../utils/school-access-guard.util';
 
 const router = express.Router();
+
+function decryptStudentRows<T extends Record<string, unknown>>(rows: T[]): T[] {
+  return rows.map((row) => decryptStudentRecord(row));
+}
 
 // ========== GESTION DES ÉLÈVES ==========
 
@@ -72,18 +81,21 @@ router.get('/students/nfc/:nfcId', async (req: SchoolContextRequest, res) => {
       return res.status(404).json({ error: 'Aucun élève trouvé avec cet ID NFC' });
     }
 
-    res.json(student);
+    res.json(decryptStudentRecord(student as Record<string, unknown>));
   } catch (error: any) {
     console.error('Error fetching student by NFC ID:', error);
     res.status(500).json({ error: error.message || 'Erreur serveur' });
   }
 });
 
-// Lister tous les élèves
+// Lister tous les élèves (pagination plafonnée pour éviter les réponses non bornées)
 router.get('/students', async (req: SchoolContextRequest, res) => {
   try {
     const { classId, isActive, enrollmentStatus } = req.query;
     const schoolId = req.schoolId!;
+    const pageSize = Math.min(Math.max(Number(req.query.limit) || 200, 1), 500);
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const skip = (page - 1) * pageSize;
 
     const students = await prisma.student.findMany({
       where: {
@@ -135,9 +147,14 @@ router.get('/students', async (req: SchoolContextRequest, res) => {
           },
         },
       },
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      skip,
     });
 
-    res.json(students);
+    res.setHeader('X-Page', String(page));
+    res.setHeader('X-Page-Size', String(pageSize));
+    res.json(decryptStudentRows(students as unknown as Record<string, unknown>[]));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -240,6 +257,17 @@ router.post(
 
       const { hashedPassword, shouldSendSetupEmail } = await resolveAdminProvidedOrInvitePassword(password);
 
+      const sensitiveFields = encryptStudentScalarsForPrismaCreate({
+        address,
+        emergencyContact,
+        emergencyPhone,
+        emergencyContact2,
+        emergencyPhone2,
+        medicalInfo,
+        allergies,
+        specialNeeds,
+      });
+
       // Créer l'utilisateur et le profil élève
       const user = await prisma.user.create({
         data: {
@@ -256,14 +284,7 @@ router.post(
               birthPlace: typeof birthPlace === 'string' && birthPlace.trim() ? birthPlace.trim() : undefined,
               isRepeating: Boolean(isRepeating),
               gender,
-              address,
-              emergencyContact,
-              emergencyPhone,
-              emergencyContact2,
-              emergencyPhone2,
-              medicalInfo,
-              allergies,
-              specialNeeds,
+              ...sensitiveFields,
               digitalCardPublicId: generateDigitalCardPublicId(),
               classId,
               classGroupId,
@@ -317,7 +338,14 @@ router.post(
       }
 
       const { password: _pw, ...userWithoutPassword } = user;
-      res.status(201).json({ ...userWithoutPassword, passwordSetupEmailSent: shouldSendSetupEmail });
+      const profile = userWithoutPassword.studentProfile
+        ? decryptStudentRecord(userWithoutPassword.studentProfile as Record<string, unknown>)
+        : userWithoutPassword.studentProfile;
+      res.status(201).json({
+        ...userWithoutPassword,
+        studentProfile: profile,
+        passwordSetupEmailSent: shouldSendSetupEmail,
+      });
     } catch (error: unknown) {
       console.error('POST /admin/students:', error);
       const message = error instanceof Error ? error.message : 'Erreur serveur';
@@ -401,7 +429,7 @@ router.get('/students/:id', async (req: SchoolContextRequest, res) => {
       return res.status(404).json({ error: 'Élève non trouvé' });
     }
 
-    res.json(student);
+    res.json(decryptStudentRecord(student as Record<string, unknown>));
   } catch (error: unknown) {
     console.error('GET /admin/students/:id:', error);
     res.status(500).json({
@@ -892,14 +920,28 @@ router.put('/students/:id', async (req, res) => {
 
     const studentData: Prisma.StudentUncheckedUpdateInput = {};
 
-    if (address !== undefined) studentData.address = emptyToNull(address) ?? null;
-    if (emergencyContact !== undefined) studentData.emergencyContact = emptyToNull(emergencyContact) ?? null;
-    if (emergencyPhone !== undefined) studentData.emergencyPhone = emptyToNull(emergencyPhone) ?? null;
-    if (emergencyContact2 !== undefined) studentData.emergencyContact2 = emptyToNull(emergencyContact2) ?? null;
-    if (emergencyPhone2 !== undefined) studentData.emergencyPhone2 = emptyToNull(emergencyPhone2) ?? null;
-    if (medicalInfo !== undefined) studentData.medicalInfo = emptyToNull(medicalInfo) ?? null;
-    if (allergies !== undefined) studentData.allergies = emptyToNull(allergies) ?? null;
-    if (specialNeeds !== undefined) studentData.specialNeeds = emptyToNull(specialNeeds) ?? null;
+    Object.assign(
+      studentData,
+      encryptStudentSensitiveWritePayload({
+        ...(address !== undefined ? { address: emptyToNull(address) ?? null } : {}),
+        ...(emergencyContact !== undefined
+          ? { emergencyContact: emptyToNull(emergencyContact) ?? null }
+          : {}),
+        ...(emergencyPhone !== undefined
+          ? { emergencyPhone: emptyToNull(emergencyPhone) ?? null }
+          : {}),
+        ...(emergencyContact2 !== undefined
+          ? { emergencyContact2: emptyToNull(emergencyContact2) ?? null }
+          : {}),
+        ...(emergencyPhone2 !== undefined
+          ? { emergencyPhone2: emptyToNull(emergencyPhone2) ?? null }
+          : {}),
+        ...(medicalInfo !== undefined ? { medicalInfo: emptyToNull(medicalInfo) ?? null } : {}),
+        ...(allergies !== undefined ? { allergies: emptyToNull(allergies) ?? null } : {}),
+        ...(specialNeeds !== undefined ? { specialNeeds: emptyToNull(specialNeeds) ?? null } : {}),
+      }),
+    );
+
     if (birthPlace !== undefined) studentData.birthPlace = emptyToNull(birthPlace) ?? null;
     if (isRepeating !== undefined) studentData.isRepeating = Boolean(isRepeating);
     if (dateOfBirth !== undefined && typeof dateOfBirth === 'string' && dateOfBirth.trim()) {
@@ -1011,10 +1053,14 @@ router.put('/students/:id', async (req, res) => {
           },
         },
       });
-      return res.json(withOptions ?? updatedStudent);
+      return res.json(
+        withOptions
+          ? decryptStudentRecord(withOptions as Record<string, unknown>)
+          : decryptStudentRecord(updatedStudent as Record<string, unknown>),
+      );
     }
 
-    res.json(updatedStudent);
+    res.json(decryptStudentRecord(updatedStudent as Record<string, unknown>));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

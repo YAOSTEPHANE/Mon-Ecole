@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt.util';
+import { extractAccessToken } from '../utils/auth-cookie.util';
 import { verifyUploadAccessToken } from '../utils/upload-access-token.util';
 import {
   isSensitiveUploadPath,
@@ -21,7 +22,7 @@ function requestUploadPath(req: Request): string {
 }
 
 async function resolveUserFromBearer(req: Request): Promise<AuthRequest['user'] | null> {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = extractAccessToken(req);
   if (!token) return null;
   try {
     const decoded = verifyAccessToken(token);

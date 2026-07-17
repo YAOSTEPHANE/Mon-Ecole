@@ -20,8 +20,8 @@ function jwtSecret(): string {
 }
 
 function expiresInOption(): SignOptions['expiresIn'] {
-  const raw = (process.env.JWT_EXPIRES_IN ?? '7d').trim();
-  return (raw.length > 0 ? raw : '7d') as SignOptions['expiresIn'];
+  const raw = (process.env.JWT_EXPIRES_IN ?? '12h').trim();
+  return (raw.length > 0 ? raw : '12h') as SignOptions['expiresIn'];
 }
 
 /** À appeler au démarrage du serveur pour échouer tôt si la config JWT est invalide. */

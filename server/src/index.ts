@@ -11,6 +11,7 @@ import {
   logDatabaseUrlDiagnostics,
   logProductionEnvDiagnostics,
 } from './utils/production-env-diagnostics.util';
+import { requireSensitiveFieldEncryptionKey } from './utils/field-encryption.util';
 
 dotenv.config();
 
@@ -23,14 +24,17 @@ try {
   }
 }
 
+try {
+  requireSensitiveFieldEncryptionKey();
+} catch (e) {
+  console.error(e);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
 logDatabaseUrlDiagnostics();
 logProductionEnvDiagnostics();
-
-if (process.env.NODE_ENV === 'production' && !process.env.SENSITIVE_FIELD_ENCRYPTION_KEY?.trim()) {
-  console.warn(
-    '[Sécurité] SENSITIVE_FIELD_ENCRYPTION_KEY est absent — les champs élève sensibles (adresse, urgence, santé) sont stockés en clair. Définissez une clé forte et ré-enregistrez les données si besoin.'
-  );
-}
 
 if (process.env.VERCEL === '1' && !useBlobStorage()) {
   console.error(

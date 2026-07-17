@@ -16,7 +16,7 @@ export default function RealtimeBootstrap() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    if (!token || !user?.id) {
+    if (!user?.id) {
       socketRef.current?.disconnect();
       socketRef.current = null;
       return;
@@ -25,7 +25,8 @@ export default function RealtimeBootstrap() {
     const origin = getRealtimeOrigin();
     const socket = io(origin, {
       path: "/socket.io",
-      auth: { token },
+      ...(token ? { auth: { token } } : {}),
+      withCredentials: true,
       transports: ["websocket", "polling"],
       reconnectionAttempts: 8,
       reconnectionDelay: 2000,

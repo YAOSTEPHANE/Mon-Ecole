@@ -1,5 +1,5 @@
 import path from 'path';
-import { put, del } from '@vercel/blob';
+import { put, del, get } from '@vercel/blob';
 
 const SENSITIVE_BLOB_FOLDER_PREFIXES = [
   'identity-documents/',
@@ -32,6 +32,14 @@ export function blobPathnameFromStoredUrl(storedUrl: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function isSensitiveBlobFolder(folder: string): boolean {
+  const normalized = folder.replace(/^\/+|\/+$/g, '').toLowerCase();
+  const withSlash = `${normalized}/`;
+  return SENSITIVE_BLOB_FOLDER_PREFIXES.some(
+    (prefix) => withSlash === prefix || withSlash.startsWith(prefix),
+  );
 }
 
 export function isSensitiveBlobStoredUrl(storedUrl: string): boolean {
@@ -82,12 +90,59 @@ export async function uploadBufferToBlob(
 ): Promise<string> {
   assertBlobConfiguredForVercel();
   const pathname = `${folder}/${filename}`;
+  const sensitive = isSensitiveBlobFolder(folder);
+  const contentTypeSafe = contentType || 'application/octet-stream';
+
+  if (sensitive) {
+    try {
+      const privateResult = await put(pathname, body, {
+        access: 'private',
+        contentType: contentTypeSafe,
+        addRandomSuffix: false,
+      });
+      return privateResult.url;
+    } catch (error) {
+      console.warn(
+        '[blob] Échec upload privé — configurez un Blob store privé Vercel. Repli public (URL CDN ne sera pas exposée dans les réponses API).',
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
   const result = await put(pathname, body, {
     access: 'public',
-    contentType: contentType || 'application/octet-stream',
+    contentType: contentTypeSafe,
     addRandomSuffix: false,
   });
   return result.url;
+}
+
+/**
+ * Lit un blob (privé d’abord, puis public pour les fichiers legacy).
+ */
+export async function readBlobContent(pathnameOrUrl: string): Promise<{
+  stream: ReadableStream;
+  contentType: string;
+} | null> {
+  const attempts: Array<'private' | 'public'> = isSensitiveBlobStoredUrl(pathnameOrUrl)
+    || isSensitiveBlobFolder(pathnameOrUrl.split('/')[0] || '')
+    ? ['private', 'public']
+    : ['public', 'private'];
+
+  for (const access of attempts) {
+    try {
+      const result = await get(pathnameOrUrl, { access });
+      if (result?.statusCode === 200 && result.stream) {
+        return {
+          stream: result.stream,
+          contentType: result.blob.contentType || 'application/octet-stream',
+        };
+      }
+    } catch {
+      /* essayer le mode suivant */
+    }
+  }
+  return null;
 }
 
 export async function deleteBlobByUrl(url: string): Promise<void> {

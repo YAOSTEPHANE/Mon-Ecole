@@ -22,6 +22,13 @@ export const authApi = {
       }
     }
   },
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      /* ignore */
+    }
+  },
   register: async (data: any) => {
     const response = await api.post('/auth/register', data);
     return response.data;

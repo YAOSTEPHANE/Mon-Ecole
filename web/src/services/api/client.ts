@@ -30,7 +30,13 @@ const API_URL = (() => {
   return n || 'http://localhost:5000/api';
 })();
 
-const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
+const PUBLIC_AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/logout',
+];
 
 function isPublicAuthRequest(url: string | undefined): boolean {
   if (!url) return false;
@@ -41,6 +47,7 @@ function isPublicAuthRequest(url: string | undefined): boolean {
 
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -57,7 +64,12 @@ api.interceptors.request.use(async (config) => {
       delete (h as Record<string, unknown>)['content-type'];
     }
   }
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  // Cookie HttpOnly `sm_session` est envoyé via withCredentials.
+  // Bearer optionnel (mémoire / mobile / transition) — plus de localStorage pour limiter le XSS.
+  const token =
+    typeof window !== 'undefined'
+      ? (window as Window & { __smAccessToken?: string }).__smAccessToken || null
+      : null;
   if (token && !isPublicAuthRequest(config.url)) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -133,6 +145,7 @@ api.interceptors.response.use(
       if (!isPublicAuthRequest(requestUrl)) {
         try {
           localStorage.removeItem('token');
+          delete (window as Window & { __smAccessToken?: string }).__smAccessToken;
         } catch {
           /* ignore */
         }

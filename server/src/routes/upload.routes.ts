@@ -2,8 +2,15 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { upload, identityUpload, digitalLibraryUpload, elearningUpload } from '../middleware/upload.middleware';
 import prisma from '../utils/prisma';
-import { resolveStoredFileAccessUrl } from '../utils/upload-access-token.util';
+import {
+  blobAccessLogicalPath,
+  resolveStoredFileAccessUrl,
+  verifyUploadAccessToken,
+} from '../utils/upload-access-token.util';
 import { discardUploadedFile, persistUploadedFile } from '../utils/upload-persist.util';
+import { readBlobContent } from '../utils/blob-storage.util';
+import { userCanAccessSensitiveUpload } from '../utils/upload-access-authorization.util';
+import { verifyAccessToken } from '../utils/jwt.util';
 
 const IDENTITY_TYPES = [
   'NATIONAL_ID',
@@ -23,6 +30,84 @@ const TEACHER_ADMIN_DOC_TYPES = [
 ] as const;
 
 const router = express.Router();
+
+/**
+ * Proxy authentifié pour les blobs sensibles (privés).
+ * N’exige pas le middleware authenticate global : jeton `?access=` ou Bearer.
+ */
+router.get('/blob-content', async (req, res) => {
+  try {
+    const pathnameRaw = typeof req.query.pathname === 'string' ? req.query.pathname.trim() : '';
+    if (!pathnameRaw || pathnameRaw.includes('..') || pathnameRaw.startsWith('/')) {
+      return res.status(400).json({ error: 'pathname invalide' });
+    }
+
+    const logicalPath = blobAccessLogicalPath(pathnameRaw);
+    const accessToken =
+      typeof req.query.access === 'string'
+        ? req.query.access
+        : typeof req.query.fileAccess === 'string'
+          ? req.query.fileAccess
+          : undefined;
+
+    let allowed = Boolean(accessToken && verifyUploadAccessToken(logicalPath, accessToken));
+
+    if (!allowed) {
+      const bearer = req.headers.authorization?.split(' ')[1];
+      if (bearer) {
+        try {
+          const decoded = verifyAccessToken(bearer);
+          const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            select: { id: true, email: true, role: true, isActive: true },
+          });
+          if (user?.isActive) {
+            allowed = await userCanAccessSensitiveUpload(
+              { id: user.id, email: user.email, role: user.role },
+              logicalPath,
+            );
+          }
+        } catch {
+          allowed = false;
+        }
+      }
+    }
+
+    if (!allowed) {
+      return res.status(401).json({ error: 'Accès au fichier refusé.' });
+    }
+
+    const content = await readBlobContent(pathnameRaw);
+    if (!content) {
+      return res.status(404).json({ error: 'Fichier introuvable' });
+    }
+
+    res.setHeader('Content-Type', content.contentType);
+    res.setHeader('Cache-Control', 'private, no-store, no-cache');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    const reader = content.stream.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const body = Buffer.allocUnsafe(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      body.set(chunk, offset);
+      offset += chunk.length;
+    }
+    res.send(body);
+  } catch (error: unknown) {
+    console.error('GET /upload/blob-content:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+});
 
 router.use(authenticate);
 

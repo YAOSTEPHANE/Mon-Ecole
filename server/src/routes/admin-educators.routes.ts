@@ -11,6 +11,7 @@ import {
   parseEducatorClassIds,
   syncEducatorClassAssignments,
 } from '../utils/educator-class-assignment.util';
+import type { SchoolContextRequest } from '../utils/school-context.util';
 
 const router = express.Router();
 
@@ -45,10 +46,23 @@ router.get('/educators/nfc/:nfcId', async (req, res) => {
   }
 });
 
-// Lister tous les éducateurs
-router.get('/educators', async (req, res) => {
+// Lister les éducateurs (pagination plafonnée)
+router.get('/educators', async (req: SchoolContextRequest, res) => {
   try {
+    const pageSize = Math.min(Math.max(Number(req.query.limit) || 200, 1), 500);
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const skip = (page - 1) * pageSize;
+    const schoolId = req.schoolId;
+
     const educators = await prisma.educator.findMany({
+      where: schoolId
+        ? {
+            OR: [
+              { user: { schoolMemberships: { some: { schoolId } } } },
+              { classAssignments: { some: { class: { schoolId } } } },
+            ],
+          }
+        : undefined,
       include: {
         user: {
           select: {
@@ -63,8 +77,13 @@ router.get('/educators', async (req, res) => {
         },
         ...educatorClassAssignmentInclude,
       },
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      skip,
     });
 
+    res.setHeader('X-Page', String(page));
+    res.setHeader('X-Page-Size', String(pageSize));
     res.json(
       educators.map((e) => ({
         ...e,

@@ -7,7 +7,11 @@ export const STUDENT_SENSITIVE_FIELD_KEYS = [
   'address',
   'emergencyContact',
   'emergencyPhone',
+  'emergencyContact2',
+  'emergencyPhone2',
   'medicalInfo',
+  'allergies',
+  'specialNeeds',
 ] as const;
 
 export type StudentSensitiveFieldKey = (typeof STUDENT_SENSITIVE_FIELD_KEYS)[number];

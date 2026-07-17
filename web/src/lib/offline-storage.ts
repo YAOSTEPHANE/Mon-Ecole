@@ -1,5 +1,6 @@
 /**
  * Persistance locale (IndexedDB) pour consultation hors ligne des données essentielles.
+ * Les clés sont cloisonnées par utilisateur + établissement.
  */
 
 import type { SyncQueueBody } from './offline-formdata';
@@ -10,6 +11,7 @@ const STORE = 'kv';
 const BLOB_STORE = 'sync-blobs';
 const USER_KEY = 'snapshot:user';
 const SYNC_QUEUE_KEY = 'sync-queue:items';
+const SCOPE_KEY = 'cache-scope';
 
 export type SyncQueueItem = {
   id: string;
@@ -24,7 +26,51 @@ export type SyncQueueItem = {
   retries: number;
 };
 
+type CacheScope = { userId: string; schoolId: string };
+
+let activeScope: CacheScope = { userId: '', schoolId: '' };
 let dbPromise: Promise<IDBDatabase> | null = null;
+
+export function setOfflineCacheScope(userId: string, schoolId = ''): void {
+  activeScope = {
+    userId: userId || '',
+    schoolId: schoolId || '',
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(SCOPE_KEY, JSON.stringify(activeScope));
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export function getOfflineCacheScope(): CacheScope {
+  if (activeScope.userId) return activeScope;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = sessionStorage.getItem(SCOPE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CacheScope;
+        if (parsed?.userId) {
+          activeScope = {
+            userId: String(parsed.userId),
+            schoolId: String(parsed.schoolId || ''),
+          };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!activeScope.schoolId && typeof window !== 'undefined') {
+    activeScope = {
+      ...activeScope,
+      schoolId: localStorage.getItem('activeSchoolId') || '',
+    };
+  }
+  return activeScope;
+}
 
 function openDb(): Promise<IDBDatabase> {
   if (!dbPromise) {
@@ -92,21 +138,31 @@ async function idbDelete(key: string): Promise<void> {
   }
 }
 
+function scopedKey(base: string): string {
+  const scope = getOfflineCacheScope();
+  const user = scope.userId || 'anon';
+  const school = scope.schoolId || 'noschool';
+  return `u:${user}|s:${school}|${base}`;
+}
+
 export async function saveUserSnapshot(user: unknown): Promise<void> {
-  await idbSet(USER_KEY, user);
+  await idbSet(scopedKey(USER_KEY), user);
 }
 
 export async function loadUserSnapshot<T>(): Promise<T | null> {
-  return idbGet<T>(USER_KEY);
+  return idbGet<T>(scopedKey(USER_KEY));
 }
 
 export async function clearUserSnapshot(): Promise<void> {
-  await idbDelete(USER_KEY);
+  await idbDelete(scopedKey(USER_KEY));
 }
 
-/** Clé stable pour une requête GET (pathname + query). */
+/** Clé stable pour une requête GET (pathname + query), cloisonnée par session. */
 export function apiCacheKey(method: string, pathnameWithSearch: string): string {
-  return `${method.toUpperCase()}|${pathnameWithSearch}`;
+  const scope = getOfflineCacheScope();
+  const user = scope.userId || 'anon';
+  const school = scope.schoolId || 'noschool';
+  return `${user}|${school}|${method.toUpperCase()}|${pathnameWithSearch}`;
 }
 
 export async function saveApiCacheEntry(key: string, payload: unknown): Promise<void> {
@@ -140,6 +196,14 @@ export async function clearAllOfflineCaches(): Promise<void> {
   } catch {
     /* ignore */
   }
+  activeScope = { userId: '', schoolId: '' };
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.removeItem(SCOPE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export async function saveSyncBlob(blobKey: string, blob: Blob): Promise<void> {
@@ -147,7 +211,7 @@ export async function saveSyncBlob(blobKey: string, blob: Blob): Promise<void> {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(BLOB_STORE, 'readwrite');
-      tx.objectStore(BLOB_STORE).put(blob, blobKey);
+      tx.objectStore(BLOB_STORE).put(blob, scopedKey(blobKey));
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -161,7 +225,7 @@ export async function loadSyncBlob(blobKey: string): Promise<Blob | null> {
     const db = await openDb();
     return await new Promise((resolve, reject) => {
       const tx = db.transaction(BLOB_STORE, 'readonly');
-      const r = tx.objectStore(BLOB_STORE).get(blobKey);
+      const r = tx.objectStore(BLOB_STORE).get(scopedKey(blobKey));
       r.onerror = () => reject(r.error);
       r.onsuccess = () => resolve((r.result as Blob) ?? null);
     });
@@ -175,7 +239,7 @@ export async function deleteSyncBlob(blobKey: string): Promise<void> {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(BLOB_STORE, 'readwrite');
-      tx.objectStore(BLOB_STORE).delete(blobKey);
+      tx.objectStore(BLOB_STORE).delete(scopedKey(blobKey));
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -189,14 +253,14 @@ export async function deleteSyncBlobs(blobKeys: string[]): Promise<void> {
 }
 
 export async function loadSyncQueueItems(): Promise<SyncQueueItem[]> {
-  const items = await idbGet<SyncQueueItem[]>(SYNC_QUEUE_KEY);
+  const items = await idbGet<SyncQueueItem[]>(scopedKey(SYNC_QUEUE_KEY));
   return Array.isArray(items) ? items : [];
 }
 
 export async function saveSyncQueueItems(items: SyncQueueItem[]): Promise<void> {
-  await idbSet(SYNC_QUEUE_KEY, items);
+  await idbSet(scopedKey(SYNC_QUEUE_KEY), items);
 }
 
 export async function clearSyncQueueItems(): Promise<void> {
-  await idbDelete(SYNC_QUEUE_KEY);
+  await idbDelete(scopedKey(SYNC_QUEUE_KEY));
 }

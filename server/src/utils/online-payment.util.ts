@@ -37,6 +37,7 @@ export async function listPendingMobileMoneyPayments(client: Db = prisma, school
 
 /**
  * Finalise un paiement en ligne (Mobile Money / carte) après webhook ou validation admin.
+ * Transition atomique PENDING → COMPLETED pour éviter les doubles traitements concurrents.
  */
 export async function completeOnlinePayment(
   client: Db,
@@ -73,8 +74,8 @@ export async function completeOnlinePayment(
       : opts.providerNote
     : payment.notes;
 
-  const updated = await client.payment.update({
-    where: { id: paymentId },
+  const claimed = await client.payment.updateMany({
+    where: { id: paymentId, status: 'PENDING' },
     data: {
       status: 'COMPLETED',
       transactionId: opts.transactionId || `MM-${Date.now()}`,
@@ -82,6 +83,19 @@ export async function completeOnlinePayment(
       receiptUrl: autoReceiptUrl(payment.paymentReference || paymentId),
       notes: note,
     },
+  });
+
+  if (claimed.count === 0) {
+    const current = await client.payment.findUnique({
+      where: { id: paymentId },
+      include: PAYMENT_INCLUDE,
+    });
+    if (current?.status === 'COMPLETED') return current;
+    throw Object.assign(new Error('Ce paiement ne peut plus être confirmé'), { status: 400 });
+  }
+
+  const updated = await client.payment.findUnique({
+    where: { id: paymentId },
     include: PAYMENT_INCLUDE,
   });
 
@@ -113,12 +127,18 @@ export async function failOnlinePayment(
   if (payment.status !== 'PENDING') {
     throw Object.assign(new Error('Paiement non modifiable'), { status: 400 });
   }
-  return client.payment.update({
-    where: { id: paymentId },
+  const claimed = await client.payment.updateMany({
+    where: { id: paymentId, status: 'PENDING' },
     data: {
       status: 'FAILED',
       notes: payment.notes ? `${payment.notes} — Échec: ${reason}` : `Échec: ${reason}`,
     },
+  });
+  if (claimed.count === 0) {
+    throw Object.assign(new Error('Paiement non modifiable'), { status: 400 });
+  }
+  return client.payment.findUnique({
+    where: { id: paymentId },
     include: PAYMENT_INCLUDE,
   });
 }

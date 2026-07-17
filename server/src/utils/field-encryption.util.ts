@@ -18,11 +18,26 @@ export function isEncryptedSensitivePayload(value: string | null | undefined): b
   return typeof value === 'string' && value.startsWith(PREFIX);
 }
 
+export function requireSensitiveFieldEncryptionKey(): void {
+  if (process.env.NODE_ENV === 'production' && !deriveKey()) {
+    throw new Error(
+      'SENSITIVE_FIELD_ENCRYPTION_KEY est obligatoire en production pour chiffrer les données sensibles.',
+    );
+  }
+}
+
 export function encryptSensitiveString(plain: string | null | undefined): string | null {
   if (plain === null || plain === undefined) return plain ?? null;
   if (plain === '') return '';
   const key = deriveKey();
-  if (!key) return plain;
+  if (!key) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'SENSITIVE_FIELD_ENCRYPTION_KEY manquant — refus d’écrire des données sensibles en clair.',
+      );
+    }
+    return plain;
+  }
 
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGO, key, iv);

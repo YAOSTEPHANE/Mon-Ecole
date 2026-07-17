@@ -9,9 +9,12 @@ import {
   createPasswordResetToken,
   sendPasswordResetEmail,
   sendTransactionalHtmlEmail,
-  verifyResetToken,
-  markTokenAsUsed,
+  consumePasswordResetToken,
 } from '../utils/email.util';
+import {
+  clearAuthSessionCookie,
+  setAuthSessionCookie,
+} from '../utils/auth-cookie.util';
 import {
   authLoginLimiter,
   authRegisterLimiter,
@@ -129,6 +132,7 @@ router.post(
 
       // Générer le token
       const token = generateToken(user.id, user.email, user.role);
+      setAuthSessionCookie(res, token);
 
       res.status(201).json({
         message: 'Inscription réussie',
@@ -276,6 +280,8 @@ router.post(
       const { password: _, ...userWithoutPassword } = user;
       const userForSession = await withSyncedStaffModules(userWithoutPassword);
 
+      setAuthSessionCookie(res, token);
+
       res.json({
         message: 'Connexion réussie',
         user: decryptSessionUserPayload(userForSession),
@@ -292,6 +298,12 @@ router.post(
     }
   }
 );
+
+/** Déconnexion : invalide le cookie de session HttpOnly. */
+router.post('/logout', (_req, res) => {
+  clearAuthSessionCookie(res);
+  res.json({ message: 'Déconnexion réussie' });
+});
 
 // Mettre à jour le profil de l'utilisateur
 router.put('/me', authenticate, async (req: any, res) => {
@@ -613,8 +625,8 @@ router.post(
 
       const { token, password } = req.body;
 
-      // Vérifier le token
-      const tokenVerification = await verifyResetToken(token);
+      // Consommer le token de façon atomique (évite la double utilisation)
+      const tokenVerification = await consumePasswordResetToken(token);
       if (!tokenVerification.valid || !tokenVerification.userId) {
         return res.status(400).json({ error: 'Token invalide ou expiré' });
       }
@@ -627,9 +639,6 @@ router.post(
         where: { id: tokenVerification.userId },
         data: { password: hashedPassword },
       });
-
-      // Marquer le token comme utilisé
-      await markTokenAsUsed(token);
 
       // Enregistrer l'événement de sécurité
       await prisma.securityEvent.create({

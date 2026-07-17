@@ -2,9 +2,33 @@
  * Supprime les notes, absences et créneaux d'emploi du temps dont le cours (ou remplaçant) n'existe plus.
  * Corrige les erreurs Prisma « Field course is required… got null ».
  * Réaligne aussi les comptes démo (mot de passe password123) et les liens parent–élève.
+ *
+ * GARDE-FOU : exige ALLOW_DESTRUCTIVE_E2E=1 et une base de test explicite.
  */
 import bcrypt from 'bcryptjs';
 import prisma from '../src/utils/prisma';
+
+function assertDestructiveE2eAllowed(): void {
+  if (process.env.ALLOW_DESTRUCTIVE_E2E !== '1') {
+    throw new Error(
+      'Refus : définissez ALLOW_DESTRUCTIVE_E2E=1 pour exécuter ce script destructif (réparation E2E).',
+    );
+  }
+  const dbUrl = process.env.DATABASE_URL || '';
+  const looksLikeTestDb =
+    /_test\b|\/test\b|test_|e2e|localhost|127\.0\.0\.1/i.test(dbUrl) ||
+    process.env.E2E_ALLOW_NONLOCAL_DB === '1';
+  if (!looksLikeTestDb) {
+    throw new Error(
+      'Refus : DATABASE_URL ne ressemble pas à une base de test. Utilisez une URL contenant _test / localhost, ou E2E_ALLOW_NONLOCAL_DB=1 en connaissance de cause.',
+    );
+  }
+  if (/prod|production/i.test(dbUrl) && process.env.E2E_ALLOW_PRODUCTION_DB !== '1') {
+    throw new Error('Refus : DATABASE_URL semble pointer vers la production.');
+  }
+}
+
+assertDestructiveE2eAllowed();
 
 const SEED_DEMO_PASSWORD = 'password123';
 

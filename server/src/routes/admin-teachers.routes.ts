@@ -22,9 +22,17 @@ import {
   sortedPeriodBuckets,
   type PeriodBucket,
 } from '../utils/hours-summary.util';
+import type { SchoolContextRequest } from '../utils/school-context.util';
+import {
+  assertTeacherInSchool,
+  SchoolAccessDeniedError,
+} from '../utils/school-access-guard.util';
 
 const router = express.Router();
 
+async function requireTeacherInActiveSchool(req: SchoolContextRequest, teacherId: string) {
+  await assertTeacherInSchool(teacherId, req.schoolId);
+}
 
 // Rechercher un enseignant par NFC ID
 router.get('/teachers/nfc/:nfcId', async (req, res) => {
@@ -419,9 +427,10 @@ router.post(
 );
 
 // Obtenir un enseignant par ID
-router.get('/teachers/:id', async (req, res) => {
+router.get('/teachers/:id', async (req: SchoolContextRequest, res) => {
   try {
     const teacherId = req.params.id;
+    await requireTeacherInActiveSchool(req, teacherId);
     const teacher = await prisma.teacher.findUnique({
       where: { id: teacherId },
       select: {
@@ -606,18 +615,22 @@ router.get('/teachers/:id', async (req, res) => {
         maxWeeklyHours: teacher.maxWeeklyHours ?? null,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (error instanceof SchoolAccessDeniedError) {
+      return res.status(error.status).json({ error: error.message });
+    }
     console.error('Erreur dans /admin/teachers/:id:', error);
-    res.status(500).json({ 
-      error: error.message || 'Erreur serveur',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erreur serveur',
+      details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined,
     });
   }
 });
 
 // Mettre à jour un enseignant
-router.put('/teachers/:id', async (req, res) => {
+router.put('/teachers/:id', async (req: SchoolContextRequest, res) => {
   try {
+    await requireTeacherInActiveSchool(req, req.params.id);
     const {
       firstName,
       lastName,
@@ -743,11 +756,14 @@ router.put('/teachers/:id', async (req, res) => {
         maxWeeklyHours: updatedTeacher.maxWeeklyHours ?? null,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (error instanceof SchoolAccessDeniedError) {
+      return res.status(error.status).json({ error: error.message });
+    }
     console.error('Erreur dans /admin/teachers/:id PUT:', error);
-    res.status(500).json({ 
-      error: error.message || 'Erreur serveur',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erreur serveur',
+      details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined,
     });
   }
 });
@@ -1288,8 +1304,9 @@ router.get('/hr/teacher-performance-reviews', async (req, res) => {
 });
 
 // Supprimer un enseignant
-router.delete('/teachers/:id', async (req, res) => {
+router.delete('/teachers/:id', async (req: SchoolContextRequest, res) => {
   try {
+    await requireTeacherInActiveSchool(req, req.params.id);
     const teacher = await prisma.teacher.findUnique({
       where: { id: req.params.id },
       include: { user: true },
@@ -1506,11 +1523,14 @@ router.delete('/teachers/:id', async (req, res) => {
     });
 
     res.json({ message: 'Enseignant supprimé avec succès' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (error instanceof SchoolAccessDeniedError) {
+      return res.status(error.status).json({ error: error.message });
+    }
     console.error('Erreur lors de la suppression de l\'enseignant:', error);
-    res.status(500).json({ 
-      error: error.message || 'Erreur lors de la suppression',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erreur lors de la suppression',
+      details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined,
     });
   }
 });

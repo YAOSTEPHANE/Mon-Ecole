@@ -3,6 +3,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { generateToken, uploadAccessSigningMaterial } from '../utils/jwt.util';
+import { setAuthSessionCookie } from '../utils/auth-cookie.util';
 import { authLoginLimiter } from '../middleware/rate-limit.middleware';
 
 const router = express.Router();
@@ -301,7 +302,9 @@ router.post('/exchange', authLoginLimiter, async (req, res) => {
     }
 
     res.setHeader('Cache-Control', 'no-store');
-    return res.json({ token: generateToken(user.id, user.email, user.role) });
+    const token = generateToken(user.id, user.email, user.role);
+    setAuthSessionCookie(res, token);
+    return res.json({ token });
   } catch (e) {
     console.error('POST /oauth/exchange:', e);
     return res.status(500).json({ error: 'Impossible de finaliser la connexion SSO' });

@@ -9,6 +9,11 @@ export const generateResetToken = (): string => {
   return crypto.randomBytes(32).toString('hex');
 };
 
+/** Hash SHA-256 du token opaque (seul le hash est stocké en base). */
+export function hashPasswordResetToken(token: string): string {
+  return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
+}
+
 /**
  * Crée et sauvegarde un token de réinitialisation dans la base de données
  * @param expiresInHours durée de validité (défaut 1 h pour « mot de passe oublié »)
@@ -22,9 +27,6 @@ export const createPasswordResetToken = async (
     where: {
       userId,
       used: false,
-      expiresAt: {
-        lt: new Date(), // Supprimer les tokens expirés
-      },
     },
   });
 
@@ -34,11 +36,11 @@ export const createPasswordResetToken = async (
   const hours = Number.isFinite(expiresInHours) && expiresInHours > 0 ? expiresInHours : 1;
   expiresAt.setHours(expiresAt.getHours() + hours);
 
-  // Sauvegarder le token
+  // Sauvegarder uniquement le hash
   await prisma.passwordResetToken.create({
     data: {
       userId,
-      token,
+      token: hashPasswordResetToken(token),
       expiresAt,
     },
   });
@@ -50,20 +52,20 @@ export const createPasswordResetToken = async (
  * Vérifie si un token de réinitialisation est valide
  */
 export const verifyResetToken = async (token: string): Promise<{ valid: boolean; userId?: string }> => {
-  const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { token },
-  });
+  const hashed = hashPasswordResetToken(token);
+  const resetToken =
+    (await prisma.passwordResetToken.findUnique({ where: { token: hashed } })) ||
+    // Compatibilité : anciens tokens stockés en clair
+    (await prisma.passwordResetToken.findUnique({ where: { token } }));
 
   if (!resetToken) {
     return { valid: false };
   }
 
-  // Vérifier si le token a été utilisé
   if (resetToken.used) {
     return { valid: false };
   }
 
-  // Vérifier si le token a expiré
   if (resetToken.expiresAt < new Date()) {
     return { valid: false };
   }
@@ -72,13 +74,48 @@ export const verifyResetToken = async (token: string): Promise<{ valid: boolean;
 };
 
 /**
- * Marque un token comme utilisé
+ * Marque un token comme utilisé (atomique : ne réclame qu’un token encore valide).
  */
 export const markTokenAsUsed = async (token: string): Promise<void> => {
-  await prisma.passwordResetToken.update({
-    where: { token },
+  const hashed = hashPasswordResetToken(token);
+  const now = new Date();
+  const claimed = await prisma.passwordResetToken.updateMany({
+    where: {
+      OR: [{ token: hashed }, { token }],
+      used: false,
+      expiresAt: { gt: now },
+    },
     data: { used: true },
   });
+  if (claimed.count === 0) {
+    throw new Error('Token invalide ou déjà utilisé');
+  }
+};
+
+/**
+ * Consomme un token (vérification + marquage atomique) et renvoie le userId.
+ */
+export const consumePasswordResetToken = async (
+  token: string,
+): Promise<{ valid: boolean; userId?: string }> => {
+  const hashed = hashPasswordResetToken(token);
+  const now = new Date();
+  const existing =
+    (await prisma.passwordResetToken.findFirst({
+      where: {
+        OR: [{ token: hashed }, { token }],
+        used: false,
+        expiresAt: { gt: now },
+      },
+    }));
+  if (!existing) return { valid: false };
+
+  const claimed = await prisma.passwordResetToken.updateMany({
+    where: { id: existing.id, used: false, expiresAt: { gt: now } },
+    data: { used: true },
+  });
+  if (claimed.count === 0) return { valid: false };
+  return { valid: true, userId: existing.userId };
 };
 
 function getFrontendBase(): string {

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   buildSafeUploadFilename,
   folderForUploadField,
+  isSensitiveBlobFolder,
   isSensitiveBlobStoredUrl,
   isVercelBlobUrl,
   useBlobStorage,
@@ -25,6 +26,11 @@ describe('blob-storage.util', () => {
       isSensitiveBlobStoredUrl('https://abc.public.blob.vercel-storage.com/branding/logo.png'),
       false,
     );
+  });
+
+  it('détecte les dossiers sensibles pour l’upload', () => {
+    assert.equal(isSensitiveBlobFolder('identity-documents'), true);
+    assert.equal(isSensitiveBlobFolder('branding'), false);
   });
 
   it('mappe les champs multer vers les dossiers', () => {
