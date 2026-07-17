@@ -4,11 +4,11 @@ import jsPDF from 'jspdf';
 import { dossierToPdfPayload, downloadHealthDossierPdf } from './healthDossierPdf';
 import { downloadJobDescriptionPdf } from './jobDescriptionPdf';
 import {
-  generateTranlefetReportCardPdf,
+  generateSchoolReportCardPdf,
   resolveProfessorForRow,
   pickPrimaryCourseForRow,
   isSingleTrimesterBulletin,
-} from './tranlefetReportCardPdf';
+} from './schoolReportCardPdf';
 import { buildStudentEnrollmentDossierDoc } from './studentEnrollmentDossierPdf';
 
 describe('exports PDF client (jsPDF)', () => {
@@ -41,8 +41,8 @@ describe('exports PDF client (jsPDF)', () => {
     assert.doesNotThrow(() => downloadHealthDossierPdf(payload));
   });
 
-  it('génère un PDF bulletin Tranlefet (1er trimestre) sans erreur', async () => {
-    await generateTranlefetReportCardPdf(
+  it('génère un PDF bulletin scolaire (1er trimestre) sans erreur', async () => {
+    await generateSchoolReportCardPdf(
       {
         studentIdNumber: 'MAT002',
         dateOfBirth: '2011-03-15',
@@ -108,8 +108,8 @@ describe('exports PDF client (jsPDF)', () => {
     assert.equal(pickPrimaryCourseForRow(anglaisRow, courses)?.id, 'en');
   });
 
-  it('génère un PDF bulletin Tranlefet (3e trimestre) sans erreur', async () => {
-    await generateTranlefetReportCardPdf(
+  it('génère un PDF bulletin scolaire (3e trimestre) sans erreur', async () => {
+    await generateSchoolReportCardPdf(
       {
         studentIdNumber: 'MAT001',
         dateOfBirth: '2012-05-01',
@@ -163,7 +163,7 @@ describe('exports PDF client (jsPDF)', () => {
       buildStudentEnrollmentDossierDoc({
         generatedAt: new Date().toISOString(),
         school: {
-          name: 'Collège Privé Tranlefet de Bouaké',
+          name: 'Mon Ecole',
           schoolCode: '1234567A',
           address: 'Bouaké',
         },

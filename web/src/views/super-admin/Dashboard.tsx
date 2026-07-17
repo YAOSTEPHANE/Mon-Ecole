@@ -17,7 +17,7 @@ import {
 } from '@/components/dashboard/premium';
 import { superAdminApi } from '@/services/api/superAdmin.api';
 import { ROLE_LABELS } from '@/lib/rolePaths';
-import { TRANLEFET_SCHOOL } from '@/data/tranlefetSchool';
+import { SCHOOL_DEFAULTS } from '@/data/schoolDefaults';
 import toast from 'react-hot-toast';
 import {
   FiUsers,
@@ -112,7 +112,7 @@ export default function SuperAdminDashboard() {
           <PremiumDashboardHero
             variant="super"
             eyebrow="Super administration"
-            title={TRANLEFET_SCHOOL.fullName}
+            title={SCHOOL_DEFAULTS.fullName}
             icon={FiShield}
             badge="Plateforme opérationnelle"
             description="Science · Humanisme · Excellence — pilotage global des comptes, données et paramètres système."

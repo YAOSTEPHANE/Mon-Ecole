@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 import FilterDropdown from '../ui/FilterDropdown';
 import { FiBarChart, FiDownload } from 'react-icons/fi';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 const AttendanceReportsPanel: React.FC = () => {

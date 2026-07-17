@@ -1,21 +1,12 @@
 "use client";
 
 import { Sector } from "recharts";
-
-type PieSectorProps = {
-  cx?: number;
-  cy?: number;
-  innerRadius?: number;
-  outerRadius?: number;
-  startAngle?: number;
-  endAngle?: number;
-  fill?: string;
-};
+import type { PieSectorShapeProps } from "recharts/types/polar/Pie";
 
 /**
- * Secteur actif du donut : halo extérieur + bord blanc (effet « lift » premium).
+ * Secteur Pie Recharts 3 — halo « lift » quand isActive (via prop shape).
  */
-export function PremiumPieActiveShape(raw: PieSectorProps) {
+export function PremiumPieActiveShape(raw: PieSectorShapeProps) {
   const {
     cx = 0,
     cy = 0,
@@ -24,7 +15,24 @@ export function PremiumPieActiveShape(raw: PieSectorProps) {
     startAngle = 0,
     endAngle = 0,
     fill = "#6366f1",
+    isActive = false,
+    cornerRadius,
   } = raw;
+
+  if (!isActive) {
+    return (
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        cornerRadius={cornerRadius}
+      />
+    );
+  }
 
   return (
     <g>
@@ -49,6 +57,7 @@ export function PremiumPieActiveShape(raw: PieSectorProps) {
         fill={fill}
         stroke="#ffffff"
         strokeWidth={3}
+        cornerRadius={cornerRadius}
         style={{ filter: "drop-shadow(0 8px 16px rgba(15, 23, 42, 0.18))" }}
       />
     </g>

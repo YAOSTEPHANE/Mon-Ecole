@@ -194,6 +194,7 @@ router.post(
         enrollmentDate,
         enrollmentStatus,
         stateAssignment,
+        nationalMatricule,
       } = req.body;
 
       const classId = typeof classIdRaw === 'string' && classIdRaw.trim() ? classIdRaw.trim() : undefined;
@@ -268,6 +269,9 @@ router.post(
               classGroupId,
               schoolId: schoolId ?? undefined,
               ...(enrollmentDate && { enrollmentDate: new Date(enrollmentDate) }),
+              ...(typeof nationalMatricule === 'string' && nationalMatricule.trim()
+                ? { nationalMatricule: nationalMatricule.trim().slice(0, 64) }
+                : {}),
               ...(stateAssignment === 'STATE_ASSIGNED' || stateAssignment === 'NOT_STATE_ASSIGNED'
                 ? { stateAssignment }
                 : {}),
@@ -837,6 +841,7 @@ router.put('/students/:id', async (req, res) => {
       nfcId,
       enrollmentStatus,
       stateAssignment,
+      nationalMatricule,
       subjectOptionIds,
     } = body;
 
@@ -927,6 +932,9 @@ router.put('/students/:id', async (req, res) => {
       (stateAssignment === 'STATE_ASSIGNED' || stateAssignment === 'NOT_STATE_ASSIGNED')
     ) {
       studentData.stateAssignment = stateAssignment;
+    }
+    if (nationalMatricule !== undefined) {
+      studentData.nationalMatricule = emptyToNull(nationalMatricule)?.slice(0, 64) ?? null;
     }
     if (isActive !== undefined) studentData.isActive = Boolean(isActive);
     if (nfcId !== undefined) {

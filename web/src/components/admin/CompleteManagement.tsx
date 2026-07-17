@@ -49,7 +49,7 @@ const BULLETIN_PERIOD_OPTIONS = [
   { value: 'sem2', label: 'Semestre 2' },
 ];
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import {
   ACADEMIC_CHANGE_VALIDATION_MESSAGE,

@@ -229,8 +229,8 @@ async function ensureBrandingSchoolCode(schoolId: string): Promise<void> {
       id: brandingId,
       schoolId,
       schoolCode: '253798',
-      schoolDisplayName: 'COLLEGE PRIVE TRANLEFET DE BOUAKÉ',
-      appTitle: 'CPTB',
+      schoolDisplayName: 'Mon Ecole',
+      appTitle: 'Mon Ecole',
     },
     update: { schoolCode: '253798' },
   });

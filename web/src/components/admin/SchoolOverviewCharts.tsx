@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Card from '../ui/Card';
@@ -54,7 +54,7 @@ import {
   type EnrollmentStatusValue,
 } from '../../lib/enrollmentStatus';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   FiPieChart,
   FiUsers,
@@ -220,18 +220,16 @@ function OccupancyStackTooltip({
   payload,
 }: {
   active?: boolean;
-  label?: string;
-  payload?: Array<{
-    payload?: {
-      fullName?: string;
-      élèves?: number;
-      capacité?: number;
-      taux?: number;
-    };
-  }>;
+  label?: string | number;
+  payload?: unknown;
 }) {
-  if (!active || !payload?.length) return null;
-  const row = payload[0].payload;
+  if (!active || !Array.isArray(payload) || !payload.length) return null;
+  const row = (payload[0] as { payload?: {
+    fullName?: string;
+    élèves?: number;
+    capacité?: number;
+    taux?: number;
+  } })?.payload;
   if (!row) return null;
   return (
     <div className="relative min-w-[210px] max-w-[300px] rounded-2xl p-[1px] shadow-[0_28px_56px_-12px_rgba(15,23,42,0.35)] backdrop-blur-xl bg-gradient-to-br from-amber-200/80 via-white/40 to-orange-200/50">
@@ -261,10 +259,6 @@ function OccupancyStackTooltip({
 }
 
 export default function SchoolOverviewCharts() {
-  const [assignPieIdx, setAssignPieIdx] = useState<number | undefined>();
-  const [enrollPieIdx, setEnrollPieIdx] = useState<number | undefined>();
-  const [classPieIdx, setClassPieIdx] = useState<number | undefined>();
-
   const { data: students, isLoading: studentsLoading, isError } = useQuery({
     queryKey: ['students'],
     queryFn: adminApi.getStudents,
@@ -666,10 +660,7 @@ export default function SchoolOverviewCharts() {
                         cx="50%"
                         cy="50%"
                         {...pieGeometry(stateAssignmentData.length)}
-                        activeIndex={assignPieIdx}
-                        activeShape={PremiumPieActiveShape}
-                        onMouseEnter={(_, i) => setAssignPieIdx(i)}
-                        onMouseLeave={() => setAssignPieIdx(undefined)}
+                        shape={PremiumPieActiveShape}
                       >
                         {stateAssignmentData.map((_, i) => (
                           <Cell
@@ -730,10 +721,7 @@ export default function SchoolOverviewCharts() {
                         cx="50%"
                         cy="50%"
                         {...pieGeometry(enrollmentStatusData.length)}
-                        activeIndex={enrollPieIdx}
-                        activeShape={PremiumPieActiveShape}
-                        onMouseEnter={(_, i) => setEnrollPieIdx(i)}
-                        onMouseLeave={() => setEnrollPieIdx(undefined)}
+                        shape={PremiumPieActiveShape}
                       >
                         {enrollmentStatusData.map((_, i) => (
                           <Cell
@@ -874,10 +862,7 @@ export default function SchoolOverviewCharts() {
                         cx="50%"
                         cy="50%"
                         {...pieGeometry(classAssignmentData.length)}
-                        activeIndex={classPieIdx}
-                        activeShape={PremiumPieActiveShape}
-                        onMouseEnter={(_, i) => setClassPieIdx(i)}
-                        onMouseLeave={() => setClassPieIdx(undefined)}
+                        shape={PremiumPieActiveShape}
                       >
                         {classAssignmentData.map((_, i) => (
                           <Cell

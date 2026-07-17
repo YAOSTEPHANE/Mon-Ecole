@@ -7,7 +7,19 @@ import {
   classScopeWhere,
   accountingScopeWhere,
   studentScopeWhere,
+  brandingIdForSchool,
 } from '../utils/school-context.util';
+import { getAppBrandingDelegate } from '../utils/app-branding-prisma.util';
+import { toPublicBrandingShape } from '../utils/branding-assets.util';
+import {
+  emptyMoneyBucket,
+  finalizeMoneyBuckets,
+  GENDER_LABELS,
+  roundMoney,
+  studentDimFrom,
+  type GenderKey,
+  type MoneyBucket,
+} from '../utils/financial-breakdown.util';
 
 const router = express.Router();
 
@@ -1053,6 +1065,1028 @@ router.get('/reports/financial', async (req: SchoolContextRequest, res) => {
     });
   } catch (e) {
     console.error('GET /admin/reports/financial:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/**
+ * Statistiques élèves : genre, moyenne par classe, moyenne par niveau.
+ */
+router.get('/reports/student-stats', async (req: SchoolContextRequest, res) => {
+  try {
+    const { studentWhere, classWhere } = reportSchoolCtx(req);
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+    const period = typeof req.query.period === 'string' ? req.query.period.trim() : 'full';
+
+    const classes = await prisma.class.findMany({
+      where: {
+        ...classWhere,
+        ...(academicYear ? { academicYear } : {}),
+      },
+      select: { id: true, name: true, level: true, academicYear: true, capacity: true },
+      orderBy: [{ level: 'asc' }, { name: 'asc' }],
+    });
+    const classIds = classes.map((c) => c.id);
+    const classById = new Map(classes.map((c) => [c.id, c]));
+
+    const studentFilter: Prisma.StudentWhereInput = {
+      ...studentWhere,
+      isActive: true,
+      enrollmentStatus: 'ACTIVE',
+      archivedAt: null,
+      ...(academicYear
+        ? classIds.length > 0
+          ? { OR: [{ classId: { in: classIds } }, { classId: null }] }
+          : { classId: null }
+        : {}),
+    };
+
+    const students = await prisma.student.findMany({
+      where: studentFilter,
+      select: {
+        id: true,
+        gender: true,
+        classId: true,
+        stateAssignment: true,
+        class: { select: { id: true, name: true, level: true, academicYear: true } },
+      },
+    });
+
+    const genderCounts = { MALE: 0, FEMALE: 0, OTHER: 0 };
+    for (const s of students) {
+      if (s.gender === 'MALE') genderCounts.MALE += 1;
+      else if (s.gender === 'FEMALE') genderCounts.FEMALE += 1;
+      else genderCounts.OTHER += 1;
+    }
+    const genderTotal = students.length;
+    const gender = [
+      {
+        key: 'MALE',
+        label: 'Garçons',
+        count: genderCounts.MALE,
+        percent: genderTotal > 0 ? Math.round((genderCounts.MALE / genderTotal) * 1000) / 10 : 0,
+      },
+      {
+        key: 'FEMALE',
+        label: 'Filles',
+        count: genderCounts.FEMALE,
+        percent: genderTotal > 0 ? Math.round((genderCounts.FEMALE / genderTotal) * 1000) / 10 : 0,
+      },
+      {
+        key: 'OTHER',
+        label: 'Autre',
+        count: genderCounts.OTHER,
+        percent: genderTotal > 0 ? Math.round((genderCounts.OTHER / genderTotal) * 1000) / 10 : 0,
+      },
+    ].filter((g) => g.count > 0 || genderTotal === 0);
+
+    const genderByLevelMap = new Map<
+      string,
+      { level: string; male: number; female: number; other: number; total: number }
+    >();
+    for (const s of students) {
+      const level = s.class?.level ?? 'Sans niveau';
+      const row = genderByLevelMap.get(level) ?? {
+        level,
+        male: 0,
+        female: 0,
+        other: 0,
+        total: 0,
+      };
+      row.total += 1;
+      if (s.gender === 'MALE') row.male += 1;
+      else if (s.gender === 'FEMALE') row.female += 1;
+      else row.other += 1;
+      genderByLevelMap.set(level, row);
+    }
+    const genderByLevel = [...genderByLevelMap.values()].sort((a, b) =>
+      a.level.localeCompare(b.level, 'fr')
+    );
+
+    const courseWhere: Prisma.CourseWhereInput = {
+      class: {
+        ...classWhere,
+        ...(academicYear ? { academicYear } : {}),
+      },
+    };
+    const gradeWhere: Prisma.GradeWhereInput = {
+      course: courseWhere,
+      student: studentWhere,
+    };
+
+    let periodLabel = 'Toutes périodes';
+    if (academicYear) {
+      const range = getPeriodDateRange(period, academicYear);
+      if (range) {
+        gradeWhere.date = { gte: range.start, lte: range.end };
+        periodLabel = range.label;
+      }
+    }
+
+    const grades = await prisma.grade.findMany({
+      where: gradeWhere,
+      select: {
+        score: true,
+        maxScore: true,
+        coefficient: true,
+        studentId: true,
+        course: {
+          select: {
+            classId: true,
+            class: { select: { id: true, name: true, level: true, academicYear: true } },
+          },
+        },
+        student: {
+          select: {
+            classId: true,
+            stateAssignment: true,
+            class: { select: { id: true, name: true, level: true } },
+          },
+        },
+      },
+    });
+
+    const isStateAssigned = (raw: string | null | undefined) => raw === 'STATE_ASSIGNED';
+
+    type StudentMeta = {
+      classId: string | null;
+      className: string;
+      level: string;
+      assigned: boolean;
+    };
+
+    const studentMeta = new Map<string, StudentMeta>();
+    for (const s of students) {
+      studentMeta.set(s.id, {
+        classId: s.classId,
+        className: s.class?.name ?? 'Sans classe',
+        level: s.class?.level ?? 'Sans niveau',
+        assigned: isStateAssigned(s.stateAssignment),
+      });
+    }
+
+    /** Moyenne pondérée /20 par élève (à partir des notes filtrées). */
+    const studentGradeAgg = new Map<string, { sum: number; coef: number }>();
+    let globalSum = 0;
+    let globalCoef = 0;
+    let assignedSum = 0;
+    let assignedCoef = 0;
+    let notAssignedSum = 0;
+    let notAssignedCoef = 0;
+    const assignedStudentIds = new Set<string>();
+    const notAssignedStudentIds = new Set<string>();
+
+    type AvgBucket = {
+      id: string;
+      name: string;
+      level: string;
+      academicYear: string | null;
+      sum: number;
+      coef: number;
+      gradeCount: number;
+      studentIds: Set<string>;
+    };
+
+    const byClass = new Map<string, AvgBucket>();
+    const byLevel = new Map<string, AvgBucket>();
+
+    const emptyBucket = (
+      id: string,
+      name: string,
+      level: string,
+      academicYear: string | null
+    ): AvgBucket => ({
+      id,
+      name,
+      level,
+      academicYear,
+      sum: 0,
+      coef: 0,
+      gradeCount: 0,
+      studentIds: new Set<string>(),
+    });
+
+    for (const g of grades) {
+      const n20 = norm20(g.score, g.maxScore);
+      const weighted = n20 * g.coefficient;
+      globalSum += weighted;
+      globalCoef += g.coefficient;
+
+      const meta = studentMeta.get(g.studentId);
+      const cls = g.student?.class ?? g.course.class;
+      const classId = meta?.classId ?? g.student?.classId ?? g.course.classId;
+      const className =
+        meta?.className ?? cls?.name ?? classById.get(classId ?? '')?.name ?? 'Classe';
+      const level =
+        meta?.level ?? cls?.level ?? classById.get(classId ?? '')?.level ?? 'Sans niveau';
+      const year =
+        (classId && classById.get(classId)?.academicYear) ||
+        (cls && 'academicYear' in cls ? (cls.academicYear as string) : null);
+      const assigned = meta ? meta.assigned : isStateAssigned(g.student?.stateAssignment);
+
+      if (assigned) {
+        assignedSum += weighted;
+        assignedCoef += g.coefficient;
+        assignedStudentIds.add(g.studentId);
+      } else {
+        notAssignedSum += weighted;
+        notAssignedCoef += g.coefficient;
+        notAssignedStudentIds.add(g.studentId);
+      }
+
+      const sa = studentGradeAgg.get(g.studentId) ?? { sum: 0, coef: 0 };
+      sa.sum += weighted;
+      sa.coef += g.coefficient;
+      studentGradeAgg.set(g.studentId, sa);
+
+      if (classId) {
+        const cb = byClass.get(classId) ?? emptyBucket(classId, className, level, year);
+        cb.sum += weighted;
+        cb.coef += g.coefficient;
+        cb.gradeCount += 1;
+        cb.studentIds.add(g.studentId);
+        byClass.set(classId, cb);
+      }
+
+      const lb = byLevel.get(level) ?? emptyBucket(level, level, level, year);
+      lb.sum += weighted;
+      lb.coef += g.coefficient;
+      lb.gradeCount += 1;
+      lb.studentIds.add(g.studentId);
+      byLevel.set(level, lb);
+    }
+
+    const mapAvg = (b: AvgBucket) => ({
+      id: b.id,
+      name: b.name,
+      level: b.level,
+      academicYear: b.academicYear,
+      average20: b.coef > 0 ? Math.round((b.sum / b.coef) * 100) / 100 : null,
+      gradeCount: b.gradeCount,
+      studentsWithGrades: b.studentIds.size,
+    });
+
+    const averagesByClass = [...byClass.values()]
+      .map(mapAvg)
+      .sort((a, b) => (b.average20 ?? 0) - (a.average20 ?? 0));
+
+    const averagesByLevel = [...byLevel.values()]
+      .map(mapAvg)
+      .sort((a, b) => a.level.localeCompare(b.level, 'fr'));
+
+    type StudentAvg = {
+      studentId: string;
+      average20: number;
+      classId: string | null;
+      className: string;
+      level: string;
+      assigned: boolean;
+    };
+
+    const studentAverages: StudentAvg[] = [];
+    for (const [studentId, agg] of studentGradeAgg) {
+      if (agg.coef <= 0) continue;
+      const meta = studentMeta.get(studentId);
+      studentAverages.push({
+        studentId,
+        average20: Math.round((agg.sum / agg.coef) * 100) / 100,
+        classId: meta?.classId ?? null,
+        className: meta?.className ?? 'Sans classe',
+        level: meta?.level ?? 'Sans niveau',
+        assigned: meta?.assigned ?? false,
+      });
+    }
+
+    type RecapAcc = {
+      id: string;
+      name: string;
+      level: string;
+      effectifTotal: number;
+      effectifAssigned: number;
+      effectifNotAssigned: number;
+      above10: number;
+      mid85: number;
+      below85: number;
+      graded: number;
+      avgSum: number;
+      avgCount: number;
+    };
+
+    const pct = (n: number, den: number) =>
+      den > 0 ? Math.round((n / den) * 1000) / 10 : 0;
+
+    const finishRecap = (acc: RecapAcc) => {
+      const graded = acc.graded;
+      return {
+        id: acc.id,
+        name: acc.name,
+        level: acc.level,
+        effectifTotal: acc.effectifTotal,
+        effectifAssigned: acc.effectifAssigned,
+        effectifNotAssigned: acc.effectifNotAssigned,
+        above10Count: acc.above10,
+        above10Percent: pct(acc.above10, graded),
+        mid85Count: acc.mid85,
+        mid85Percent: pct(acc.mid85, graded),
+        below85Count: acc.below85,
+        below85Percent: pct(acc.below85, graded),
+        studentsWithGrades: graded,
+        average20:
+          acc.avgCount > 0
+            ? Math.round((acc.avgSum / acc.avgCount) * 100) / 100
+            : null,
+      };
+    };
+
+    const ensureRecap = (
+      map: Map<string, RecapAcc>,
+      id: string,
+      name: string,
+      level: string
+    ) => {
+      let row = map.get(id);
+      if (!row) {
+        row = {
+          id,
+          name,
+          level,
+          effectifTotal: 0,
+          effectifAssigned: 0,
+          effectifNotAssigned: 0,
+          above10: 0,
+          mid85: 0,
+          below85: 0,
+          graded: 0,
+          avgSum: 0,
+          avgCount: 0,
+        };
+        map.set(id, row);
+      }
+      return row;
+    };
+
+    const recapByClassMap = new Map<string, RecapAcc>();
+    const recapByLevelMap = new Map<string, RecapAcc>();
+
+    for (const c of classes) {
+      ensureRecap(recapByClassMap, c.id, c.name, c.level);
+      ensureRecap(recapByLevelMap, c.level, c.level, c.level);
+    }
+    ensureRecap(recapByLevelMap, 'Sans niveau', 'Sans niveau', 'Sans niveau');
+
+    for (const s of students) {
+      const assigned = isStateAssigned(s.stateAssignment);
+      const level = s.class?.level ?? 'Sans niveau';
+      const levelRow = ensureRecap(recapByLevelMap, level, level, level);
+      levelRow.effectifTotal += 1;
+      if (assigned) levelRow.effectifAssigned += 1;
+      else levelRow.effectifNotAssigned += 1;
+
+      if (s.classId) {
+        const classRow = ensureRecap(
+          recapByClassMap,
+          s.classId,
+          s.class?.name ?? 'Classe',
+          level
+        );
+        classRow.effectifTotal += 1;
+        if (assigned) classRow.effectifAssigned += 1;
+        else classRow.effectifNotAssigned += 1;
+      }
+    }
+
+    for (const sa of studentAverages) {
+      const band =
+        sa.average20 >= 10 ? 'above' : sa.average20 >= 8.5 ? 'mid' : 'below';
+
+      const applyBand = (row: RecapAcc) => {
+        row.graded += 1;
+        row.avgSum += sa.average20;
+        row.avgCount += 1;
+        if (band === 'above') row.above10 += 1;
+        else if (band === 'mid') row.mid85 += 1;
+        else row.below85 += 1;
+      };
+
+      applyBand(ensureRecap(recapByLevelMap, sa.level, sa.level, sa.level));
+      if (sa.classId) {
+        applyBand(ensureRecap(recapByClassMap, sa.classId, sa.className, sa.level));
+      }
+    }
+
+    const recapByLevel = [...recapByLevelMap.values()]
+      .filter((r) => r.effectifTotal > 0 || r.graded > 0)
+      .map(finishRecap)
+      .sort((a, b) => a.level.localeCompare(b.level, 'fr'));
+
+    const recapByClass = [...recapByClassMap.values()]
+      .filter((r) => r.effectifTotal > 0 || r.graded > 0)
+      .map(finishRecap)
+      .sort((a, b) => a.level.localeCompare(b.level, 'fr') || a.name.localeCompare(b.name, 'fr'));
+
+    let headcountAssigned = 0;
+    let headcountNotAssigned = 0;
+    for (const s of students) {
+      if (isStateAssigned(s.stateAssignment)) headcountAssigned += 1;
+      else headcountNotAssigned += 1;
+    }
+
+    const headcountByClass = classes.map((c) => {
+      const inClass = students.filter((s) => s.classId === c.id);
+      const assigned = inClass.filter((s) => isStateAssigned(s.stateAssignment)).length;
+      const notAssigned = inClass.length - assigned;
+      return {
+        classId: c.id,
+        className: c.name,
+        level: c.level,
+        academicYear: c.academicYear,
+        students: inClass.length,
+        stateAssigned: assigned,
+        notStateAssigned: notAssigned,
+        capacity: c.capacity,
+        fillRate:
+          c.capacity > 0 ? Math.round((inClass.length / c.capacity) * 1000) / 10 : null,
+      };
+    });
+
+    const roundAvg = (sum: number, coef: number) =>
+      coef > 0 ? Math.round((sum / coef) * 100) / 100 : null;
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      academicYear: academicYear || null,
+      period,
+      periodLabel,
+      summary: {
+        studentsActive: genderTotal,
+        gradesCount: grades.length,
+        globalAverage20: roundAvg(globalSum, globalCoef),
+        stateAssignedCount: headcountAssigned,
+        notStateAssignedCount: headcountNotAssigned,
+        stateAssignedAverage20: roundAvg(assignedSum, assignedCoef),
+        notStateAssignedAverage20: roundAvg(notAssignedSum, notAssignedCoef),
+        stateAssignedStudentsWithGrades: assignedStudentIds.size,
+        notStateAssignedStudentsWithGrades: notAssignedStudentIds.size,
+      },
+      gender,
+      genderByLevel,
+      averagesByClass,
+      averagesByLevel,
+      recapByLevel,
+      recapByClass,
+      headcountByClass,
+    });
+  } catch (e) {
+    console.error('GET /admin/reports/student-stats:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/**
+ * Rapport MENA / DESPS : fiche établissement, effectifs (classe × sexe),
+ * élèves affectés de l’État, complétude FNE — exportable pour remontées officielles.
+ */
+router.get('/reports/mena', async (req: SchoolContextRequest, res) => {
+  try {
+    const { schoolId, isDefault, studentWhere, classWhere } = reportSchoolCtx(req);
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+
+    const brandingDelegate = getAppBrandingDelegate();
+    let brandingRow: Record<string, unknown> | null = null;
+    if (brandingDelegate) {
+      const brandingId = await brandingIdForSchool(schoolId);
+      brandingRow = (await brandingDelegate.findUnique({ where: { id: brandingId } })) as Record<
+        string,
+        unknown
+      > | null;
+    }
+
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: {
+        id: true,
+        name: true,
+        shortName: true,
+        address: true,
+        phone: true,
+        email: true,
+        website: true,
+        principalName: true,
+        slug: true,
+        isDefault: true,
+      },
+    });
+
+    const classes = await prisma.class.findMany({
+      where: {
+        ...classWhere,
+        ...(academicYear ? { academicYear } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        level: true,
+        capacity: true,
+        academicYear: true,
+        room: true,
+      },
+      orderBy: [{ level: 'asc' }, { name: 'asc' }],
+    });
+
+    const classIds = classes.map((c) => c.id);
+    const studentYearFilter: Prisma.StudentWhereInput =
+      academicYear.length > 0
+        ? classIds.length > 0
+          ? { OR: [{ classId: { in: classIds } }, { classId: null }] }
+          : { classId: null }
+        : {};
+
+    const students = await prisma.student.findMany({
+      where: {
+        ...studentWhere,
+        isActive: true,
+        enrollmentStatus: 'ACTIVE',
+        archivedAt: null,
+        ...studentYearFilter,
+      },
+      select: {
+        id: true,
+        studentId: true,
+        nationalMatricule: true,
+        stateAssignment: true,
+        gender: true,
+        dateOfBirth: true,
+        birthPlace: true,
+        isRepeating: true,
+        classId: true,
+        enrollmentDate: true,
+        user: { select: { firstName: true, lastName: true } },
+        class: { select: { id: true, name: true, level: true, academicYear: true } },
+      },
+    });
+
+    const scopedStudents = students;
+
+    type EffRow = {
+      classId: string | null;
+      className: string;
+      level: string;
+      academicYear: string;
+      capacity: number | null;
+      male: number;
+      female: number;
+      other: number;
+      total: number;
+      stateAssigned: number;
+      withFne: number;
+      withoutFne: number;
+    };
+
+    const byClass = new Map<string, EffRow>();
+    for (const cls of classes) {
+      byClass.set(cls.id, {
+        classId: cls.id,
+        className: cls.name,
+        level: cls.level,
+        academicYear: cls.academicYear,
+        capacity: cls.capacity,
+        male: 0,
+        female: 0,
+        other: 0,
+        total: 0,
+        stateAssigned: 0,
+        withFne: 0,
+        withoutFne: 0,
+      });
+    }
+    const unassigned: EffRow = {
+      classId: null,
+      className: 'Sans classe',
+      level: '—',
+      academicYear: academicYear || '—',
+      capacity: null,
+      male: 0,
+      female: 0,
+      other: 0,
+      total: 0,
+      stateAssigned: 0,
+      withFne: 0,
+      withoutFne: 0,
+    };
+
+    const byLevel = new Map<
+      string,
+      { level: string; male: number; female: number; other: number; total: number; stateAssigned: number }
+    >();
+
+    const stateAssignedList: Array<{
+      id: string;
+      studentId: string;
+      nationalMatricule: string | null;
+      firstName: string;
+      lastName: string;
+      gender: string;
+      dateOfBirth: string;
+      birthPlace: string | null;
+      className: string | null;
+      level: string | null;
+      isRepeating: boolean;
+    }> = [];
+
+    let missingFne = 0;
+    let missingBirthPlace = 0;
+    let withFne = 0;
+    let stateAssignedCount = 0;
+
+    for (const s of scopedStudents) {
+      const bucket = s.classId && byClass.has(s.classId) ? byClass.get(s.classId)! : unassigned;
+      bucket.total += 1;
+      if (s.gender === 'MALE') bucket.male += 1;
+      else if (s.gender === 'FEMALE') bucket.female += 1;
+      else bucket.other += 1;
+
+      const hasFne = Boolean(s.nationalMatricule?.trim());
+      if (hasFne) {
+        withFne += 1;
+        bucket.withFne += 1;
+      } else {
+        missingFne += 1;
+        bucket.withoutFne += 1;
+      }
+      if (!s.birthPlace?.trim()) missingBirthPlace += 1;
+
+      const isState = s.stateAssignment === 'STATE_ASSIGNED';
+      if (isState) {
+        stateAssignedCount += 1;
+        bucket.stateAssigned += 1;
+        stateAssignedList.push({
+          id: s.id,
+          studentId: s.studentId,
+          nationalMatricule: s.nationalMatricule,
+          firstName: s.user.firstName,
+          lastName: s.user.lastName,
+          gender: s.gender,
+          dateOfBirth: s.dateOfBirth.toISOString().slice(0, 10),
+          birthPlace: s.birthPlace,
+          className: s.class?.name ?? null,
+          level: s.class?.level ?? null,
+          isRepeating: s.isRepeating,
+        });
+      }
+
+      const levelKey = s.class?.level ?? 'Sans niveau';
+      const lvl = byLevel.get(levelKey) ?? {
+        level: levelKey,
+        male: 0,
+        female: 0,
+        other: 0,
+        total: 0,
+        stateAssigned: 0,
+      };
+      lvl.total += 1;
+      if (s.gender === 'MALE') lvl.male += 1;
+      else if (s.gender === 'FEMALE') lvl.female += 1;
+      else lvl.other += 1;
+      if (isState) lvl.stateAssigned += 1;
+      byLevel.set(levelKey, lvl);
+    }
+
+    const effectifsByClass = [...byClass.values(), ...(unassigned.total > 0 ? [unassigned] : [])];
+    const effectifsByLevel = [...byLevel.values()].sort((a, b) => a.level.localeCompare(b.level, 'fr'));
+
+    const brandingPublic = brandingRow
+      ? toPublicBrandingShape(brandingRow as Parameters<typeof toPublicBrandingShape>[0])
+      : null;
+
+    const fiche = {
+      schoolId,
+      name:
+        (brandingPublic?.schoolDisplayName as string | null | undefined)?.trim() ||
+        school?.name ||
+        null,
+      shortName: school?.shortName ?? null,
+      code: brandingPublic?.schoolCode ?? null,
+      drena: brandingPublic?.schoolDrena ?? null,
+      iepp: brandingPublic?.schoolIepp ?? null,
+      status: brandingPublic?.schoolStatus ?? null,
+      milieu: brandingPublic?.schoolMilieu ?? null,
+      region: brandingPublic?.schoolRegion ?? null,
+      classroomCount: brandingPublic?.classroomCount ?? null,
+      address: brandingPublic?.schoolAddress || school?.address || null,
+      phone: brandingPublic?.schoolPhone || school?.phone || null,
+      email: brandingPublic?.schoolEmail || school?.email || null,
+      website: brandingPublic?.schoolWebsite || school?.website || null,
+      principal:
+        brandingPublic?.schoolPrincipal || school?.principalName || null,
+      classesOpen: classes.length,
+      capacityTotal: classes.reduce((sum, c) => sum + (c.capacity || 0), 0),
+    };
+
+    const completeness = {
+      activeStudents: scopedStudents.length,
+      withNationalMatricule: withFne,
+      missingNationalMatricule: missingFne,
+      missingBirthPlace,
+      stateAssigned: stateAssignedCount,
+      fneCoveragePercent:
+        scopedStudents.length > 0
+          ? Math.round((withFne / scopedStudents.length) * 1000) / 10
+          : 0,
+      ficheGaps: [
+        !fiche.code ? 'code MENA' : null,
+        !fiche.drena ? 'DRENA' : null,
+        !fiche.iepp ? 'IEPP / antenne' : null,
+        !fiche.status ? 'statut (public/privé)' : null,
+        !fiche.milieu ? 'milieu (urbain/rural)' : null,
+        fiche.classroomCount == null ? 'nombre de salles' : null,
+      ].filter(Boolean) as string[],
+    };
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      academicYear: academicYear || null,
+      filters: {
+        scopeNote: academicYear
+          ? `Élèves actifs de l’année ${academicYear} (classes de cette année + sans classe).`
+          : 'Tous les élèves actifs de l’établissement (toutes années).',
+        isDefaultSchool: isDefault,
+      },
+      fiche,
+      effectifsByClass,
+      effectifsByLevel,
+      stateAssignedStudents: stateAssignedList.sort((a, b) =>
+        `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, 'fr')
+      ),
+      completeness,
+    });
+  } catch (e) {
+    console.error('GET /admin/reports/mena:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/**
+ * Service financier : paiements et impayés ventilés par classe, niveau et genre (+ point dépenses).
+ */
+router.get('/reports/financial/breakdown', async (req: SchoolContextRequest, res) => {
+  try {
+    const { studentWhere, accountingWhere } = reportSchoolCtx(req);
+    const academicYear = typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+    const fromQ = typeof req.query.from === 'string' ? req.query.from.trim() : '';
+    const toQ = typeof req.query.to === 'string' ? req.query.to.trim() : '';
+    const now = new Date();
+
+    let rangeStart: Date | null = null;
+    let rangeEnd: Date | null = null;
+    if (fromQ && toQ) {
+      rangeStart = new Date(fromQ);
+      rangeEnd = new Date(toQ);
+      if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) {
+        return res.status(400).json({ error: 'Paramètres from / to invalides (ISO date)' });
+      }
+    } else if (academicYear) {
+      const r = academicYearToSchoolRange(academicYear);
+      if (!r) {
+        return res.status(400).json({ error: 'academicYear invalide (ex. 2024-2025)' });
+      }
+      rangeStart = r.start;
+      rangeEnd = r.end;
+    }
+
+    const tuitionYearFilter = academicYear
+      ? { academicYear, student: studentWhere }
+      : { student: studentWhere };
+
+    const paymentWhere: Prisma.PaymentWhereInput = {
+      status: 'COMPLETED',
+      student: studentWhere,
+      ...(academicYear ? { tuitionFee: { academicYear } } : {}),
+      ...(rangeStart && rangeEnd
+        ? { paidAt: { gte: rangeStart, lte: rangeEnd } }
+        : {}),
+    };
+
+    const [payments, unpaidFees, expenseByCategory, expenseTotal] = await Promise.all([
+      prisma.payment.findMany({
+        where: paymentWhere,
+        select: {
+          amount: true,
+          paidAt: true,
+          studentId: true,
+          student: {
+            select: {
+              gender: true,
+              classId: true,
+              class: { select: { id: true, name: true, level: true } },
+            },
+          },
+        },
+      }),
+      prisma.tuitionFee.findMany({
+        where: { isPaid: false, ...tuitionYearFilter },
+        select: {
+          amount: true,
+          dueDate: true,
+          studentId: true,
+          student: {
+            select: {
+              gender: true,
+              classId: true,
+              class: { select: { id: true, name: true, level: true } },
+            },
+          },
+          payments: {
+            where: { status: 'COMPLETED' },
+            select: { amount: true },
+          },
+        },
+      }),
+      prisma.schoolExpense.groupBy({
+        by: ['category'],
+        where: {
+          ...accountingWhere,
+          ...(rangeStart && rangeEnd
+            ? { expenseDate: { gte: rangeStart, lte: rangeEnd } }
+            : {}),
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      prisma.schoolExpense.aggregate({
+        where: {
+          ...accountingWhere,
+          ...(rangeStart && rangeEnd
+            ? { expenseDate: { gte: rangeStart, lte: rangeEnd } }
+            : {}),
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+    ]);
+
+    const byClass = new Map<string, MoneyBucket>();
+    const byLevel = new Map<string, MoneyBucket>();
+    const byGender = new Map<GenderKey, MoneyBucket>();
+    for (const g of Object.keys(GENDER_LABELS) as GenderKey[]) {
+      byGender.set(g, emptyMoneyBucket(g, GENDER_LABELS[g]));
+    }
+
+    const paidStudentIds = new Set<string>();
+    const unpaidStudentIds = new Set<string>();
+    let paidTotal = 0;
+    let unpaidTotal = 0;
+    let overdueTotal = 0;
+    let unpaidCount = 0;
+    let overdueCount = 0;
+
+    const touch = (dim: ReturnType<typeof studentDimFrom>, kind: 'paid' | 'unpaid', amount: number, overdue: boolean) => {
+      const classKey = dim.classId ?? 'none';
+      const classBucket =
+        byClass.get(classKey) ?? emptyMoneyBucket(classKey, dim.className, dim.level);
+      const levelBucket = byLevel.get(dim.level) ?? emptyMoneyBucket(dim.level, dim.level, dim.level);
+      const genderBucket =
+        byGender.get(dim.gender) ?? emptyMoneyBucket(dim.gender, GENDER_LABELS[dim.gender]);
+
+      if (kind === 'paid') {
+        classBucket.paidAmount += amount;
+        classBucket.paidCount += 1;
+        levelBucket.paidAmount += amount;
+        levelBucket.paidCount += 1;
+        genderBucket.paidAmount += amount;
+        genderBucket.paidCount += 1;
+      } else {
+        classBucket.unpaidAmount += amount;
+        classBucket.unpaidCount += 1;
+        levelBucket.unpaidAmount += amount;
+        levelBucket.unpaidCount += 1;
+        genderBucket.unpaidAmount += amount;
+        genderBucket.unpaidCount += 1;
+        if (overdue) {
+          classBucket.overdueAmount += amount;
+          classBucket.overdueCount += 1;
+          levelBucket.overdueAmount += amount;
+          levelBucket.overdueCount += 1;
+          genderBucket.overdueAmount += amount;
+          genderBucket.overdueCount += 1;
+        }
+      }
+
+      byClass.set(classKey, classBucket);
+      byLevel.set(dim.level, levelBucket);
+      byGender.set(dim.gender, genderBucket);
+    };
+
+    for (const p of payments) {
+      const dim = studentDimFrom(p.student);
+      paidTotal += p.amount;
+      paidStudentIds.add(p.studentId);
+      touch(dim, 'paid', p.amount, false);
+    }
+
+    for (const fee of unpaidFees) {
+      const paidOnFee = fee.payments.reduce((s, x) => s + x.amount, 0);
+      const remaining = Math.max(0, fee.amount - paidOnFee);
+      if (remaining <= 0) continue;
+      const dim = studentDimFrom(fee.student);
+      const overdue = fee.dueDate < now;
+      unpaidTotal += remaining;
+      unpaidCount += 1;
+      unpaidStudentIds.add(fee.studentId);
+      if (overdue) {
+        overdueTotal += remaining;
+        overdueCount += 1;
+      }
+      touch(dim, 'unpaid', remaining, overdue);
+    }
+
+    // Compteurs élèves distincts par bucket (2e passe légère)
+    const paidByClassStudents = new Map<string, Set<string>>();
+    const unpaidByClassStudents = new Map<string, Set<string>>();
+    const paidByLevelStudents = new Map<string, Set<string>>();
+    const unpaidByLevelStudents = new Map<string, Set<string>>();
+    const paidByGenderStudents = new Map<GenderKey, Set<string>>();
+    const unpaidByGenderStudents = new Map<GenderKey, Set<string>>();
+
+    for (const p of payments) {
+      const dim = studentDimFrom(p.student);
+      const ck = dim.classId ?? 'none';
+      if (!paidByClassStudents.has(ck)) paidByClassStudents.set(ck, new Set());
+      paidByClassStudents.get(ck)!.add(p.studentId);
+      if (!paidByLevelStudents.has(dim.level)) paidByLevelStudents.set(dim.level, new Set());
+      paidByLevelStudents.get(dim.level)!.add(p.studentId);
+      if (!paidByGenderStudents.has(dim.gender)) paidByGenderStudents.set(dim.gender, new Set());
+      paidByGenderStudents.get(dim.gender)!.add(p.studentId);
+    }
+    for (const fee of unpaidFees) {
+      const paidOnFee = fee.payments.reduce((s, x) => s + x.amount, 0);
+      if (fee.amount - paidOnFee <= 0) continue;
+      const dim = studentDimFrom(fee.student);
+      const ck = dim.classId ?? 'none';
+      if (!unpaidByClassStudents.has(ck)) unpaidByClassStudents.set(ck, new Set());
+      unpaidByClassStudents.get(ck)!.add(fee.studentId);
+      if (!unpaidByLevelStudents.has(dim.level)) unpaidByLevelStudents.set(dim.level, new Set());
+      unpaidByLevelStudents.get(dim.level)!.add(fee.studentId);
+      if (!unpaidByGenderStudents.has(dim.gender)) unpaidByGenderStudents.set(dim.gender, new Set());
+      unpaidByGenderStudents.get(dim.gender)!.add(fee.studentId);
+    }
+
+    for (const [k, b] of byClass) {
+      b.studentsPaid = paidByClassStudents.get(k)?.size ?? 0;
+      b.studentsUnpaid = unpaidByClassStudents.get(k)?.size ?? 0;
+    }
+    for (const [k, b] of byLevel) {
+      b.studentsPaid = paidByLevelStudents.get(k)?.size ?? 0;
+      b.studentsUnpaid = unpaidByLevelStudents.get(k)?.size ?? 0;
+    }
+    for (const [k, b] of byGender) {
+      b.studentsPaid = paidByGenderStudents.get(k)?.size ?? 0;
+      b.studentsUnpaid = unpaidByGenderStudents.get(k)?.size ?? 0;
+    }
+
+    const expensesRows = expenseByCategory.map((r) => ({
+      category: r.category,
+      count: gbCount(r),
+      totalAmount: roundMoney(r._sum.amount ?? 0),
+    }));
+
+    res.json({
+      filters: {
+        academicYear: academicYear || null,
+        dateFrom: rangeStart?.toISOString() ?? null,
+        dateTo: rangeEnd?.toISOString() ?? null,
+        note: academicYear
+          ? 'Paiements complétés et impayés filtrés sur l’année scolaire ; dépenses sur la fenêtre année.'
+          : fromQ && toQ
+            ? 'Paiements / dépenses sur la fenêtre from–to ; impayés = solde non soldé (année non filtrée).'
+            : 'Sans filtre : tous les paiements complétés et impayés de l’établissement ; dépenses toutes dates.',
+      },
+      overview: {
+        paidAmount: roundMoney(paidTotal),
+        paidCount: payments.length,
+        studentsWithPayments: paidStudentIds.size,
+        unpaidAmount: roundMoney(unpaidTotal),
+        unpaidCount,
+        studentsWithUnpaid: unpaidStudentIds.size,
+        overdueAmount: roundMoney(overdueTotal),
+        overdueCount,
+        expensesAmount: roundMoney(expenseTotal._sum.amount ?? 0),
+        expensesCount: expenseTotal._count,
+        netEncaissementsMoinsDepenses: roundMoney(paidTotal - (expenseTotal._sum.amount ?? 0)),
+      },
+      paymentsAndUnpaid: {
+        byClass: finalizeMoneyBuckets(byClass),
+        byLevel: finalizeMoneyBuckets(byLevel),
+        byGender: finalizeMoneyBuckets(byGender).filter(
+          (b) => b.paidCount > 0 || b.unpaidCount > 0 || b.key !== 'UNKNOWN'
+        ),
+      },
+      expensesByCategory: expensesRows,
+      genderLabels: GENDER_LABELS,
+    });
+  } catch (e) {
+    console.error('GET /admin/reports/financial/breakdown:', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });

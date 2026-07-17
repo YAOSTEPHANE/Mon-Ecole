@@ -86,6 +86,15 @@ enum EvaluationType {
   LEVEL_HOMEWORK
   CLASS_HOMEWORK
   ORAL
+  /// Examen blanc (BEPC / BAC / préparatoire)
+  MOCK_EXAM
+}
+
+/// Type d’examen blanc (orientation officielle)
+enum MockExamKind {
+  BEPC
+  BAC
+  OTHER
 }
 
 enum PaymentStatus {
@@ -338,7 +347,14 @@ model User {
   twoFactorSettings               UserTwoFactorSettings?
   adminWorkspaceMemberships         AdminWorkspaceMember[]
   schoolMemberships               SchoolMember[]
+  /// SSO : google | microsoft (null = compte classique e-mail/mot de passe)
+  oauthProvider                   String?
+  /// Identifiant stable chez le fournisseur OAuth
+  oauthSubject                    String?
+  /// Clé lookup : `{provider}:{subject}` (unicité garantie côté app ; pas d’index unique MongoDB sparse)
+  oauthKey                        String?
 
+  @@index([oauthKey])
   @@map("users")
 }
 
@@ -794,6 +810,7 @@ model Teacher {
   elearningCourses          ElearningCourse[]
   pedagogicalResources      PedagogicalResourceBank[]
   virtualClassSessions      VirtualClassSession[]
+  mockExams                 MockExam[]
 
   @@index([nfcId])
   @@index([biometricId])
@@ -955,6 +972,8 @@ model Student {
   medicalInfo     String?
   allergies       String?
   specialNeeds    String?
+  /// Matricule national FNE (Fichier National des Élèves — MENA)
+  nationalMatricule String?
   /// Identifiant opaque pour la carte étudiant (QR / lien public)
   digitalCardPublicId String? @unique
   archivedAt      DateTime?
@@ -988,6 +1007,8 @@ model Student {
   pickupAuthorizations StudentPickupAuthorization[]
   disciplinaryRecords StudentDisciplinaryRecord[]
   extracurricularRegistrations ExtracurricularRegistration[]
+  canteenSubscriptions          CanteenSubscription[]
+  transportSubscriptions        TransportSubscription[]
   orientationFollowUps        StudentOrientationFollowUp[]
   orientationPlacements       StudentOrientationPlacement[]
   staffModuleRecords          StaffModuleRecord[]
@@ -1001,10 +1022,15 @@ model Student {
   elearningQuizAttempts       ElearningQuizAttempt[]
   elearningLessonProgress     ElearningLessonProgress[]
   subjectOptions              StudentSubjectOption[]
+  promotionDecisions          StudentPromotionDecision[]
+  gamificationPoints          StudentGamificationEvent[]
+  mockExamAttempts            MockExamAttempt[]
 
   @@index([nfcId])
   @@index([biometricId])
   @@index([schoolId])
+  @@index([nationalMatricule])
+  @@index([stateAssignment])
   @@map("students")
 }
 
@@ -1214,6 +1240,8 @@ model StaffAttendance {
   notes              String?
   checkInAt          DateTime?
   checkOutAt         DateTime?
+  /// Minutes travaillées (saisie ou calculées depuis entrée/sortie)
+  workedMinutes      Int?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -1488,6 +1516,7 @@ model Class {
   extracurricularOfferings ExtracurricularOffering[]
   elearningCourses ElearningCourse[]
   virtualClassSessions VirtualClassSession[]
+  mockExams       MockExam[]
   trackId     String?      @db.ObjectId
   track       SchoolTrack? @relation(fields: [trackId], references: [id], onDelete: SetNull)
   educatorAssignments EducatorClassAssignment[]
@@ -1517,6 +1546,7 @@ model Course {
   absences    Absence[]
   elearningCourses ElearningCourse[]
   virtualClassSessions VirtualClassSession[]
+  mockExams   MockExam[]
 
   @@map("courses")
 }
@@ -1746,6 +1776,54 @@ model ReportCardTemplate {
 
   @@index([isDefault])
   @@map("report_card_templates")
+}
+
+/// Décision de passage / redoublement après calcul des moyennes (ex. 3ᵉ trimestre).
+enum PromotionDecisionKind {
+  ADMIS
+  DOUBLANT
+}
+
+model StudentPromotionDecision {
+  id            String                @id @default(auto()) @map("_id") @db.ObjectId
+  studentId     String                @db.ObjectId
+  classId       String?               @db.ObjectId
+  academicYear  String
+  period        String                @default("trim3")
+  average       Float
+  rankInClass   Int?
+  decision      PromotionDecisionKind
+  threshold     Float                 @default(10)
+  declaredById  String?               @db.ObjectId
+  notes         String?
+  declaredAt    DateTime              @default(now())
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, academicYear, period])
+  @@index([academicYear, period, decision])
+  @@index([classId, academicYear])
+  @@map("student_promotion_decisions")
+}
+
+/// Points / badges de gamification élève
+model StudentGamificationEvent {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId   String   @db.ObjectId
+  kind        String   // GRADE | ASSIGNMENT | ATTENDANCE | BADGE
+  points      Int      @default(0)
+  badgeCode   String?
+  label       String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@index([kind])
+  @@map("student_gamification_events")
 }
 
 model ClassCouncilSession {
@@ -2299,6 +2377,10 @@ model Payment {
   status          PaymentStatus @default(PENDING)
   transactionId   String?       // ID de transaction du processeur de paiement
   paymentReference String?      // Référence de paiement unique
+  /// Fournisseur : WAVE | ORANGE_MONEY | MTN_MOMO | CINETPAY | PAYSTACK | SANDBOX
+  paymentProvider String?
+  /// URL de redirection checkout (carte / agrégateur)
+  checkoutUrl     String?
   receiptUrl      String?       // URL du reçu de paiement
   notes           String?       // Notes additionnelles
   paidAt          DateTime?     // Date de paiement effectif
@@ -2309,6 +2391,7 @@ model Payment {
   student         Student       @relation(fields: [studentId], references: [id])
   payer           User          @relation(fields: [payerId], references: [id])
 
+  @@index([paymentProvider, status])
   @@map("payments")
 }
 
@@ -2425,6 +2508,21 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+/// Code opaque, court et à usage unique échangé contre une session après OAuth.
+model OAuthExchangeCode {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  codeHash  String    @unique
+  userId    String    @db.ObjectId
+  provider  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("oauth_exchange_codes")
+}
+
 /// Demande d'inscription / pré-admission (dossier candidat)
 model Admission {
   id               String          @id @default(auto()) @map("_id") @db.ObjectId
@@ -2514,10 +2612,39 @@ model School {
   healthCampaigns HealthCampaign[]
   workspaces      AdminWorkspace[]
   branding        AppBranding?
+  menaTransmissions MenaTransmission[]
 
   @@index([isActive])
   @@index([isDefault])
   @@map("schools")
+}
+
+/// Historique des dossiers élèves préparés / envoyés vers le MENA (DESPS / SIGE / FNE).
+model MenaTransmission {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String   @db.ObjectId
+  academicYear     String?
+  status           String
+  /// EXPORT | WEBHOOK | BOTH
+  channel          String
+  studentCount     Int      @default(0)
+  packageChecksum  String?
+  /// Résumé (pas forcément le payload complet si très volumineux)
+  summary          Json?
+  /// Payload complet du dossier (JSON)
+  payload          Json?
+  errorMessage     String?
+  webhookUrlMasked String?
+  webhookHttpStatus Int?
+  createdByUserId  String?  @db.ObjectId
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, createdAt])
+  @@index([schoolId, status])
+  @@map("mena_transmissions")
 }
 
 /// Métier du personnel de soutien (STAFF) configuré par établissement — les admins restent globaux (AdminWorkspace).
@@ -2669,6 +2796,15 @@ model AppBranding {
   schoolWebsite     String?
   schoolPrincipal   String?
   schoolCode        String?
+  /// Fiche administrative MENA (rapports / remontées DESPS)
+  schoolDrena       String?
+  schoolIepp        String?
+  /// PUBLIC | PRIVATE | COMMUNITY
+  schoolStatus      String?
+  /// URBAN | RURAL
+  schoolMilieu      String?
+  schoolRegion      String?
+  classroomCount    Int?
   /// Portrait affiché sur la page d’accueil (section « Mot de la Directrice des Études »)
   studiesDirectorPhotoUrl String?
   /// Texte de la section « Mot de la Directrice » (page d’accueil publique)
@@ -2950,5 +3086,197 @@ model VirtualClassSession {
   @@index([scheduledStart])
   @@index([status])
   @@map("virtual_class_sessions")
+}
+
+// ========== CANTINE & TRANSPORT (services campus) ==========
+
+enum CampusSubscriptionStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  WAITLIST
+}
+
+/// Formule / forfait cantine (menus, tarifs, capacité)
+model CanteenMealPlan {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String?
+  academicYear  String
+  /// Montant mensuel ou forfait période (FCFA)
+  priceAmount   Float    @default(0)
+  /// Ex. LUN,MAR,MER,JEU,VEN
+  weekdays      String[] @default([])
+  menuNotes     String?
+  maxSubscribers Int?
+  isPublished   Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  schoolId      String?  @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions CanteenSubscription[]
+
+  @@index([academicYear, isPublished, isActive])
+  @@index([schoolId])
+  @@map("canteen_meal_plans")
+}
+
+model CanteenSubscription {
+  id           String                   @id @default(auto()) @map("_id") @db.ObjectId
+  planId       String                   @db.ObjectId
+  studentId    String                   @db.ObjectId
+  status       CampusSubscriptionStatus @default(ACTIVE)
+  startDate    String?
+  endDate      String?
+  notes        String?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  plan    CanteenMealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  student Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, studentId])
+  @@index([studentId])
+  @@map("canteen_subscriptions")
+}
+
+/// Ligne / circuit de transport scolaire
+model TransportRoute {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String?
+  academicYear  String
+  departureArea String?
+  arrivalArea   String?
+  scheduleNotes String?
+  vehicleLabel  String?
+  driverName    String?
+  driverPhone   String?
+  capacity      Int?
+  priceAmount   Float    @default(0)
+  isPublished   Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  schoolId      String?  @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions TransportSubscription[]
+  vehiclePings  TransportVehiclePing[]
+
+  @@index([academicYear, isPublished, isActive])
+  @@index([schoolId])
+  @@map("transport_routes")
+}
+
+/// Position GPS d’un bus / véhicule sur une ligne (pings périodiques)
+model TransportVehiclePing {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  routeId    String   @db.ObjectId
+  latitude   Float
+  longitude  Float
+  speedKmh   Float?
+  heading    Float?
+  recordedAt DateTime @default(now())
+  note       String?
+
+  route TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId, recordedAt])
+  @@map("transport_vehicle_pings")
+}
+
+model TransportSubscription {
+  id           String                   @id @default(auto()) @map("_id") @db.ObjectId
+  routeId      String                   @db.ObjectId
+  studentId    String                   @db.ObjectId
+  status       CampusSubscriptionStatus @default(ACTIVE)
+  stopLabel    String?
+  notes        String?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, studentId])
+  @@index([studentId])
+  @@map("transport_subscriptions")
+}
+
+/// Examen blanc (préparation BEPC / BAC) pour classes d’examen
+model MockExam {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  description     String?
+  subject         String?
+  examKind        MockExamKind @default(OTHER)
+  academicYear    String
+  /// Niveaux ciblés si pas de classe précise (ex. ["3ème"], ["Terminale"])
+  targetLevels    String[]
+  classId         String?      @db.ObjectId
+  courseId        String?      @db.ObjectId
+  teacherId       String?      @db.ObjectId
+  schoolId        String?      @db.ObjectId
+  durationMinutes Int?
+  startsAt        DateTime?
+  endsAt          DateTime?
+  isPublished     Boolean      @default(false)
+  /// Si vrai : une note MOCK_EXAM est créée à la soumission
+  countsAsGrade   Boolean      @default(false)
+  maxAttempts     Int          @default(2)
+  passingScore    Float        @default(10)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  class     Class?              @relation(fields: [classId], references: [id], onDelete: SetNull)
+  course    Course?             @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  teacher   Teacher?            @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  questions MockExamQuestion[]
+  attempts  MockExamAttempt[]
+
+  @@index([academicYear, isPublished])
+  @@index([examKind, isPublished])
+  @@index([classId])
+  @@index([teacherId])
+  @@index([schoolId])
+  @@map("mock_exams")
+}
+
+model MockExamQuestion {
+  id            String                @id @default(auto()) @map("_id") @db.ObjectId
+  mockExamId    String                @db.ObjectId
+  kind          ElearningQuestionKind @default(MCQ)
+  prompt        String
+  options       Json?
+  correctAnswer String
+  points        Int                   @default(1)
+  sortOrder     Int                   @default(0)
+
+  mockExam MockExam @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+
+  @@index([mockExamId])
+  @@map("mock_exam_questions")
+}
+
+model MockExamAttempt {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  mockExamId  String    @db.ObjectId
+  studentId   String    @db.ObjectId
+  answers     Json
+  score       Float?
+  maxScore    Float?
+  scoreOn20   Float?
+  passed      Boolean?
+  gradeId     String?   @db.ObjectId
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+
+  mockExam MockExam @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([mockExamId, studentId])
+  @@index([studentId])
+  @@map("mock_exam_attempts")
 }
 

@@ -14,7 +14,7 @@ import {
   startOfDay,
   isWithinInterval,
 } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { formatFCFA } from '../../utils/currency';
 import { ADM } from './adminModuleLayout';
 

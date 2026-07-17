@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Card from '../ui/Card';
@@ -47,7 +47,7 @@ import {
   FiBell,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import RecentActivity from './RecentActivity';
 import QuickActions from './QuickActions';
 import NotificationsWidget from './NotificationsWidget';
@@ -80,8 +80,6 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
   onExportData,
   onSettings,
 }) => {
-  const [pieActiveIndex, setPieActiveIndex] = useState<number | undefined>(undefined);
-
   const { data: stats, isLoading, dataUpdatedAt, isFetching } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: adminApi.getDashboard,
@@ -339,10 +337,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
                             labelLine={false}
                             animationDuration={CHART_ANIMATION_MS}
                             animationEasing="ease-out"
-                            activeIndex={pieActiveIndex}
-                            activeShape={PremiumPieActiveShape}
-                            onMouseEnter={(_, i) => setPieActiveIndex(i)}
-                            onMouseLeave={() => setPieActiveIndex(undefined)}
+                            shape={PremiumPieActiveShape}
                           >
                             {chartData.map((_, i) => (
                               <Cell

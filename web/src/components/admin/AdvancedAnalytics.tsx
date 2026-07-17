@@ -56,7 +56,7 @@ import {
   FiFileText,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { ADM } from './adminModuleLayout';
 import jsPDF from 'jspdf';
@@ -704,7 +704,10 @@ const AdvancedAnalytics = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, moyenne }) => `${name}: ${moyenne}`}
+                  label={(props) => {
+                    const { name, moyenne } = props as { name?: string; moyenne?: number | string };
+                    return `${name ?? ''}: ${moyenne ?? ''}`;
+                  }}
                   outerRadius={96}
                   innerRadius={28}
                   paddingAngle={2}

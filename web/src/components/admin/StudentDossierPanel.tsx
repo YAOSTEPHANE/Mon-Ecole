@@ -8,7 +8,7 @@ import Button from '../ui/Button';
 import toast from 'react-hot-toast';
 import { FiLayers, FiShuffle, FiCreditCard, FiArchive, FiTrash2, FiPlus, FiDownload, FiPrinter } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   downloadStudentEnrollmentDossier,
   printStudentEnrollmentDossier,

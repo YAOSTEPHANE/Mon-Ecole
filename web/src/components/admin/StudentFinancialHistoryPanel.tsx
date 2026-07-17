@@ -8,7 +8,7 @@ import FilterDropdown from '../ui/FilterDropdown';
 import toast from 'react-hot-toast';
 import { FiUser, FiDownload, FiArrowDownCircle, FiArrowUpCircle } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { formatFCFA } from '../../utils/currency';
 import { ADM } from './adminModuleLayout';
 

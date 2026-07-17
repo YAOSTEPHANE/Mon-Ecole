@@ -356,10 +356,10 @@ async function ensureDefaultClass(schoolId: string): Promise<string | null> {
   if (existing) return existing.id;
 
   const track = await prisma.schoolTrack.upsert({
-    where: { code: 'CPTB-COL' },
+    where: { code: 'MON-ECOLE-COL' },
     create: {
-      name: 'Collège Tranlefet',
-      code: 'CPTB-COL',
+      name: 'Mon Ecole',
+      code: 'MON-ECOLE-COL',
       levels: ['6ème', '5ème', '4ème', '3ème'],
       academicYear: '2025-2026',
     },

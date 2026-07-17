@@ -40,6 +40,12 @@ function emptyBrandingResponse() {
     schoolWebsite: null,
     schoolPrincipal: null,
     schoolCode: null,
+    schoolDrena: null,
+    schoolIepp: null,
+    schoolStatus: null,
+    schoolMilieu: null,
+    schoolRegion: null,
+    classroomCount: null,
     studiesDirectorPhotoUrl: null,
     studiesDirectorName: null,
     studiesDirectorOccasionBadge: null,
@@ -144,6 +150,50 @@ router.put('/app-branding', async (req: SchoolContextRequest, res) => {
     const schoolWeb = trimText(body.schoolWebsite, 200);
     const schoolPr = trimText(body.schoolPrincipal, 120);
     const schoolCode = trimText(body.schoolCode, 32);
+    const schoolDrena = trimText(body.schoolDrena, 120);
+    const schoolIepp = trimText(body.schoolIepp, 120);
+    const schoolRegion = trimText(body.schoolRegion, 120);
+    let schoolStatus: string | null | undefined = undefined;
+    if (body.schoolStatus !== undefined) {
+      if (body.schoolStatus === null || body.schoolStatus === '') {
+        schoolStatus = null;
+      } else if (
+        typeof body.schoolStatus === 'string' &&
+        ['PUBLIC', 'PRIVATE', 'COMMUNITY'].includes(body.schoolStatus)
+      ) {
+        schoolStatus = body.schoolStatus;
+      } else {
+        return res.status(400).json({ error: 'Statut établissement invalide (PUBLIC, PRIVATE, COMMUNITY)' });
+      }
+    }
+    let schoolMilieu: string | null | undefined = undefined;
+    if (body.schoolMilieu !== undefined) {
+      if (body.schoolMilieu === null || body.schoolMilieu === '') {
+        schoolMilieu = null;
+      } else if (
+        typeof body.schoolMilieu === 'string' &&
+        ['URBAN', 'RURAL'].includes(body.schoolMilieu)
+      ) {
+        schoolMilieu = body.schoolMilieu;
+      } else {
+        return res.status(400).json({ error: 'Milieu invalide (URBAN, RURAL)' });
+      }
+    }
+    let classroomCount: number | null | undefined = undefined;
+    if (body.classroomCount !== undefined) {
+      if (body.classroomCount === null || body.classroomCount === '') {
+        classroomCount = null;
+      } else {
+        const n =
+          typeof body.classroomCount === 'number'
+            ? body.classroomCount
+            : Number(body.classroomCount);
+        if (!Number.isFinite(n) || n < 0 || n > 10_000) {
+          return res.status(400).json({ error: 'Nombre de salles invalide' });
+        }
+        classroomCount = Math.floor(n);
+      }
+    }
     if (schoolName !== undefined) data.schoolDisplayName = schoolName;
     if (schoolAddr !== undefined) data.schoolAddress = schoolAddr;
     if (schoolPh !== undefined) data.schoolPhone = schoolPh;
@@ -151,6 +201,12 @@ router.put('/app-branding', async (req: SchoolContextRequest, res) => {
     if (schoolWeb !== undefined) data.schoolWebsite = schoolWeb;
     if (schoolPr !== undefined) data.schoolPrincipal = schoolPr;
     if (schoolCode !== undefined) data.schoolCode = schoolCode;
+    if (schoolDrena !== undefined) data.schoolDrena = schoolDrena;
+    if (schoolIepp !== undefined) data.schoolIepp = schoolIepp;
+    if (schoolRegion !== undefined) data.schoolRegion = schoolRegion;
+    if (schoolStatus !== undefined) data.schoolStatus = schoolStatus;
+    if (schoolMilieu !== undefined) data.schoolMilieu = schoolMilieu;
+    if (classroomCount !== undefined) data.classroomCount = classroomCount;
 
     const directorName = trimText(body.studiesDirectorName, 120);
     const directorOccasion = trimText(body.studiesDirectorOccasionBadge, 160);

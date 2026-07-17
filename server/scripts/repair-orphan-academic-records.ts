@@ -10,7 +10,7 @@ const SEED_DEMO_PASSWORD = 'password123';
 
 const SEED_DEMO_EMAILS = [
   'admin@school.com',
-  'superadmin@tranlefet.ci',
+  'kouassistephane489@gmail.com',
   'teacher1@school.com',
   'teacher2@school.com',
   'teacher3@school.com',

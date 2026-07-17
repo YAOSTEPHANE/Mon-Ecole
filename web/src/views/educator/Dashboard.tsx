@@ -13,7 +13,7 @@ import AcademicValidationPanel from '../../components/academic/AcademicValidatio
 import { FiLayout, FiUsers, FiShield, FiSearch, FiTrendingUp, FiCommand, FiCheckCircle, FiBookOpen, FiHeart, FiMessageSquare, FiCalendar } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';

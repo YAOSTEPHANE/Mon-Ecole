@@ -5,8 +5,9 @@ import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import { FiBook, FiCalendar, FiClipboard, FiAward, FiAlertCircle, FiSearch } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import PortalSchoolFeed from '../portal/PortalSchoolFeed';
+import StudentGamificationCard from './StudentGamificationCard';
 import { PremiumOverviewHero, PremiumStatGrid, PremiumGlassCard } from '../dashboard/premium';
 import type { PremiumStatItem } from '../dashboard/premium/PremiumStatGrid';
 
@@ -168,6 +169,7 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
               )}
             </div>
           </div>
+          <StudentGamificationCard />
           <PortalSchoolFeed role="student" compact />
         </>
       )}

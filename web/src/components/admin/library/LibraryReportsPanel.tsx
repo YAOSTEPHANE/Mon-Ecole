@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { FiPrinter } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useLibraryManagement } from '@/contexts/LibraryManagementContext';

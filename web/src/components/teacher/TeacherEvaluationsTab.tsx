@@ -5,7 +5,7 @@ import { teacherApi } from '../../services/api';
 import Card from '../ui/Card';
 import { FiStar, FiTarget, FiTrendingUp, FiAlertCircle, FiUser } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const TeacherEvaluationsTab = () => {
   const { data: reviews, isLoading } = useQuery({

@@ -6,7 +6,7 @@ import Badge from '../../ui/Badge';
 import Button from '../../ui/Button';
 import { FiDownload, FiBriefcase } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { formatFCFA } from '../../../utils/currency';
 

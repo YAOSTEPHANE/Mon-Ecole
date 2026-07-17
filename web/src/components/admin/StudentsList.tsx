@@ -28,7 +28,7 @@ import {
 import { useSchoolReady, schoolQueryKey } from '../../hooks/useSchoolReady';
 import { useSchool } from '../../contexts/SchoolContext';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   ENROLLMENT_STATUS_LABELS,
   enrollmentBadgeVariant,

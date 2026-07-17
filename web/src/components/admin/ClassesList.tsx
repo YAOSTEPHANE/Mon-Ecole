@@ -28,7 +28,7 @@ import { canDeleteStudentsOrClasses } from '@/lib/staffDeletionPolicy';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useSchoolReady, schoolQueryKey } from '../../hooks/useSchoolReady';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   buildClassMetaFromApi,
   downloadAllClassRostersPdf,

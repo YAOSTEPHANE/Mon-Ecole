@@ -24,7 +24,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import GdprUserRightsPanel from '../gdpr/GdprUserRightsPanel';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const TeacherPersonalProfile = () => {
   const { user: authUser } = useAuth();

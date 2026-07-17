@@ -38,6 +38,24 @@ export const adminApi = {
     const response = await api.get('/admin/teachers/attendance', { params });
     return response.data;
   },
+  getTeacherAttendanceSummary: async (params: {
+    from: string;
+    to: string;
+    groupBy?: 'day' | 'week' | 'month';
+    teacherId?: string;
+  }) => {
+    const response = await api.get('/admin/teachers/attendance/summary', { params });
+    return response.data;
+  },
+  getStaffAttendanceSummary: async (params: {
+    from: string;
+    to: string;
+    groupBy?: 'day' | 'week' | 'month';
+    staffId?: string;
+  }) => {
+    const response = await api.get('/admin/staff/attendance/summary', { params });
+    return response.data;
+  },
   getAccessControlOverview: async () => {
     const response = await api.get('/admin/access-control/overview');
     return response.data;
@@ -859,8 +877,58 @@ export const adminApi = {
     const response = await api.get('/admin/reports/administrative', { params });
     return response.data;
   },
+  getMenaReports: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/admin/reports/mena', { params });
+    return response.data;
+  },
+  getMenaStatus: async () => {
+    const response = await api.get('/admin/mena/status');
+    return response.data;
+  },
+  getMenaExportPackage: async (params?: { academicYear?: string; format?: 'json' | 'csv' }) => {
+    const response = await api.get('/admin/mena/export-package', {
+      params,
+      ...(params?.format === 'csv' ? { responseType: 'blob' as const } : {}),
+    });
+    return response.data;
+  },
+  transmitMenaPackage: async (data?: { academicYear?: string; forceExportOnly?: boolean }) => {
+    const response = await api.post('/admin/mena/transmit', data ?? {});
+    return response.data;
+  },
+  getMenaTransmissions: async (params?: { limit?: number }) => {
+    const response = await api.get('/admin/mena/transmissions', { params });
+    return response.data;
+  },
+  getMenaTransmission: async (id: string) => {
+    const response = await api.get(`/admin/mena/transmissions/${id}`);
+    return response.data;
+  },
+  getFneOptions: async (params?: { cycle?: 'secondary' | 'primary'; q?: string }) => {
+    const response = await api.get('/admin/mena/fne-options', { params });
+    return response.data;
+  },
+  lookupFneMatricule: async (data: {
+    cycle?: 'secondary' | 'primary';
+    annee: string;
+    nom: string;
+    prenoms?: string;
+    datenaiss?: string;
+    etablissement?: string;
+  }) => {
+    const response = await api.post('/admin/mena/fne-lookup', data);
+    return response.data;
+  },
+  getStudentStatsReports: async (params?: { academicYear?: string; period?: string }) => {
+    const response = await api.get('/admin/reports/student-stats', { params });
+    return response.data;
+  },
   getFinancialReports: async (params?: { academicYear?: string; from?: string; to?: string }) => {
     const response = await api.get('/admin/reports/financial', { params });
+    return response.data;
+  },
+  getFinancialBreakdown: async (params?: { academicYear?: string; from?: string; to?: string }) => {
+    const response = await api.get('/admin/reports/financial/breakdown', { params });
     return response.data;
   },
   toggleUserStatus: async (id: string, isActive: boolean) => {
@@ -1265,6 +1333,26 @@ export const adminApi = {
     const response = await api.get('/admin/grades/rankings', { params });
     return response.data;
   },
+  getPromotionDecisions: async (params: {
+    academicYear: string;
+    period?: string;
+    classId?: string;
+    threshold?: number;
+  }) => {
+    const response = await api.get('/admin/grades/promotion-decisions', { params });
+    return response.data;
+  },
+  declarePromotionDecisions: async (data: {
+    academicYear: string;
+    period?: string;
+    classId?: string;
+    threshold?: number;
+    notifyParents?: boolean;
+    includeSansNotesAsDoublant?: boolean;
+  }) => {
+    const response = await api.post('/admin/grades/promotion-decisions/declare', data);
+    return response.data;
+  },
   getClassCouncils: async (params?: { classId?: string; period?: string; academicYear?: string }) => {
     const response = await api.get('/admin/class-councils', { params });
     return response.data;
@@ -1537,7 +1625,15 @@ export const adminApi = {
   },
   recordStaffAttendance: async (
     staffId: string,
-    data: { attendanceDate: string; status?: string; source?: string; notes?: string | null }
+    data: {
+      attendanceDate: string;
+      status?: string;
+      source?: string;
+      notes?: string | null;
+      checkInAt?: string | null;
+      checkOutAt?: string | null;
+      workedMinutes?: number | null;
+    }
   ) => {
     const response = await api.post(`/admin/staff/${staffId}/attendances`, data);
     return response.data;
@@ -1731,6 +1827,128 @@ export const adminApi = {
   },
   deleteExtracurricularRegistration: async (id: string) => {
     const response = await api.delete(`/admin/extracurricular/registrations/${id}`);
+    return response.data;
+  },
+
+  getCanteenPlans: async (params?: { academicYear?: string; publishedOnly?: boolean }) => {
+    const response = await api.get('/admin/campus/canteen/plans', { params });
+    return response.data;
+  },
+  createCanteenPlan: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/campus/canteen/plans', data);
+    return response.data;
+  },
+  deleteCanteenPlan: async (id: string) => {
+    const response = await api.delete(`/admin/campus/canteen/plans/${id}`);
+    return response.data;
+  },
+  createCanteenSubscription: async (data: { studentId: string; planId: string }) => {
+    const response = await api.post('/admin/campus/canteen/subscriptions', data);
+    return response.data;
+  },
+  getTransportRoutes: async (params?: { academicYear?: string; publishedOnly?: boolean }) => {
+    const response = await api.get('/admin/campus/transport/routes', { params });
+    return response.data;
+  },
+  createTransportRoute: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/campus/transport/routes', data);
+    return response.data;
+  },
+  deleteTransportRoute: async (id: string) => {
+    const response = await api.delete(`/admin/campus/transport/routes/${id}`);
+    return response.data;
+  },
+  createTransportSubscription: async (data: {
+    studentId: string;
+    routeId: string;
+    stopLabel?: string;
+  }) => {
+    const response = await api.post('/admin/campus/transport/subscriptions', data);
+    return response.data;
+  },
+  getPendingMobileMoneyPayments: async () => {
+    const response = await api.get('/admin/payments/pending-mobile-money');
+    return response.data;
+  },
+  confirmMobileMoneyPayment: async (id: string, data?: { transactionId?: string }) => {
+    const response = await api.post(`/admin/payments/${id}/confirm-mobile-money`, data || {});
+    return response.data;
+  },
+
+  getPaymentIntegrations: async () => {
+    const response = await api.get('/admin/integrations/payments');
+    return response.data;
+  },
+  getWhatsAppStatus: async () => {
+    const response = await api.get('/admin/integrations/whatsapp/status');
+    return response.data;
+  },
+  sendWhatsAppTest: async (data: { phone: string; message: string }) => {
+    const response = await api.post('/admin/integrations/whatsapp/send', data);
+    return response.data;
+  },
+  getLtiConfig: async () => {
+    const response = await api.get('/admin/integrations/lti/config');
+    return response.data;
+  },
+  getTransportTracking: async (routeId: string, params?: { limit?: number }) => {
+    const response = await api.get(`/admin/campus/transport/routes/${routeId}/tracking`, { params });
+    return response.data;
+  },
+  postTransportPing: async (
+    routeId: string,
+    data: { latitude: number; longitude: number; speedKmh?: number; heading?: number; note?: string }
+  ) => {
+    const response = await api.post(`/admin/campus/transport/routes/${routeId}/tracking`, data);
+    return response.data;
+  },
+  getPaymentsForecast: async (params?: { months?: number }) => {
+    const response = await api.get('/admin/analytics/forecast/payments', { params });
+    return response.data;
+  },
+  optimizeSchedule: async (data: {
+    classId: string;
+    teacherId?: string;
+    candidates: Array<{ dayOfWeek: number; startTime: string; endTime: string; roomKey?: string }>;
+    preferMorning?: boolean;
+  }) => {
+    const response = await api.post('/admin/schedule/optimize', data);
+    return response.data;
+  },
+  getStudentGamification: async (studentId: string) => {
+    const response = await api.get(`/admin/gamification/students/${studentId}`);
+    return response.data;
+  },
+  awardStudentGamification: async (
+    studentId: string,
+    data: { points: number; label: string; kind?: string; badgeCode?: string }
+  ) => {
+    const response = await api.post(`/admin/gamification/students/${studentId}/award`, data);
+    return response.data;
+  },
+
+  getMockExams: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/admin/mock-exams', { params });
+    return response.data;
+  },
+  getMockExamClasses: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/admin/mock-exams/exam-classes', { params });
+    return response.data;
+  },
+  getMockExam: async (id: string) => {
+    const response = await api.get(`/admin/mock-exams/${id}`);
+    return response.data;
+  },
+  createMockExam: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/mock-exams', data);
+    return response.data;
+  },
+  updateMockExam: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/admin/mock-exams/${id}`, data);
+    return response.data;
+  },
+  deleteMockExam: async (id: string) => {
+    const response = await api.delete(`/admin/mock-exams/${id}`);
     return response.data;
   },
 

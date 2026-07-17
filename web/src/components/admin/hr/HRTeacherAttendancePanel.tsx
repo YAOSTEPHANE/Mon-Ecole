@@ -3,9 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../../services/api';
 import Card from '../../ui/Card';
 import Badge from '../../ui/Badge';
-import { FiClock, FiRefreshCw } from 'react-icons/fi';
+import Button from '../../ui/Button';
+import { FiClock, FiRefreshCw, FiDownload } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
+import toast from 'react-hot-toast';
+import { downloadTeacherAttendanceSessionsPdf } from '../../../lib/hoursSummaryPdf';
 const STATUS_META: Record<
   string,
   { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'secondary' }
@@ -53,6 +56,42 @@ const HRTeacherAttendancePanel: React.FC = () => {
 
   const list = (rows as any[]) ?? [];
   const teacherOptions = (teachers as any[]) ?? [];
+
+  const handleDownloadPdf = () => {
+    try {
+      downloadTeacherAttendanceSessionsPdf({
+        from,
+        to,
+        rows: list.map((row) => {
+          const st = STATUS_META[row.status];
+          return {
+            attendanceDate: row.attendanceDate
+              ? format(new Date(row.attendanceDate + 'T12:00:00'), 'dd/MM/yyyy', { locale: fr })
+              : '—',
+            teacherName: `${row.teacher?.user?.firstName ?? ''} ${row.teacher?.user?.lastName ?? ''}`.trim() || '—',
+            courseLabel: row.course?.name
+              ? `${row.course.name}${row.course?.code ? ` (${row.course.code})` : ''}`
+              : '—',
+            status: st?.label ?? row.status ?? '—',
+            checkIn: row.checkInAt
+              ? format(new Date(row.checkInAt), 'HH:mm', { locale: fr })
+              : '—',
+            checkOut: row.checkOutAt
+              ? format(new Date(row.checkOutAt), 'HH:mm', { locale: fr })
+              : '—',
+            hours:
+              row.teachingMinutes != null
+                ? `${(row.teachingMinutes / 60).toFixed(2).replace('.', ',')} h`
+                : '—',
+            source: SOURCE_LABEL[row.source] ?? row.source ?? '—',
+          };
+        }),
+      });
+      toast.success('PDF téléchargé');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur export PDF');
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -122,6 +161,16 @@ const HRTeacherAttendancePanel: React.FC = () => {
             <FiRefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
             Actualiser
           </button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={handleDownloadPdf}
+            disabled={isLoading}
+          >
+            <FiDownload className="w-4 h-4 mr-1.5" />
+            Télécharger PDF
+          </Button>
         </div>
       </Card>
 

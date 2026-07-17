@@ -20,7 +20,7 @@ import { PremiumOverviewHero, PremiumStatGrid, PremiumKpiCard } from '../dashboa
 import GdprUserRightsPanel from '../gdpr/GdprUserRightsPanel';
 import PortalSchoolFeed from '../portal/PortalSchoolFeed';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const ParentOverview = () => {
   const [selectedChild, setSelectedChild] = useState<string | null>(null);

@@ -18,7 +18,12 @@ import academicValidationRoutes from '../routes/academic-validation.routes';
 import digitalLibraryRoutes from '../routes/digital-library.routes';
 import healthRoutes from '../routes/health.routes';
 import elearningRoutes from '../routes/elearning.routes';
+import paymentsWebhookRoutes from '../routes/payments-webhook.routes';
+import openapiRoutes from '../routes/openapi.routes';
+import assistantRoutes from '../routes/assistant.routes';
+import oauthRoutes from '../routes/oauth.routes';
 import { getUploadsRootDir } from '../utils/uploads-path';
+import { initObservability, captureException } from '../utils/observability.util';
 import { getAllowedCorsOrigins } from '../utils/cors-origins.util';
 import { recordRequestMetric } from '../utils/performance-metrics.util';
 import { securityHeaders } from '../middleware/security-headers.middleware';
@@ -31,6 +36,8 @@ import { apiGlobalLimiter } from '../middleware/rate-limit.middleware';
  */
 export function createApp(): express.Express {
   const app = express();
+
+  void initObservability();
 
   const apiPrefix = process.env.VERCEL === '1' ? '' : '/api';
   const healthJson = { status: 'OK', message: 'School Manager API is running' };
@@ -87,7 +94,14 @@ export function createApp(): express.Express {
     });
   }
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(
+    express.json({
+      limit: '10mb',
+      verify: (req, _res, buffer) => {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   if (apiPrefix) {
@@ -152,7 +166,9 @@ export function createApp(): express.Express {
     });
   }
 
+  app.use(`${apiPrefix}/auth/oauth`, oauthRoutes);
   app.use(`${apiPrefix}/auth`, authRoutes);
+  app.use(`${apiPrefix}/assistant`, assistantRoutes);
   app.use(`${apiPrefix}/admin`, adminRoutes);
   app.use(`${apiPrefix}/super-admin`, superAdminRoutes);
   app.use(`${apiPrefix}/teacher`, teacherRoutes);
@@ -179,6 +195,8 @@ export function createApp(): express.Express {
 
   app.use(`${apiPrefix}/health`, healthRoutes);
   app.use(`${apiPrefix}/elearning`, elearningRoutes);
+  app.use(`${apiPrefix}/payments`, paymentsWebhookRoutes);
+  app.use(`${apiPrefix}`, openapiRoutes);
 
   app.use((req, res) => {
     res.status(404).json({ error: 'Route non trouvée' });
@@ -195,6 +213,7 @@ export function createApp(): express.Express {
         return;
       }
       console.error('Erreur non gérée:', err);
+      void captureException(err);
       const message = err instanceof Error ? err.message : 'Erreur serveur';
       if (!res.headersSent) {
         res.status(500).json({

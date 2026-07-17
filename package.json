@@ -8,8 +8,9 @@
     "dev:server": "cd server && npm run dev",
     "dev:web": "cd web && npm run dev",
     "dev:web:wait": "node scripts/wait-for-api.mjs && npm run dev:web",
+    "dev:mobile": "cd mobile && npm start",
     "build": "cd server && npm run build && cd ../web && npm run build",
-    "install:all": "npm install && cd server && npm install && cd ../web && npm install",
+    "install:all": "npm install && cd server && npm install && cd ../web && npm install && cd ../mobile && npm install --legacy-peer-deps",
     "prisma:seed": "cd server && npm run prisma:seed",
     "db:seed": "npm run prisma:seed",
     "prisma:generate": "cd server && npm run prisma:generate",
@@ -29,8 +30,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
-    "concurrently": "^8.2.2",
-    "dotenv": "^16.6.1"
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^10.0.3",
+    "dotenv": "^17.4.2"
   }
 }

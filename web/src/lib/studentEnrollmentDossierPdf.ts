@@ -1,10 +1,10 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { ENROLLMENT_STATUS_LABELS, type EnrollmentStatusValue } from './enrollmentStatus';
 import { STATE_ASSIGNMENT_LABELS, type StudentStateAssignmentValue } from './stateAssignment';
-import { TRANLEFET_SCHOOL } from '../data/tranlefetSchool';
+import { SCHOOL_DEFAULTS } from '../data/schoolDefaults';
 
 export type StudentEnrollmentDossierPayload = {
   generatedAt: string;
@@ -220,8 +220,8 @@ export function buildStudentEnrollmentDossierDoc(
   const maxWidth = pageWidth - margin * 2;
   let y = 14;
 
-  const schoolName = payload.school?.name?.trim() || TRANLEFET_SCHOOL.fullName;
-  const schoolCode = payload.school?.schoolCode?.trim() || TRANLEFET_SCHOOL.establishmentCode;
+  const schoolName = payload.school?.name?.trim() || SCHOOL_DEFAULTS.fullName;
+  const schoolCode = payload.school?.schoolCode?.trim() || SCHOOL_DEFAULTS.establishmentCode;
 
   if (options.logoDataUrl) {
     try {

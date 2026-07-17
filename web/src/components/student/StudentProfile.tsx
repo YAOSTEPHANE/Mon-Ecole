@@ -25,7 +25,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   ENROLLMENT_STATUS_LABELS,
   enrollmentBadgeVariant,

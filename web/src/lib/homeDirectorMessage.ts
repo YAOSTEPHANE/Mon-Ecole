@@ -1,13 +1,13 @@
-export const DEFAULT_DIRECTOR_NAME = "N'GUESSAN AMELA APOLLINE";
+export const DEFAULT_DIRECTOR_NAME = '';
 export const DEFAULT_DIRECTOR_ROLE = 'Directrice des Études';
 export const DEFAULT_DIRECTOR_OCCASION = 'À l’occasion de la rentrée scolaire';
 export const DEFAULT_DIRECTOR_MESSAGE_TITLE = 'Mot de la Directrice des Études';
 export const DEFAULT_DIRECTOR_CLOSING = 'Bonne rentrée scolaire à toutes et à tous.';
-export const DEFAULT_DIRECTOR_FOOTER = 'Collège Privé Tranlefet de Bouaké — Bouaké, Côte d\'Ivoire';
+export const DEFAULT_DIRECTOR_FOOTER = "Mon Ecole — Côte d'Ivoire";
 
 export const DEFAULT_DIRECTOR_MESSAGE_PARAGRAPHS = [
   'Chers parents d’élèves, Mesdames et Messieurs les enseignants, Chers élèves, Honorables membres du personnel éducatif et administratif,',
-  'À l’aube de cette nouvelle année scolaire, la Direction du Collège Privé Tranlefet de Bouaké adresse à l’ensemble de la communauté éducative ses salutations les plus chaleureuses ainsi que ses vœux de santé, de paix et de réussite.',
+  'À l’aube de cette nouvelle année scolaire, la Direction de Mon Ecole adresse à l’ensemble de la communauté éducative ses salutations les plus chaleureuses ainsi que ses vœux de santé, de paix et de réussite.',
   'La rentrée scolaire constitue un moment important dans la vie de notre établissement. Elle marque le début d’un nouveau parcours fait d’apprentissage, d’efforts, de discipline et d’engagement collectif au service de l’excellence.',
   'La Direction rappelle aux parents d’élèves que l’école demeure le socle fondamental de la formation de l’enfant et de la construction de son avenir. Offrir une éducation de qualité à son enfant, c’est lui donner les moyens de devenir un citoyen responsable, compétent et utile à la société. C’est pourquoi nous invitons chaque parent à accompagner efficacement le suivi scolaire et moral de son enfant tout au long de l’année.',
   'Aux enseignants et à l’ensemble du personnel éducatif, la Direction renouvelle sa confiance et son attachement aux valeurs de rigueur, de professionnalisme, de ponctualité et de responsabilité qui fondent la noblesse de notre mission éducative. L’encadrement pédagogique de qualité demeure un pilier essentiel pour l’amélioration constante des résultats scolaires de nos apprenants.',
@@ -38,7 +38,7 @@ export function directorMessageBodyFromParagraphs(paragraphs: string[]): string 
 
 export function resolveDirectorMessageContent(branding: DirectorMessageBranding) {
   const schoolName =
-    branding.schoolDisplayName?.trim() || 'Collège Privé Tranlefet de Bouaké';
+    branding.schoolDisplayName?.trim() || 'Mon Ecole';
 
   return {
     name: branding.studiesDirectorName?.trim() || DEFAULT_DIRECTOR_NAME,
@@ -49,7 +49,7 @@ export function resolveDirectorMessageContent(branding: DirectorMessageBranding)
     closing: branding.studiesDirectorClosing?.trim() || DEFAULT_DIRECTOR_CLOSING,
     footerLine:
       branding.studiesDirectorFooterLine?.trim() ||
-      `${schoolName} — Bouaké, Côte d'Ivoire`,
+      `${schoolName} — Côte d'Ivoire`,
     schoolName,
   };
 }

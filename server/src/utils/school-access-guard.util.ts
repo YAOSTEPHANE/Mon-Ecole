@@ -62,6 +62,26 @@ export async function assertClassInSchool(
   if (!row) throw new SchoolAccessDeniedError('Classe introuvable dans cet établissement.');
 }
 
+export async function assertTeacherInSchool(
+  teacherId: string,
+  schoolId: string | undefined,
+): Promise<void> {
+  if (!schoolId) throw new SchoolAccessDeniedError('Établissement actif requis (en-tête X-School-Id).');
+  if (!isObjectId(teacherId)) throw new SchoolAccessDeniedError('Enseignant invalide.');
+  const row = await prisma.teacher.findFirst({
+    where: {
+      id: teacherId,
+      OR: [
+        { user: { schoolMemberships: { some: { schoolId } } } },
+        { classes: { some: { schoolId } } },
+        { courses: { some: { class: { schoolId } } } },
+      ],
+    },
+    select: { id: true },
+  });
+  if (!row) throw new SchoolAccessDeniedError('Enseignant introuvable dans cet établissement.');
+}
+
 export async function assertTuitionFeeInSchool(
   feeId: string,
   schoolId: string | undefined,

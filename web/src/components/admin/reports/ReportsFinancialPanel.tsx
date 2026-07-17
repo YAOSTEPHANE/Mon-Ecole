@@ -310,7 +310,7 @@ const ReportsFinancialPanel: React.FC<Props> = ({ summary, isLoading }) => {
                     <XAxis type="number" tick={CHART_AXIS_TICK} tickFormatter={(v) => `${v}k`} />
                     <YAxis type="category" dataKey="name" width={100} tick={CHART_AXIS_TICK} />
                     <Tooltip
-                      formatter={(v: number, _n, p) => {
+                      formatter={(v, _n, p) => {
                         const full = p?.payload?.montantFull;
                         return [`${fmtMoney(typeof full === 'number' ? full : v * 1000)} FCFA`, 'Montant'];
                       }}
@@ -367,7 +367,7 @@ const ReportsFinancialPanel: React.FC<Props> = ({ summary, isLoading }) => {
                   <XAxis dataKey="name" tick={CHART_AXIS_TICK} interval={0} angle={-25} textAnchor="end" height={70} />
                   <YAxis tick={CHART_AXIS_TICK} tickFormatter={(v) => `${v}k`} width={36} />
                   <Tooltip
-                    formatter={(v: number, _n, p) => {
+                    formatter={(v, _n, p) => {
                       const full = p?.payload?.montantFull;
                       return [`${fmtMoney(typeof full === 'number' ? full : v * 1000)} FCFA`, 'Dépenses'];
                     }}
@@ -414,7 +414,7 @@ const ReportsFinancialPanel: React.FC<Props> = ({ summary, isLoading }) => {
                   <XAxis dataKey="name" tick={CHART_AXIS_TICK} interval={0} angle={-30} textAnchor="end" height={80} />
                   <YAxis tick={CHART_AXIS_TICK} tickFormatter={(v) => `${v}k`} />
                   <Tooltip
-                    formatter={(v: number) => [`${fmtMoney(v * 1000)} FCFA`, '']}
+                    formatter={(v) => [`${fmtMoney(v * 1000)} FCFA`, '']}
                     content={(p) => <PremiumTooltip {...p} />}
                     cursor={CHART_CURSOR}
                   />
@@ -507,7 +507,7 @@ const ReportsFinancialPanel: React.FC<Props> = ({ summary, isLoading }) => {
             <XAxis dataKey="label" tick={CHART_AXIS_TICK} />
             <YAxis tick={CHART_AXIS_TICK} tickFormatter={(v) => `${v}k`} />
             <Tooltip
-              formatter={(value: number) => [`${fmtMoney(value * 1000)} FCFA`, 'Montant']}
+              formatter={(value) => [`${fmtMoney(Number(value ?? 0) * 1000)} FCFA`, 'Montant']}
               labelFormatter={(label) => `Période ${label}`}
               content={(p) => <PremiumTooltip {...p} />}
               cursor={CHART_CURSOR}

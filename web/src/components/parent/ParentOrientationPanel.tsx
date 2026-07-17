@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import fr from "date-fns/locale/fr";
+import { fr } from 'date-fns/locale';
 import { useMemo, useState } from "react";
 import { FiBookOpen, FiBriefcase, FiClipboard, FiNavigation } from "react-icons/fi";
 import { parentApi } from "@/services/api";

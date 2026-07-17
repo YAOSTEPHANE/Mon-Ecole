@@ -8,7 +8,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { FiRefreshCw, FiSend, FiUsers } from 'react-icons/fi';
 import MessageRecipientSearch from '../messaging/MessageRecipientSearch';
 import { flattenMessagingContacts } from '../messaging/flattenMessagingContacts';

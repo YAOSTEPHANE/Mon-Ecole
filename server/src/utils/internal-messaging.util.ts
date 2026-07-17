@@ -74,6 +74,23 @@ export async function notifyUserNewMessage(params: {
       link: url,
     },
   });
+  try {
+    const { emitNotificationToUser, emitMessageToUser } = await import('./realtime.util');
+    emitNotificationToUser(params.receiverUserId, {
+      type: 'message',
+      title,
+      content: body,
+      link: url,
+      createdAt: new Date().toISOString(),
+    });
+    emitMessageToUser(params.receiverUserId, {
+      title,
+      content: body,
+      link: url,
+    });
+  } catch {
+    /* realtime optionnel */
+  }
   await sendWebPushToUsers([params.receiverUserId], { title, body, url });
 }
 

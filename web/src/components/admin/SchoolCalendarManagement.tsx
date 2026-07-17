@@ -10,7 +10,7 @@ import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
 import { FiCalendar, FiPlus, FiEdit, FiTrash2 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const defaultAcademicYear = () => {
   const y = new Date().getFullYear();

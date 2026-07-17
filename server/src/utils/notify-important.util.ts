@@ -119,6 +119,19 @@ export async function notifyUsersImportant(
       },
     });
 
+    try {
+      const { emitNotificationToUser } = await import('./realtime.util');
+      emitNotificationToUser(uid, {
+        type: options.type,
+        title: options.title,
+        content: options.content,
+        link: linkPath || null,
+        createdAt: new Date().toISOString(),
+      });
+    } catch {
+      /* realtime optionnel */
+    }
+
     const fullUrl = `${baseUrl}${linkPath.startsWith('/') ? linkPath : `/${linkPath}`}`;
 
     if (options.email !== null) {

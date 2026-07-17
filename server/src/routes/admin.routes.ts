@@ -13,6 +13,10 @@ import { reportCardClientPhotoUrl } from '../utils/report-card-photo-url.util';
 import { fetchBrandingLogoDataUrl } from '../utils/image-data-url.util';
 import { computeClassBulletinRanks, enrichReportCardsWithTermHistory, getCurrentAcademicYear, getPeriodDates, getPeriodLabel, gradePeriodWhere, inferReportingPeriod } from '../utils/report-card.util';
 import {
+  declarePromotionDecisions,
+  previewPromotionDecisions,
+} from '../utils/year-end-promotion.util';
+import {
   parseGradingCoefficient,
   parseWeeklyHours,
 } from '../utils/course-fields.util';
@@ -46,9 +50,13 @@ import accountingRoutes from './admin-accounting.routes';
 import disciplineAdminRoutes from './admin-discipline.routes';
 import adminDigitalLibraryRoutes from './admin-digital-library.routes';
 import extracurricularAdminRoutes from './admin-extracurricular.routes';
+import campusAdminRoutes from './admin-campus.routes';
+import platformAdminRoutes from './admin-platform.routes';
+import mockExamsAdminRoutes from './admin-mock-exams.routes';
 import tracksAdminRoutes from './admin-tracks.routes';
 import orientationAdminRoutes from './admin-orientation.routes';
 import adminReportsRoutes from './admin-reports.routes';
+import adminMenaRoutes from './admin-mena.routes';
 import adminAppBrandingRoutes from './admin-app-branding.routes';
 import adminWorkspacesRoutes from './admin-workspaces.routes';
 import adminSchoolsRoutes from './admin-schools.routes';
@@ -88,6 +96,11 @@ import {
   rejectCashPayment,
   validateCashPayment,
 } from '../utils/cash-payment-validation.util';
+import {
+  completeOnlinePayment,
+  listPendingMobileMoneyPayments,
+} from '../utils/online-payment.util';
+import { computeStudentRiskScore } from '../utils/student-risk-ai.util';
 import {
   assignTuitionFeeInvoiceNumbers,
   autoReceiptUrl,
@@ -156,9 +169,13 @@ router.use(accountingRoutes);
 router.use(disciplineAdminRoutes);
 router.use(adminDigitalLibraryRoutes);
 router.use(extracurricularAdminRoutes);
+router.use(campusAdminRoutes);
+router.use(platformAdminRoutes);
+router.use(mockExamsAdminRoutes);
 router.use(tracksAdminRoutes);
 router.use(orientationAdminRoutes);
 router.use(adminReportsRoutes);
+router.use(adminMenaRoutes);
 router.use(adminAppBrandingRoutes);
 router.use(libraryManagementRoutes);
 router.use(adminStudentsRoutes);
@@ -2367,7 +2384,7 @@ router.get('/pedagogical/students-at-risk', async (req, res) => {
     const { classId } = req.query;
 
     const students = await prisma.student.findMany({
-      where: classId ? { classId: classId as string } : {},
+      where: classId ? { classId: classId as string } : { isActive: true },
       include: {
         user: {
           select: {
@@ -2388,6 +2405,13 @@ router.get('/pedagogical/students-at-risk', async (req, res) => {
           },
         },
         absences: true,
+        tuitionFees: {
+          where: { isPaid: false },
+          include: {
+            payments: { where: { status: 'COMPLETED' }, select: { amount: true } },
+          },
+        },
+        assignments: true,
       },
     });
 
@@ -2396,27 +2420,48 @@ router.get('/pedagogical/students-at-risk', async (req, res) => {
         const grades = student.grades || [];
         const totalScore = grades.reduce((sum, g) => sum + (g.score / g.maxScore) * 20 * g.coefficient, 0);
         const totalCoefficient = grades.reduce((sum, g) => sum + g.coefficient, 0);
-        const average = totalCoefficient > 0 ? totalScore / totalCoefficient : 0;
-        const unexcusedAbsences = student.absences?.filter((a) => !a.excused).length || 0;
+        const average = totalCoefficient > 0 ? totalScore / totalCoefficient : null;
+        const unexcusedAbsences = student.absences?.filter((a) => !a.excused && a.status === 'ABSENT').length || 0;
+        const lateCount = student.absences?.filter((a) => a.status === 'LATE').length || 0;
+        const unpaidAmount = (student.tuitionFees || []).reduce((sum, fee) => {
+          const paid = fee.payments.reduce((s, p) => s + p.amount, 0);
+          return sum + Math.max(0, fee.amount - paid);
+        }, 0);
+        const assignments = student.assignments || [];
+        const missingRate =
+          assignments.length > 0
+            ? assignments.filter((a) => !a.submitted).length / assignments.length
+            : null;
+
+        const ai = computeStudentRiskScore({
+          studentId: student.id,
+          average20: average,
+          unjustifiedAbsences: unexcusedAbsences,
+          lateCount,
+          unpaidAmount,
+          assignmentMissingRate: missingRate,
+        });
 
         return {
           studentId: student.studentId,
+          id: student.id,
           firstName: student.user.firstName,
           lastName: student.user.lastName,
           email: student.user.email,
           class: student.class?.name || 'Non assigné',
-          average,
+          average: average ?? 0,
           unexcusedAbsences,
+          lateCount,
+          unpaidAmount: Math.round(unpaidAmount * 100) / 100,
           totalGrades: grades.length,
-          riskLevel: average < 10 || unexcusedAbsences > 5 ? 'high' : average < 12 ? 'medium' : 'low',
+          riskLevel: ai.level === 'critical' ? 'high' : ai.level,
+          aiScore: ai.score,
+          aiLevel: ai.level,
+          aiFactors: ai.factors,
         };
       })
-      .filter((s) => s.riskLevel !== 'low')
-      .sort((a, b) => {
-        if (a.riskLevel === 'high' && b.riskLevel !== 'high') return -1;
-        if (a.riskLevel !== 'high' && b.riskLevel === 'high') return 1;
-        return a.average - b.average;
-      });
+      .filter((s) => s.aiLevel !== 'low')
+      .sort((a, b) => b.aiScore - a.aiScore);
 
     res.json(atRiskStudents);
   } catch (error: any) {
@@ -4916,11 +4961,13 @@ router.get('/report-cards/generate-data', async (req, res) => {
 // Sauvegarder les bulletins
 router.post('/report-cards/save', async (req: AuthRequest, res) => {
   try {
-    const { classId, period, academicYear } = req.body;
+    const { classId, period, academicYear, publish } = req.body;
 
     if (!classId || !period || !academicYear) {
       return res.status(400).json({ error: 'classId, period et academicYear sont requis' });
     }
+
+    const shouldPublish = Boolean(publish);
 
     // Générer les données (réutiliser la logique)
     const periodDates = getPeriodDates(period, academicYear);
@@ -5017,7 +5064,7 @@ router.post('/report-cards/save', async (req: AuthRequest, res) => {
           academicYear,
           average,
           rank,
-          published: existingReportCard?.published ?? false,
+          published: shouldPublish || (existingReportCard?.published ?? false),
           comments: existingReportCard?.comments ?? null,
         };
 
@@ -5283,6 +5330,69 @@ router.get('/grades/rankings', async (req, res) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Erreur serveur' });
+  }
+});
+
+/**
+ * Aperçu Admis / Doublant après moyennes T3 (seuil 10/20 par défaut), triés par classe.
+ * GET /admin/grades/promotion-decisions?academicYear=&period=trim3&classId=&threshold=10
+ */
+router.get('/grades/promotion-decisions', async (req: SchoolContextRequest, res) => {
+  try {
+    const academicYear =
+      (typeof req.query.academicYear === 'string' && req.query.academicYear) ||
+      getCurrentAcademicYear();
+    const period = typeof req.query.period === 'string' ? req.query.period : 'trim3';
+    const classId = typeof req.query.classId === 'string' ? req.query.classId : undefined;
+    const thresholdRaw = typeof req.query.threshold === 'string' ? Number(req.query.threshold) : 10;
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 10;
+
+    const result = await previewPromotionDecisions({
+      academicYear,
+      period,
+      classId,
+      schoolId: req.schoolId,
+      threshold,
+    });
+    res.json(result);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+/**
+ * Déclare officiellement Admis (≥ seuil) / Doublant (< seuil) et met à jour isRepeating.
+ * POST /admin/grades/promotion-decisions/declare
+ */
+router.post('/grades/promotion-decisions/declare', async (req: AuthRequest & SchoolContextRequest, res) => {
+  try {
+    const academicYear =
+      (typeof req.body?.academicYear === 'string' && req.body.academicYear) ||
+      getCurrentAcademicYear();
+    const period = typeof req.body?.period === 'string' ? req.body.period : 'trim3';
+    const classId = typeof req.body?.classId === 'string' ? req.body.classId : undefined;
+    const thresholdRaw = Number(req.body?.threshold);
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 10;
+    const notifyParents = Boolean(req.body?.notifyParents);
+    const includeSansNotesAsDoublant = Boolean(req.body?.includeSansNotesAsDoublant);
+
+    const result = await declarePromotionDecisions({
+      academicYear,
+      period,
+      classId,
+      schoolId: req.schoolId,
+      threshold,
+      declaredById: req.user?.id,
+      notifyParents,
+      includeSansNotesAsDoublant,
+    });
+
+    res.json({
+      ...result,
+      message: `${result.admis} admis, ${result.doublants} doublant(s) déclarés (${result.declared} au total).`,
+    });
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 
@@ -6469,6 +6579,36 @@ router.get('/payments/pending-cash', async (req: SchoolContextRequest, res) => {
     res.json(rows);
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/payments/pending-mobile-money', async (req: SchoolContextRequest, res) => {
+  try {
+    const rows = await listPendingMobileMoneyPayments(prisma, req.schoolId);
+    res.json(rows);
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/** Confirmation manuelle / sandbox Mobile Money (en attendant le webhook opérateur). */
+router.post('/payments/:id/confirm-mobile-money', async (req: SchoolContextRequest, res) => {
+  try {
+    const transactionId =
+      typeof req.body?.transactionId === 'string' ? req.body.transactionId.trim() : undefined;
+    const payment = await completeOnlinePayment(prisma, req.params.id, {
+      transactionId,
+      providerNote: `Confirmé manuellement (admin/sandbox) le ${new Date().toLocaleString('fr-FR')}`,
+      schoolId: req.schoolId,
+    });
+    res.json({ payment, message: 'Paiement Mobile Money confirmé' });
+  } catch (e: unknown) {
+    if (e instanceof SchoolAccessDeniedError) {
+      return res.status(e.status).json({ error: e.message });
+    }
+    const err = e as Error & { status?: number };
+    if (err.status && err.status !== 500) return res.status(err.status).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
 

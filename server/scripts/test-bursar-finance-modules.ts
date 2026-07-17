@@ -14,7 +14,7 @@ async function login(email: string, password: string): Promise<string> {
 }
 
 async function main() {
-  const adminToken = await login('superadmin@tranlefet.ci', 'password123');
+  const adminToken = await login('kouassistephane489@gmail.com', 'password123');
   const staffToken = await login('bursar@school.com', 'password123');
 
   const listRes = await fetch(`${API}/admin/staff`, {

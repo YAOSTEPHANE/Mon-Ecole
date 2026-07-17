@@ -8,6 +8,7 @@ import type {
 import prisma from './prisma';
 import { getStaffMemberModuleContext } from './staff-visible-modules.util';
 import { notifyParentsNewGrade } from './parent-notify.util';
+import { notifyBulletinsPublished } from './notify-important.util';
 
 export type GradePayload = {
   studentId: string;
@@ -358,6 +359,7 @@ async function applyReportCardRequest(
         rank: payload.rank ?? null,
         comments: payload.comments ?? null,
         published: payload.published ?? false,
+        ...(payload.published ? { publishedAt: new Date() } : {}),
       },
     });
     return;
@@ -373,6 +375,12 @@ async function applyReportCardRequest(
       average: payload.average,
       rank: payload.rank ?? null,
       comments: payload.comments ?? null,
+      ...(payload.published !== undefined
+        ? {
+            published: payload.published,
+            ...(payload.published ? { publishedAt: new Date() } : { publishedAt: null }),
+          }
+        : {}),
     },
   });
 }
@@ -413,6 +421,17 @@ export async function applyApprovedRequest(requestId: string) {
       score: gradePayload.score,
       maxScore: gradePayload.maxScore,
     }).catch((err) => console.error('notifyParentsNewGrade:', err));
+  }
+
+  if (request.target === 'REPORT_CARD') {
+    const rc = payload as ReportCardPayload;
+    if (rc.published) {
+      void notifyBulletinsPublished(
+        [{ studentId: rc.studentId }],
+        rc.period,
+        rc.academicYear
+      ).catch((err) => console.error('notifyBulletinsPublished:', err));
+    }
   }
 
   return prisma.academicChangeRequest.findUnique({ where: { id: requestId } });

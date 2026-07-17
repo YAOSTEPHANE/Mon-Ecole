@@ -1,7 +1,15 @@
 /* Service worker — shell hors ligne, assets Next.js, Web Push */
 const STATIC_CACHE = 'gs-shell-v4';
 const RUNTIME_CACHE = 'gs-runtime-v4';
-const PRECACHE_URLS = ['/', '/login', '/home', '/favicon.ico', '/manifest.webmanifest'];
+const PRECACHE_URLS = [
+  '/',
+  '/login',
+  '/home',
+  '/favicon.ico',
+  '/manifest.webmanifest',
+  '/icons/icon-192.svg',
+  '/icons/icon-512.svg',
+];
 /** Chemins laissés au navigateur (évite les blocages en dev / formulaires dynamiques). */
 const BYPASS_SW_PATHS = ['/inscription', '/pre-inscription', '/_next/webpack-hmr'];
 

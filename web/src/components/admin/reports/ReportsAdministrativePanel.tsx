@@ -344,7 +344,7 @@ const ReportsAdministrativePanel: React.FC = () => {
                 <CartesianGrid {...CHART_GRID} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={36} />
-                <Tooltip formatter={(v: number) => [v, 'Transferts']} />
+                <Tooltip formatter={(v) => [v, 'Transferts']} />
                 <Line
                   type="monotone"
                   dataKey="mouvements"

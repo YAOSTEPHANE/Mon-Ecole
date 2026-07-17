@@ -8,6 +8,7 @@ import HRBenefitsPanel from './HRBenefitsPanel';
 import HRPerformancePanel from './HRPerformancePanel';
 import HRLeavesPanel from './HRLeavesPanel';
 import HRTeacherAttendancePanel from './HRTeacherAttendancePanel';
+import HoursSummaryPanel from './HoursSummaryPanel';
 import {
   FiGrid,
   FiBriefcase,
@@ -16,6 +17,8 @@ import {
   FiAward,
   FiCalendar,
   FiClock,
+  FiBarChart2,
+  FiUsers,
 } from 'react-icons/fi';
 import { ADM } from '../adminModuleLayout';
 
@@ -26,6 +29,8 @@ type HRTab =
   | 'benefits'
   | 'performance'
   | 'attendance'
+  | 'hours-teachers'
+  | 'hours-staff'
   | 'leaves';
 
 const HRManagementModule: React.FC = () => {
@@ -68,6 +73,8 @@ const HRManagementModule: React.FC = () => {
     { id: 'benefits', label: 'Avantages sociaux', icon: FiHeart },
     { id: 'performance', label: 'Évaluation', icon: FiAward },
     { id: 'attendance', label: 'Présence enseignants', icon: FiClock },
+    { id: 'hours-teachers', label: 'Heures enseignants', icon: FiBarChart2 },
+    { id: 'hours-staff', label: 'Heures personnel', icon: FiUsers },
     { id: 'leaves', label: 'Congés & permissions', icon: FiCalendar },
   ];
 
@@ -119,6 +126,15 @@ const HRManagementModule: React.FC = () => {
             <p className={`${ADM.statValTone} text-violet-900`}>{stats.reviews}</p>
             <p className={ADM.statHint}>Enregistrées (historique)</p>
           </Card>
+          <Card className={`${ADM.statCard} border border-teal-100 bg-teal-50/40 sm:col-span-2 lg:col-span-3`}>
+            <p className="text-[10px] font-medium text-teal-800 uppercase tracking-wide leading-tight">
+              Décompte des heures
+            </p>
+            <p className="text-xs text-stone-700 mt-1.5 leading-relaxed">
+              Consultez les onglets <strong>Heures enseignants</strong> et <strong>Heures personnel</strong> pour
+              le total par personne (jour / semaine / mois), graphique et export CSV/PDF.
+            </p>
+          </Card>
         </div>
       )}
 
@@ -127,6 +143,8 @@ const HRManagementModule: React.FC = () => {
       {tab === 'benefits' && <HRBenefitsPanel />}
       {tab === 'performance' && <HRPerformancePanel />}
       {tab === 'attendance' && <HRTeacherAttendancePanel />}
+      {tab === 'hours-teachers' && <HoursSummaryPanel mode="teachers" />}
+      {tab === 'hours-staff' && <HoursSummaryPanel mode="staff" />}
       {tab === 'leaves' && <HRLeavesPanel />}
     </div>
   );

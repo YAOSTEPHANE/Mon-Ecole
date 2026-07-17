@@ -8,11 +8,15 @@ import { AppBrandingProvider } from "@/contexts/AppBrandingContext";
 import { SchoolProvider } from "@/contexts/SchoolContext";
 import ServerConnectionError from "@/components/ServerConnectionError";
 import PushNotificationsBootstrap from "@/components/PushNotificationsBootstrap";
+import RealtimeBootstrap from "@/components/RealtimeBootstrap";
+import AssistantPanel from "@/components/AssistantPanel";
+import SentryBootstrap from "@/components/SentryBootstrap";
 import ServiceWorkerDevCleanup from "@/components/ServiceWorkerDevCleanup";
 import ServiceWorkerBootstrap from "@/components/ServiceWorkerBootstrap";
 import OfflineBanner from "@/components/OfflineBanner";
 import OfflinePrefetch from "@/components/OfflinePrefetch";
 import SyncQueueBootstrap from "@/components/SyncQueueBootstrap";
+import PwaInstallBanner from "@/components/PwaInstallBanner";
 import { ensureStaffPedagogyApiInterceptor } from "@/lib/staffPedagogyApi";
 import { isOffline } from "@/lib/offline-api";
 import "@/utils/debug";
@@ -57,7 +61,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <SyncQueueBootstrap />
           <OfflineBanner />
           <PushNotificationsBootstrap />
+          <RealtimeBootstrap />
+          <SentryBootstrap />
+          <PwaInstallBanner />
           {children}
+          <AssistantPanel />
           <Toaster
           position="top-right"
           gutter={12}

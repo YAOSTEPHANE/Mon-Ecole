@@ -12,7 +12,7 @@ import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   FiBookOpen,
   FiVideo,
@@ -720,7 +720,7 @@ export default function ElearningHub({ mode }: { mode: HubMode }) {
           />
           <input
             className="w-full rounded-lg border px-3 py-2"
-            placeholder="Lien visioconférence (Jitsi, Meet, Teams…)"
+            placeholder="Lien visio (laisser vide = salle Jitsi auto)"
             value={sessionForm.meetingUrl}
             onChange={(e) => setSessionForm((f) => ({ ...f, meetingUrl: e.target.value }))}
           />

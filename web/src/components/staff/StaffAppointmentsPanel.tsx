@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { staffApi } from '@/services/api/staff.api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';

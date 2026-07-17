@@ -29,7 +29,7 @@ import {
   FiGlobe,
 } from 'react-icons/fi';
 import { formatDistanceToNow, format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import 'jspdf-autotable';

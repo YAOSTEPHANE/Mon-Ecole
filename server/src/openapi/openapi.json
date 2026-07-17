@@ -1,0 +1,109 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "École à jour API",
+    "version": "1.0.0",
+    "description": "API publique documentée (extrait). Authentification Bearer JWT."
+  },
+  "servers": [{ "url": "/api" }],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/payments/webhooks/mobile-money": {
+      "post": {
+        "summary": "Webhook Mobile Money / agrégateur",
+        "parameters": [
+          {
+            "name": "x-payment-webhook-secret",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "paymentId": { "type": "string" },
+                  "paymentReference": { "type": "string" },
+                  "status": { "type": "string", "enum": ["SUCCESS", "FAILED"] },
+                  "transactionId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Traité" } }
+      }
+    },
+    "/payments/webhooks/paystack": {
+      "post": {
+        "summary": "Webhook Paystack",
+        "responses": { "200": { "description": "Traité" } }
+      }
+    },
+    "/payments/webhooks/cinetpay": {
+      "post": {
+        "summary": "Webhook CinetPay notify_url",
+        "responses": { "200": { "description": "Traité" } }
+      }
+    },
+    "/payments/webhooks/wave": {
+      "post": {
+        "summary": "Webhook Wave",
+        "responses": { "200": { "description": "Traité" } }
+      }
+    },
+    "/admin/integrations/payments": {
+      "get": {
+        "summary": "État des connecteurs paiement",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Liste providers" } }
+      }
+    },
+    "/admin/campus/transport/routes/{id}/tracking": {
+      "get": {
+        "summary": "Dernière position GPS d’une ligne",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Tracking" } }
+      },
+      "post": {
+        "summary": "Enregistrer un ping GPS",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "201": { "description": "Ping créé" } }
+      }
+    },
+    "/admin/analytics/forecast/payments": {
+      "get": {
+        "summary": "Prévision encaissements (régression linéaire)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Historique + forecast" } }
+      }
+    },
+    "/admin/schedule/optimize": {
+      "post": {
+        "summary": "Optimiser un créneau EDT",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Meilleur créneau scoré" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    }
+  }
+}

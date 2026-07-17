@@ -14,6 +14,14 @@ import {
   sanitizeVisibleStaffModulesForSchool,
 } from '../utils/school-staff-metiers.util';
 import { listPersonnelRegistry } from '../utils/personnel-registry.util';
+import {
+  accumulatePeriod,
+  minutesToHours,
+  parseHoursGroupBy,
+  resolveWorkedMinutes,
+  sortedPeriodBuckets,
+  type PeriodBucket,
+} from '../utils/hours-summary.util';
 
 const router = express.Router();
 
@@ -516,6 +524,145 @@ router.post(
   }
 );
 
+/** Décompte des heures du personnel par jour / semaine / mois. */
+router.get('/staff/attendance/summary', async (req: SchoolContextRequest, res) => {
+  try {
+    const staffId = typeof req.query.staffId === 'string' ? req.query.staffId.trim() : '';
+    const from = typeof req.query.from === 'string' ? req.query.from.trim().slice(0, 10) : '';
+    const to = typeof req.query.to === 'string' ? req.query.to.trim().slice(0, 10) : '';
+    const groupBy = parseHoursGroupBy(req.query.groupBy);
+
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Paramètres from et to requis (YYYY-MM-DD)' });
+    }
+
+    const staffMembers = await prisma.staffMember.findMany({
+      where: {
+        ...currentStaffSchoolScope(req),
+        ...(staffId ? { id: staffId } : {}),
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        jobTitle: true,
+        staffCategory: true,
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    type StaffAgg = {
+      staffId: string;
+      employeeId: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      jobTitle: string | null;
+      staffCategory: string;
+      workedMinutes: number;
+      sessions: number;
+      presentDays: number;
+      hours: number;
+      byPeriod: ReturnType<typeof sortedPeriodBuckets>;
+    };
+
+    const byStaff = new Map<string, StaffAgg & { _period: Map<string, PeriodBucket> }>();
+    for (const sm of staffMembers) {
+      byStaff.set(sm.id, {
+        staffId: sm.id,
+        employeeId: sm.employeeId,
+        firstName: sm.user.firstName,
+        lastName: sm.user.lastName,
+        email: sm.user.email,
+        jobTitle: sm.jobTitle,
+        staffCategory: sm.staffCategory,
+        workedMinutes: 0,
+        sessions: 0,
+        presentDays: 0,
+        hours: 0,
+        byPeriod: [],
+        _period: new Map(),
+      });
+    }
+
+    const staffIds = staffMembers.map((s) => s.id);
+    if (staffIds.length === 0) {
+      return res.json({
+        filters: { from, to, groupBy, staffId: staffId || null },
+        totals: {
+          sessions: 0,
+          workedMinutes: 0,
+          hours: 0,
+          presentDays: 0,
+          staffCount: 0,
+          staffListed: 0,
+        },
+        byPeriod: [],
+        byStaff: [],
+      });
+    }
+
+    const rows = await prisma.staffAttendance.findMany({
+      where: {
+        staffId: { in: staffIds },
+        attendanceDate: { gte: from, lte: to },
+      },
+      orderBy: [{ attendanceDate: 'asc' }],
+    });
+
+    const byPeriod = new Map<string, PeriodBucket>();
+    let workedMinutesTotal = 0;
+    let presentDays = 0;
+
+    for (const row of rows) {
+      const mins = resolveWorkedMinutes(row) ?? 0;
+      const isPresent = row.status === 'PRESENT' || row.status === 'LATE';
+      if (isPresent) presentDays += 1;
+      workedMinutesTotal += mins;
+      if (mins > 0) {
+        accumulatePeriod(byPeriod, row.attendanceDate, groupBy, mins, 0);
+      } else if (isPresent) {
+        accumulatePeriod(byPeriod, row.attendanceDate, groupBy, 0, 0);
+      }
+
+      const cur = byStaff.get(row.staffId);
+      if (!cur) continue;
+      cur.workedMinutes += mins;
+      cur.sessions += 1;
+      if (isPresent) cur.presentDays += 1;
+      cur.hours = minutesToHours(cur.workedMinutes);
+      if (mins > 0 || isPresent) {
+        accumulatePeriod(cur._period, row.attendanceDate, groupBy, mins, 0);
+      }
+    }
+
+    const byStaffList = [...byStaff.values()]
+      .map(({ _period, ...rest }) => ({
+        ...rest,
+        hours: minutesToHours(rest.workedMinutes),
+        byPeriod: sortedPeriodBuckets(_period),
+      }))
+      .sort((a, b) => b.hours - a.hours || `${a.lastName}`.localeCompare(b.lastName, 'fr'));
+
+    res.json({
+      filters: { from, to, groupBy, staffId: staffId || null },
+      totals: {
+        sessions: rows.length,
+        workedMinutes: workedMinutesTotal,
+        hours: minutesToHours(workedMinutesTotal),
+        presentDays,
+        staffCount: byStaffList.filter((s) => s.sessions > 0).length,
+        staffListed: byStaffList.length,
+      },
+      byPeriod: sortedPeriodBuckets(byPeriod),
+      byStaff: byStaffList,
+    });
+  } catch (error: unknown) {
+    console.error('GET /admin/staff/attendance/summary:', error);
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(500).json({ error: message });
+  }
+});
+
 router.get('/staff/:id', async (req: SchoolContextRequest, res) => {
   try {
     const staff = await prisma.staffMember.findFirst({
@@ -765,7 +912,7 @@ router.get('/staff/:id/attendances', async (req: SchoolContextRequest, res) => {
 
 router.post('/staff/:id/attendances', async (req: SchoolContextRequest, res) => {
   try {
-    const { attendanceDate, status, source, notes } = req.body;
+    const { attendanceDate, status, source, notes, checkInAt, checkOutAt, workedMinutes } = req.body;
     if (!attendanceDate || typeof attendanceDate !== 'string') {
       return res.status(400).json({ error: 'attendanceDate requis (YYYY-MM-DD)' });
     }
@@ -777,6 +924,24 @@ router.post('/staff/:id/attendances', async (req: SchoolContextRequest, res) => 
     }
     const allowed = ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'];
     const st = allowed.includes(status) ? status : 'PRESENT';
+
+    const parseOptionalDate = (v: unknown): Date | null => {
+      if (v == null || v === '') return null;
+      const d = new Date(String(v));
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+    const inAt = parseOptionalDate(checkInAt);
+    const outAt = parseOptionalDate(checkOutAt);
+    let minutes: number | null = null;
+    if (workedMinutes != null && workedMinutes !== '') {
+      const n = Number(workedMinutes);
+      if (!Number.isFinite(n) || n < 0) {
+        return res.status(400).json({ error: 'workedMinutes invalide' });
+      }
+      minutes = Math.round(n);
+    } else {
+      minutes = resolveWorkedMinutes({ checkInAt: inAt, checkOutAt: outAt });
+    }
 
     const row = await prisma.staffAttendance.upsert({
       where: {
@@ -791,12 +956,20 @@ router.post('/staff/:id/attendances', async (req: SchoolContextRequest, res) => 
         status: st,
         source: source ? String(source).slice(0, 32) : 'ADMIN',
         notes: notes ? String(notes).slice(0, 500) : null,
+        checkInAt: inAt,
+        checkOutAt: outAt,
+        workedMinutes: minutes,
         recordedByUserId: (req as express.Request & { user?: { id: string } }).user?.id ?? null,
       },
       update: {
         status: st,
         source: source ? String(source).slice(0, 32) : 'ADMIN',
         notes: notes !== undefined ? (notes ? String(notes).slice(0, 500) : null) : undefined,
+        checkInAt: checkInAt !== undefined ? inAt : undefined,
+        checkOutAt: checkOutAt !== undefined ? outAt : undefined,
+        workedMinutes: workedMinutes !== undefined || checkInAt !== undefined || checkOutAt !== undefined
+          ? minutes
+          : undefined,
         recordedByUserId: (req as express.Request & { user?: { id: string } }).user?.id ?? null,
       },
     });

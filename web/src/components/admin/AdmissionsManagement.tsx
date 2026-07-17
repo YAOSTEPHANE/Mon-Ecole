@@ -9,7 +9,7 @@ import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
 import AdmissionGradesDisplay from '../admission/AdmissionGradesDisplay';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { ADM } from './adminModuleLayout';
 import {

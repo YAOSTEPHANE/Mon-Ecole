@@ -26,7 +26,7 @@ import {
   printAdmissionRegistrationForm,
   type AdmissionFormExportOptions,
 } from '../lib/admissionFormPrint';
-import { TRANLEFET_SCHOOL } from '../data/tranlefetSchool';
+import { SCHOOL_DEFAULTS } from '../data/schoolDefaults';
 import toast from 'react-hot-toast';
 import { extractApiErrorMessage } from '../lib/extractApiErrorMessage';
 import {
@@ -169,7 +169,7 @@ const InscriptionAdmission = () => {
     const fromBranding = branding.schoolDisplayName?.trim();
     if (fromBranding) return fromBranding;
     const picked = schools.find((s) => s.slug === schoolSlug);
-    return picked?.shortName?.trim() || picked?.name || TRANLEFET_SCHOOL.fullName;
+    return picked?.shortName?.trim() || picked?.name || SCHOOL_DEFAULTS.fullName;
   }, [branding.schoolDisplayName, schools, schoolSlug]);
 
   const buildExportOptions = (

@@ -30,4 +30,19 @@ export const publicApi = {
     const response = await api.get('/public/schools');
     return response.data;
   },
+  getFneOptions: async (params?: { cycle?: 'secondary' | 'primary'; school?: string }) => {
+    const response = await api.get('/public/fne-options', { params });
+    return response.data;
+  },
+  lookupFneMatricule: async (data: {
+    cycle?: 'secondary' | 'primary';
+    annee: string;
+    nom: string;
+    prenoms?: string;
+    datenaiss?: string;
+    etablissement?: string;
+  }) => {
+    const response = await api.post('/public/fne-lookup', data);
+    return response.data;
+  },
 };

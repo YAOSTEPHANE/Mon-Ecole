@@ -15,7 +15,7 @@ export const TEACHER_MODULE_CATEGORIES: PortalModuleCategory[] = [
   },
   {
     title: 'Ressources numériques',
-    moduleIds: ['digital-library', 'elearning'],
+    moduleIds: ['digital-library', 'elearning', 'mock-exams'],
   },
 ];
 
@@ -34,7 +34,7 @@ export const STUDENT_MODULE_CATEGORIES: PortalModuleCategory[] = [
   },
   {
     title: 'Services & ressources',
-    moduleIds: ['payments', 'messages', 'digital-library', 'elearning'],
+    moduleIds: ['payments', 'messages', 'digital-library', 'elearning', 'mock-exams'],
   },
 ];
 
@@ -81,6 +81,7 @@ export const DIRECTOR_MODULE_CATEGORIES: PortalModuleCategory[] = [
       'pedagogical',
       'discipline',
       'extracurricular',
+      'campus',
       'orientation',
       'schedule',
       'attendance',

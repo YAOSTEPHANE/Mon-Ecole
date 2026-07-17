@@ -9,7 +9,7 @@ import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
 import { FiCalendar, FiPlus, FiInfo } from 'react-icons/fi';
 import { differenceInCalendarDays, format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   TEACHER_LEAVE_TYPE_LABELS,
   TEACHER_LEAVE_STATUS_LABELS,

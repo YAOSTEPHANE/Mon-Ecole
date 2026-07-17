@@ -26,7 +26,7 @@ import {
   PremiumGlassCard,
 } from '../dashboard/premium';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const TeacherOverview = () => {
   const { data: courses, isLoading: coursesLoading } = useQuery({
@@ -137,7 +137,7 @@ const TeacherOverview = () => {
               <CartesianGrid {...CHART_GRID} />
               <XAxis dataKey="label" tick={CHART_AXIS_TICK} />
               <YAxis domain={[0, 20]} width={28} tick={CHART_AXIS_TICK} />
-              <Tooltip formatter={(v: number) => [`${v} / 20`, 'Moyenne']} />
+              <Tooltip formatter={(v) => [`${v} / 20`, 'Moyenne']} />
               <Line type="monotone" dataKey="average20" stroke="#0d9488" strokeWidth={2.5} dot={{ r: 4 }} connectNulls isAnimationActive animationDuration={CHART_ANIMATION_MS} />
             </LineChart>
           </RechartsViewport>

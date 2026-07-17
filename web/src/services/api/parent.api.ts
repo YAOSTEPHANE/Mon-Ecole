@@ -170,6 +170,46 @@ export const parentApi = {
     );
     return response.data;
   },
+  getCanteenPlans: async (studentId: string, params?: { academicYear?: string }) => {
+    const response = await api.get(`/parent/children/${studentId}/campus/canteen-plans`, { params });
+    return response.data;
+  },
+  getCanteenSubscriptions: async (studentId: string) => {
+    const response = await api.get(`/parent/children/${studentId}/campus/canteen-subscriptions`);
+    return response.data;
+  },
+  subscribeCanteen: async (studentId: string, planId: string) => {
+    const response = await api.post(`/parent/children/${studentId}/campus/canteen-subscriptions`, {
+      planId,
+    });
+    return response.data;
+  },
+  getTransportRoutes: async (studentId: string, params?: { academicYear?: string }) => {
+    const response = await api.get(`/parent/children/${studentId}/campus/transport-routes`, {
+      params,
+    });
+    return response.data;
+  },
+  getTransportSubscriptions: async (studentId: string) => {
+    const response = await api.get(`/parent/children/${studentId}/campus/transport-subscriptions`);
+    return response.data;
+  },
+  subscribeTransport: async (
+    studentId: string,
+    data: { routeId: string; stopLabel?: string }
+  ) => {
+    const response = await api.post(
+      `/parent/children/${studentId}/campus/transport-subscriptions`,
+      data
+    );
+    return response.data;
+  },
+  getTransportTracking: async (studentId: string, routeId: string) => {
+    const response = await api.get(
+      `/parent/children/${studentId}/campus/transport-routes/${routeId}/tracking`
+    );
+    return response.data;
+  },
   getOrientationCatalog: async (params?: { academicYear?: string }) => {
     const response = await api.get('/parent/orientation/catalog', { params });
     return response.data;

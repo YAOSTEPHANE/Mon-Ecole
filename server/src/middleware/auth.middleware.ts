@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import type { ParamsFlatDictionary } from 'express-serve-static-core';
 import { JsonWebTokenError, NotBeforeError, TokenExpiredError } from 'jsonwebtoken';
 import {
   PrismaClientInitializationError,
@@ -8,7 +9,7 @@ import {
 import prisma from '../utils/prisma';
 import { verifyAccessToken } from '../utils/jwt.util';
 
-export interface AuthRequest extends Request {
+export interface AuthRequest extends Request<ParamsFlatDictionary> {
   user?: {
     id: string;
     email: string;

@@ -21,6 +21,15 @@ import {
 } from '../utils/extracurricular.util';
 import { notifyStaffOfPendingCashPayment } from '../utils/payment-cash-notify.util';
 import { notifyParentCashPaymentSubmitted } from '../utils/parent-notify.util';
+import { attachOnlineCheckout } from '../utils/online-payment.util';
+import { notifyParentWhatsApp } from '../utils/whatsapp.util';
+import { getStudentGamificationSummary, awardGamificationPoints } from '../utils/gamification.util';
+import {
+  assertStudentCanAccessMockExam,
+  gradeMockExamAnswers,
+  listPublishedMockExamsForStudent,
+} from '../utils/mock-exam.util';
+import { isExamClassLevel } from '../utils/exam-class.util';
 import {
   getAcademicYearsWithTuitionBlockForParent,
   parentTuitionBlockFromYears,
@@ -1542,13 +1551,31 @@ router.post('/payments', async (req: AuthRequest, res) => {
       );
     }
 
-    // Ici, vous pouvez intégrer avec un processeur de paiement réel (Stripe, PayPal, etc.)
-    // Pour l'instant, on simule un paiement réussi après 2 secondes
-    // En production, vous devriez utiliser un webhook ou une confirmation asynchrone
+    let onlinePayment = payment;
+    if (paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') {
+      const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0]?.trim();
+      onlinePayment = await attachOnlineCheckout(prisma, payment.id, {
+        method: paymentMethod,
+        phoneNumber,
+        operator,
+        customerEmail: req.user?.email,
+        customerName: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' '),
+        returnUrl: `${frontend}/student?tab=payments`,
+      });
+      if (phoneNumber) {
+        void notifyParentWhatsApp(
+          phoneNumber,
+          'Paiement initié',
+          `Réf. ${payment.paymentReference} — ${paymentAmount.toLocaleString('fr-FR')} FCFA.`
+        ).catch((e) => console.error('whatsapp payment:', e));
+      }
+    }
 
     res.status(201).json({
-      payment,
-      paymentUrl: `/payment/process/${payment.id}`, // URL pour traiter le paiement
+      payment: onlinePayment,
+      paymentUrl: onlinePayment.checkoutUrl || `/payment/process/${payment.id}`,
+      checkoutUrl: onlinePayment.checkoutUrl || null,
+      provider: onlinePayment.paymentProvider || null,
       message: 'Paiement initié avec succès',
     });
   } catch (error: any) {
@@ -1622,6 +1649,163 @@ router.get('/payments', async (req: AuthRequest, res) => {
       error: error.message || 'Erreur serveur',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+router.get('/gamification', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
+    const summary = await getStudentGamificationSummary(student.id);
+    res.json(summary);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur gamification' });
+  }
+});
+
+/** Examens blancs (classes d’examen uniquement). */
+router.get('/mock-exams', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
+    const data = await listPublishedMockExamsForStudent(prisma, student.id);
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur examens blancs' });
+  }
+});
+
+router.get('/mock-exams/:id', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
+    const { exam } = await assertStudentCanAccessMockExam(prisma, student.id, req.params.id);
+    const safeQuestions = exam.questions.map((q) => ({
+      id: q.id,
+      kind: q.kind,
+      prompt: q.prompt,
+      options: q.options,
+      points: q.points,
+      sortOrder: q.sortOrder,
+    }));
+    res.json({
+      id: exam.id,
+      title: exam.title,
+      description: exam.description,
+      subject: exam.subject,
+      examKind: exam.examKind,
+      durationMinutes: exam.durationMinutes,
+      maxAttempts: exam.maxAttempts,
+      passingScore: exam.passingScore,
+      startsAt: exam.startsAt,
+      endsAt: exam.endsAt,
+      course: exam.course,
+      class: exam.class,
+      questions: safeQuestions,
+    });
+  } catch (e) {
+    const status = (e as { status?: number })?.status ?? 500;
+    res.status(status).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/mock-exams/:id/submit', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true, classId: true, class: { select: { level: true } } },
+    });
+    if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
+    if (!isExamClassLevel(student.class?.level)) {
+      return res.status(403).json({
+        error: 'Réservé aux élèves de classes d’examen (3ème, Terminale)',
+      });
+    }
+
+    const { exam } = await assertStudentCanAccessMockExam(prisma, student.id, req.params.id);
+    const answers =
+      req.body?.answers && typeof req.body.answers === 'object' && !Array.isArray(req.body.answers)
+        ? (req.body.answers as Record<string, unknown>)
+        : {};
+
+    const previous = await prisma.mockExamAttempt.count({
+      where: { mockExamId: exam.id, studentId: student.id, submittedAt: { not: null } },
+    });
+    if (previous >= exam.maxAttempts) {
+      return res.status(409).json({
+        error: `Nombre maximum de tentatives atteint (${exam.maxAttempts})`,
+      });
+    }
+
+    const graded = gradeMockExamAnswers(exam.questions, answers);
+    const passed = graded.scoreOn20 >= exam.passingScore;
+
+    const attempt = await prisma.$transaction(async (tx) => {
+      let gradeId: string | null = null;
+      if (exam.countsAsGrade && exam.courseId && exam.teacherId) {
+        const grade = await tx.grade.create({
+          data: {
+            studentId: student.id,
+            courseId: exam.courseId,
+            teacherId: exam.teacherId,
+            evaluationType: 'MOCK_EXAM',
+            title: `Examen blanc — ${exam.title}`,
+            score: graded.scoreOn20,
+            maxScore: 20,
+            coefficient: 1,
+            comments: `Tentative examen blanc (${exam.examKind})`,
+            date: new Date(),
+          },
+        });
+        gradeId = grade.id;
+      }
+
+      return tx.mockExamAttempt.create({
+        data: {
+          mockExamId: exam.id,
+          studentId: student.id,
+          answers,
+          score: graded.score,
+          maxScore: graded.maxScore,
+          scoreOn20: graded.scoreOn20,
+          passed,
+          gradeId,
+          submittedAt: new Date(),
+        },
+      });
+    });
+
+    if (passed) {
+      void awardGamificationPoints({
+        studentId: student.id,
+        kind: 'GRADE',
+        points: 15,
+        label: `Examen blanc réussi — ${exam.title}`,
+        badgeCode: exam.examKind === 'BAC' ? 'BAC_MOCK' : exam.examKind === 'BEPC' ? 'BEPC_MOCK' : 'MOCK_EXAM',
+      }).catch((err) => console.error('gamification mock exam:', err));
+    }
+
+    res.status(201).json({
+      attempt,
+      result: {
+        score: graded.score,
+        maxScore: graded.maxScore,
+        scoreOn20: graded.scoreOn20,
+        passed,
+        passingScore: exam.passingScore,
+        attemptsUsed: previous + 1,
+        maxAttempts: exam.maxAttempts,
+      },
+    });
+  } catch (e) {
+    const status = (e as { status?: number })?.status ?? 500;
+    res.status(status).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });
 

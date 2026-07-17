@@ -6,7 +6,7 @@ import { studentApi } from '../../services/api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   FiArchive,
   FiCalendar,

@@ -22,6 +22,7 @@ import {
   FiSave,
   FiLoader
 } from 'react-icons/fi';
+import FneMatriculeVerifyActions from './FneMatriculeVerifyActions';
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -86,6 +87,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
     classGroupId: '',
     enrollmentStatus: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'GRADUATED',
     stateAssignment: 'NOT_STATE_ASSIGNED' as 'STATE_ASSIGNED' | 'NOT_STATE_ASSIGNED',
+    nationalMatricule: '',
     enrollmentDate: new Date().toISOString().split('T')[0],
     
     // Informations de contact
@@ -255,6 +257,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
       enrollmentDate: formData.enrollmentDate,
       enrollmentStatus: formData.enrollmentStatus,
       stateAssignment: formData.stateAssignment,
+      nationalMatricule: formData.nationalMatricule.trim() || undefined,
     };
 
     createStudentMutation.mutate(submitData);
@@ -278,6 +281,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
       classGroupId: '',
       enrollmentStatus: 'ACTIVE',
       stateAssignment: 'NOT_STATE_ASSIGNED',
+      nationalMatricule: '',
       enrollmentDate: new Date().toISOString().split('T')[0],
       address: '',
       emergencyContact: '',
@@ -622,13 +626,43 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
                     placeholder="STU001234"
                   />
                 </div>
-                <p className="mt-0.5 text-[10px] text-gray-500">Généré automatiquement si vide</p>
+                <p className="mt-0.5 text-[10px] text-gray-500">
+                  Identifiant interne de l&apos;établissement (généré automatiquement si vide)
+                </p>
                 {errors.studentId && (
                   <p className="mt-1 text-xs text-red-500 flex items-center">
                     <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
                     {errors.studentId}
                   </p>
                 )}
+              </div>
+
+              <div>
+                <label htmlFor="add-nationalMatricule" className="block text-xs font-semibold text-stone-700 mb-1">
+                  Matricule national FNE
+                </label>
+                <input
+                  id="add-nationalMatricule"
+                  type="text"
+                  name="nationalMatricule"
+                  value={formData.nationalMatricule}
+                  onChange={handleChange}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all font-mono"
+                  placeholder="Matricule Fichier National des Élèves"
+                />
+                <p className="mt-0.5 text-[10px] text-gray-500">
+                  Matricule officiel MENA (distinct du numéro d&apos;élève de l&apos;établissement).
+                </p>
+                <FneMatriculeVerifyActions
+                  prefill={{
+                    lastName: formData.lastName,
+                    firstName: formData.firstName,
+                    dateOfBirth: formData.dateOfBirth,
+                  }}
+                  onSelectMatricule={(matricule) =>
+                    setFormData((prev) => ({ ...prev, nationalMatricule: matricule }))
+                  }
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

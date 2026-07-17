@@ -184,7 +184,7 @@ const ReportsAcademicPanel: React.FC<Props> = ({ summary, isLoading }) => {
               <XAxis type="number" domain={[0, 20]} tick={CHART_AXIS_TICK} />
               <YAxis type="category" dataKey="name" width={100} tick={CHART_AXIS_TICK} />
               <Tooltip
-                formatter={(value: number) => [`${value} / 20`, 'Moyenne']}
+                formatter={(value) => [`${Number(value ?? 0)} / 20`, 'Moyenne']}
                 labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName ?? ''}
                 content={(p) => <PremiumTooltip {...p} />}
                 cursor={CHART_CURSOR}

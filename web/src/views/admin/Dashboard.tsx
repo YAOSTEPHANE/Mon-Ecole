@@ -39,6 +39,7 @@ import ElearningHub from '../../components/elearning/ElearningHub';
 import MaterialManagementModule from '../../components/admin/material/MaterialManagementModule';
 import DisciplineAdminModule from '../../components/admin/DisciplineAdminModule';
 import ExtracurricularAdminModule from '../../components/admin/ExtracurricularAdminModule';
+import CampusServicesModule from '../../components/admin/CampusServicesModule';
 import OrientationAdminModule from '../../components/admin/OrientationAdminModule';
 import ReportsStatisticsModule from '../../components/admin/reports/ReportsStatisticsModule';
 import AdminModulesHub from '../../components/admin/AdminModulesHub';
@@ -95,7 +96,7 @@ import {
   FiHome,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import type { IconType } from 'react-icons';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
@@ -560,6 +561,7 @@ const AdminDashboard = () => {
               {activeTab === 'pedagogical' && <PedagogicalTracking />}
               {activeTab === 'discipline' && <DisciplineAdminModule />}
               {activeTab === 'extracurricular' && <ExtracurricularAdminModule />}
+              {activeTab === 'campus' && <CampusServicesModule />}
               {activeTab === 'orientation' && <OrientationAdminModule />}
               {activeTab === 'communication' && <CommunicationHubModule />}
               {activeTab === 'library' && <LibraryManagementModule />}

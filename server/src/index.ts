@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import { ensureJwtConfiguration } from './utils/jwt.util';
 import { useBlobStorage } from './utils/blob-storage.util';
 import { createApp } from './app/createApp';
+import { attachRealtime } from './utils/realtime.util';
+import http from 'http';
 import { startScheduledMongoBackups } from './jobs/scheduled-mongodb-backup';
 import { startScheduledTuitionReminders } from './jobs/scheduled-tuition-reminders';
 import { startScheduledAppointmentReminders } from './jobs/scheduled-appointment-reminders';
@@ -43,7 +45,9 @@ if (process.env.VERCEL !== '1') {
   startScheduledMongoBackups();
   startScheduledTuitionReminders();
   startScheduledAppointmentReminders();
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+  attachRealtime(server);
+  server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   });
 }

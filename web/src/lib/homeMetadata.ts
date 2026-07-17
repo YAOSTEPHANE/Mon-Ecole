@@ -55,9 +55,9 @@ export async function fetchPublicAppBrandingForMetadata(): Promise<BrandingPaylo
   return null;
 }
 
-const DEFAULT_TITLE = 'Collège Privé Tranlefet de Bouaké';
+const DEFAULT_TITLE = 'Mon Ecole';
 const DEFAULT_DESCRIPTION =
-  'Collège Privé Tranlefet de Bouaké (CPTB) : excellence éducative, innovation et formation de qualité au cœur de Bouaké.';
+  'Mon Ecole : excellence éducative, innovation et formation de qualité.';
 
 export async function buildHomePageMetadata(): Promise<Metadata> {
   const b = await fetchPublicAppBrandingForMetadata();

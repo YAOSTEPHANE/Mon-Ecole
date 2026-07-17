@@ -21,7 +21,7 @@ import {
   FiAlertCircle,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   LineChart,
   Line,

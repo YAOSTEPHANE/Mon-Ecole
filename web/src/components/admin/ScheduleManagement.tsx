@@ -28,7 +28,7 @@ import {
 import { downloadScheduleImportTemplate, readCsvFile } from '@/lib/scheduleImport';
 import { invalidateAllScheduleQueries } from '@/lib/schedule-query-invalidation';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import 'jspdf-autotable';

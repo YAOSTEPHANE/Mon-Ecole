@@ -90,7 +90,7 @@ export const HOME_PAGE_IMAGE_DEFINITIONS: HomePageImageDefinition[] = [
   {
     slot: 'homeSplitCampus',
     label: 'Campus / bâtiment',
-    hint: 'Grande image de la section « Un collège privé exigeant à Bouaké ».',
+    hint: 'Grande image de la section établissement / campus.',
     defaultPath: '/home/split-campus.jpg',
     group: 'Établissement',
   },

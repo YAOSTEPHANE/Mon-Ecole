@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fi';
 import { getRoleDashboardPath } from '@/lib/rolePaths';
 import LoginBackground from '../components/illustrations/LoginBackgroundLazy';
+import api, { API_URL } from '@/services/api/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -24,6 +25,10 @@ const Login = () => {
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'email' | 'password'>('email'); // Étape actuelle
+  const [oauthProviders, setOauthProviders] = useState<{ google: boolean; microsoft: boolean }>({
+    google: false,
+    microsoft: false,
+  });
   const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { loginLogoAbsolute, branding } = useAppBranding();
@@ -40,6 +45,27 @@ const Login = () => {
   useEffect(() => {
     document.title = `Connexion · ${displayTitle}`;
   }, [displayTitle]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { data } = await api.get<{ google: boolean; microsoft: boolean }>(
+          '/auth/oauth/providers',
+        );
+        setOauthProviders({
+          google: Boolean(data?.google),
+          microsoft: Boolean(data?.microsoft),
+        });
+      } catch {
+        setOauthProviders({ google: false, microsoft: false });
+      }
+    })();
+  }, []);
+
+  const startOAuth = (provider: 'google' | 'microsoft') => {
+    const base = API_URL.replace(/\/+$/, '');
+    window.location.href = `${base}/auth/oauth/${provider}/start`;
+  };
 
   // Gérer la soumission de l'email
   const handleEmailSubmit = (e: React.FormEvent) => {
@@ -212,6 +238,39 @@ const Login = () => {
                     <FiArrowRight className="w-5 h-5 shrink-0" aria-hidden />
                   </span>
                 </Button>
+
+                {(oauthProviders.google || oauthProviders.microsoft) && (
+                  <div className="pt-2">
+                    <div className="relative my-4">
+                      <div className="absolute inset-0 flex items-center" aria-hidden>
+                        <div className="w-full border-t border-stone-200" />
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="bg-white/95 px-2 text-stone-500">ou continuer avec</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {oauthProviders.google ? (
+                        <button
+                          type="button"
+                          onClick={() => startOAuth('google')}
+                          className="w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-300 hover:bg-stone-50"
+                        >
+                          Google
+                        </button>
+                      ) : null}
+                      {oauthProviders.microsoft ? (
+                        <button
+                          type="button"
+                          onClick={() => startOAuth('microsoft')}
+                          className="w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-300 hover:bg-stone-50"
+                        >
+                          Microsoft
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
               </form>
             ) : (
               // Étape 2 : Saisie du mot de passe

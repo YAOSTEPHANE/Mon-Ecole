@@ -6,7 +6,7 @@ import Button from '../../ui/Button';
 import Modal from '../../ui/Modal';
 import { FiPlus, FiAward } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 const HRPerformancePanel: React.FC = () => {

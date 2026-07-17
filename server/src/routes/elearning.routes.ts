@@ -4,6 +4,8 @@ import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import prisma from '../utils/prisma';
 import { gradeQuizAttempt } from '../utils/elearning-quiz.util';
 
+import { buildJitsiMeetingUrl } from '../utils/student-risk-ai.util';
+
 const router = express.Router();
 
 router.use(authenticate);
@@ -665,7 +667,7 @@ router.post(
         if (!teacherId) return res.status(400).json({ error: 'teacherId requis' });
       }
 
-      const row = await prisma.virtualClassSession.create({
+      const created = await prisma.virtualClassSession.create({
         data: {
           title: req.body.title,
           description: req.body.description ?? null,
@@ -684,6 +686,14 @@ router.post(
           classId: req.body.classId ?? null,
         },
       });
+      // Visio Jitsi auto si aucun lien fourni
+      let row = created;
+      if (!created.meetingUrl) {
+        row = await prisma.virtualClassSession.update({
+          where: { id: created.id },
+          data: { meetingUrl: buildJitsiMeetingUrl(created.id, created.title) },
+        });
+      }
       res.status(201).json(row);
     } catch (error: unknown) {
       res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });

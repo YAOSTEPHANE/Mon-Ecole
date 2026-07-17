@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { authApi } from '../services/api';
 import {
   clearAllOfflineCaches,
@@ -46,6 +46,8 @@ interface AuthContextType {
     password: string,
     twoFactorCode?: string
   ) => Promise<{ token: string; user: User; twoFactorEnabled?: boolean }>;
+  /** Finalise une session après SSO (jeton JWT déjà émis par le backend). */
+  acceptSession: (sessionToken: string) => Promise<User>;
   logout: () => void;
   loading: boolean;
   /** Recharge le profil depuis l’API (sans message de succès). */
@@ -218,6 +220,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const acceptSession = useCallback(async (sessionToken: string): Promise<User> => {
+    const trimmed = sessionToken.trim();
+    if (!trimmed) throw new Error('Jeton manquant');
+    localStorage.setItem('token', trimmed);
+    setToken(trimmed);
+    try {
+      const userData = await authApi.getMe();
+      if (!userData) throw new Error('Profil introuvable');
+      const u = userData as User;
+      setUser(u);
+      await saveUserSnapshot(u);
+      setLoading(false);
+      return u;
+    } catch (error) {
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+      setLoading(false);
+      throw error;
+    }
+  }, []);
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -230,7 +254,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout, loading, refreshUser, updateProfile, uiPreferences }}
+      value={{
+        user,
+        token,
+        login,
+        acceptSession,
+        logout,
+        loading,
+        refreshUser,
+        updateProfile,
+        uiPreferences,
+      }}
     >
       {children}
     </AuthContext.Provider>

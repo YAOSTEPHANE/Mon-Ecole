@@ -18,6 +18,11 @@ import {
   getCurrentAcademicYear,
   inferReportingPeriod,
 } from '../utils/report-card.util';
+import {
+  createMockExamWithQuestions,
+  type MockQuestionInput,
+} from '../utils/mock-exam.util';
+import { defaultExamKindForLevel, isExamClassLevel } from '../utils/exam-class.util';
 
 const router = express.Router();
 
@@ -2004,6 +2009,162 @@ router.put('/appointments/:id/cancel', async (req: AuthRequest, res) => {
   } catch (error: unknown) {
     console.error('PUT /teacher/appointments/:id/cancel:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+// ========== EXAMENS BLANCS ==========
+
+router.get('/mock-exams', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+    const rows = await prisma.mockExam.findMany({
+      where: { teacherId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { questions: true, attempts: true } },
+        class: { select: { id: true, name: true, level: true } },
+        course: { select: { id: true, name: true } },
+      },
+    });
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/mock-exams/exam-classes', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+    const courses = await prisma.course.findMany({
+      where: { teacherId },
+      select: {
+        id: true,
+        name: true,
+        class: { select: { id: true, name: true, level: true, academicYear: true } },
+      },
+    });
+    const seen = new Set<string>();
+    const classes = [];
+    for (const c of courses) {
+      if (!isExamClassLevel(c.class.level) || seen.has(c.class.id)) continue;
+      seen.add(c.class.id);
+      classes.push({
+        ...c.class,
+        courseId: c.id,
+        courseName: c.name,
+        suggestedExamKind: defaultExamKindForLevel(c.class.level),
+      });
+    }
+    res.json({ classes });
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/mock-exams', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+
+    const body = req.body || {};
+    const rawQuestions = Array.isArray(body.questions) ? body.questions : [];
+    const questions: MockQuestionInput[] = rawQuestions
+      .map((q: Record<string, unknown>, i: number) => {
+        const prompt = typeof q?.prompt === 'string' ? q.prompt.trim() : '';
+        const correctAnswer = q?.correctAnswer != null ? String(q.correctAnswer).trim() : '';
+        if (!prompt || !correctAnswer) return null;
+        return {
+          kind:
+            q.kind === 'TRUE_FALSE' || q.kind === 'SHORT_TEXT' || q.kind === 'MCQ' ? q.kind : 'MCQ',
+          prompt,
+          options: Array.isArray(q.options) ? q.options.map((o) => String(o)) : null,
+          correctAnswer,
+          points: Number.isFinite(Number(q.points)) ? Math.max(1, Number(q.points)) : 1,
+          sortOrder: i,
+        } satisfies MockQuestionInput;
+      })
+      .filter((q: MockQuestionInput | null): q is MockQuestionInput => q != null);
+
+    let classId = typeof body.classId === 'string' ? body.classId : null;
+    let courseId = typeof body.courseId === 'string' ? body.courseId : null;
+    let targetLevels: string[] = Array.isArray(body.targetLevels)
+      ? body.targetLevels.map((l: unknown) => String(l).trim()).filter(Boolean)
+      : [];
+
+    if (courseId) {
+      const course = await prisma.course.findFirst({
+        where: { id: courseId, teacherId },
+        include: { class: { select: { id: true, level: true } } },
+      });
+      if (!course) return res.status(403).json({ error: 'Cours non autorisé' });
+      if (!isExamClassLevel(course.class.level)) {
+        return res.status(400).json({
+          error: 'Les examens blancs ne concernent que les classes d’examen (3ème, Terminale)',
+        });
+      }
+      classId = course.class.id;
+      if (!targetLevels.length) targetLevels = [course.class.level];
+    }
+
+    const examKind =
+      body.examKind === 'BEPC' || body.examKind === 'BAC' || body.examKind === 'OTHER'
+        ? body.examKind
+        : defaultExamKindForLevel(targetLevels[0]);
+
+    const created = await createMockExamWithQuestions(prisma, {
+      title: typeof body.title === 'string' ? body.title : '',
+      description: typeof body.description === 'string' ? body.description : null,
+      subject: typeof body.subject === 'string' ? body.subject : null,
+      examKind,
+      academicYear:
+        typeof body.academicYear === 'string' && body.academicYear.trim()
+          ? body.academicYear.trim()
+          : getCurrentAcademicYear(),
+      targetLevels,
+      classId,
+      courseId,
+      teacherId,
+      durationMinutes:
+        body.durationMinutes != null && Number.isFinite(Number(body.durationMinutes))
+          ? Number(body.durationMinutes)
+          : 60,
+      startsAt:
+        typeof body.startsAt === 'string' && body.startsAt
+          ? new Date(body.startsAt)
+          : null,
+      endsAt:
+        typeof body.endsAt === 'string' && body.endsAt ? new Date(body.endsAt) : null,
+      isPublished: body.isPublished !== false,
+      countsAsGrade: Boolean(body.countsAsGrade),
+      maxAttempts:
+        body.maxAttempts != null ? Math.max(1, Math.min(10, Number(body.maxAttempts))) : 2,
+      passingScore: body.passingScore != null ? Number(body.passingScore) : 10,
+      questions,
+    });
+    res.status(201).json(created);
+  } catch (e) {
+    const status = (e as { status?: number })?.status ?? 500;
+    res.status(status).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.patch('/mock-exams/:id/publish', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+    const exam = await prisma.mockExam.findFirst({
+      where: { id: req.params.id, teacherId },
+    });
+    if (!exam) return res.status(404).json({ error: 'Examen blanc introuvable' });
+    const updated = await prisma.mockExam.update({
+      where: { id: exam.id },
+      data: { isPublished: req.body?.isPublished !== false },
+    });
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });
 

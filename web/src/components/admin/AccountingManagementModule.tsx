@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { adminAccountingApi } from '../../services/api/admin-accounting.api';
 import Card from '../ui/Card';
 import Button from '../ui/Button';

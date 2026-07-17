@@ -18,12 +18,13 @@ import ChildConduct from '../../components/parent/ChildConduct';
 import ParentAppointmentsPanel from '../../components/parent/ParentAppointmentsPanel';
 import ParentFamilyProfilePanel from '../../components/parent/ParentFamilyProfilePanel';
 import ParentExtracurricularPanel from '../../components/parent/ParentExtracurricularPanel';
+import ParentCampusPanel from '../../components/parent/ParentCampusPanel';
 import ParentOrientationPanel from '../../components/parent/ParentOrientationPanel';
 import ParentNotificationsPanel from '../../components/parent/ParentNotificationsPanel';
 import SchoolCommunication from '../../components/portal/SchoolCommunication';
 import Card from '../../components/ui/Card';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import {
   FiSearch,
   FiHeart,
@@ -43,6 +44,7 @@ import {
   FiMap,
   FiNavigation,
   FiBell,
+  FiCoffee,
 } from 'react-icons/fi';
 
 const VALID_PARENT_TABS = [
@@ -61,6 +63,7 @@ const VALID_PARENT_TABS = [
   'extracurricular',
   'orientation',
   'payments',
+  'campus',
 ] as const;
 
 type ParentTabId = (typeof VALID_PARENT_TABS)[number];
@@ -102,6 +105,13 @@ const ParentDashboard = () => {
         color: 'from-teal-500 to-emerald-600',
       },
       {
+        id: 'campus',
+        label: 'Cantine & transport',
+        icon: FiCoffee,
+        requiresChild: true,
+        color: 'from-amber-600 to-orange-700',
+      },
+      {
         id: 'orientation',
         label: 'Orientation',
         icon: FiNavigation,
@@ -128,6 +138,7 @@ const ParentDashboard = () => {
       'report-cards': 'Bulletins et bilans',
       conduct: 'Appréciations et conduite',
       extracurricular: 'Clubs, événements, sorties et inscriptions',
+      campus: 'Cantine scolaire et lignes de transport',
       orientation: 'Filières, tests, conseils, partenariats et suivi de votre enfant',
       payments: 'Frais scolaires et règlements',
     }),
@@ -343,6 +354,19 @@ const ParentDashboard = () => {
                         <p className="text-lg mb-2 font-semibold text-stone-900">Sélectionnez un enfant</p>
                         <p className="text-sm leading-relaxed">
                           Choisissez un enfant dans « Mes enfants » pour gérer les activités parascolaires.
+                        </p>
+                      </div>
+                    </Card>
+                  ))}
+                {activeTab === 'campus' &&
+                  (selectedChild ? (
+                    <ParentCampusPanel studentId={selectedChild} />
+                  ) : (
+                    <Card>
+                      <div className="text-center py-12 text-stone-600">
+                        <p className="text-lg mb-2 font-semibold text-stone-900">Sélectionnez un enfant</p>
+                        <p className="text-sm leading-relaxed">
+                          Choisissez un enfant pour la cantine et le transport.
                         </p>
                       </div>
                     </Card>

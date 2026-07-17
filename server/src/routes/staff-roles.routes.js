@@ -1,0 +1,705 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const express_validator_1 = require("express-validator");
+const prisma_1 = __importDefault(require("../utils/prisma"));
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const school_context_middleware_1 = require("../middleware/school-context.middleware");
+const staff_visible_modules_util_1 = require("../utils/staff-visible-modules.util");
+const cash_payment_validation_util_1 = require("../utils/cash-payment-validation.util");
+const admission_enroll_util_1 = require("../utils/admission-enroll.util");
+const student_enrollment_dossier_util_1 = require("../utils/student-enrollment-dossier.util");
+const school_context_util_1 = require("../utils/school-context.util");
+const password_util_1 = require("../utils/password.util");
+const router = express_1.default.Router();
+router.use(auth_middleware_1.authenticate);
+router.use((0, auth_middleware_1.authorize)('STAFF'));
+router.use((req, res, next) => (0, school_context_middleware_1.attachSchoolContext)(req, res, next));
+const CASH_VALIDATION_MODULES = [
+    'treasury',
+    'payments_mgmt',
+    'fees_mgmt',
+    'counter',
+];
+function requireStaffAnyModule(moduleIds) {
+    return async (req, res, next) => {
+        try {
+            const ctx = await (0, staff_visible_modules_util_1.getStaffMemberModuleContext)(req.user.id);
+            if (!ctx) {
+                return res.status(403).json({ error: 'Profil personnel introuvable.' });
+            }
+            if (!moduleIds.some((m) => ctx.visibleModules.includes(m))) {
+                return res.status(403).json({
+                    error: 'Le module Paiements / Trésorerie n’est pas activé pour votre compte. Contactez l’administration.',
+                });
+            }
+            next();
+        }
+        catch (e) {
+            next(e);
+        }
+    };
+}
+function requireStaffModule(moduleId) {
+    return async (req, res, next) => {
+        try {
+            await (0, staff_visible_modules_util_1.assertStaffHasModule)(req.user.id, moduleId);
+            next();
+        }
+        catch (e) {
+            if (e instanceof Error && e.message === 'STAFF_PROFILE_NOT_FOUND') {
+                return res.status(403).json({
+                    error: 'Profil personnel introuvable. Contactez l’administration pour rattacher votre compte.',
+                    code: 'STAFF_PROFILE_NOT_FOUND',
+                });
+            }
+            if (e instanceof Error && e.message === 'MODULE_NOT_ALLOWED') {
+                return res.status(403).json({
+                    error: 'Le module « Inscriptions & admissions » n’est pas activé pour votre compte. Reconnectez-vous ou demandez l’accès à l’administration.',
+                    code: 'MODULE_NOT_ALLOWED',
+                });
+            }
+            next(e);
+        }
+    };
+}
+const SECRETARY_ADMISSION_STATUSES = new Set([
+    'PENDING',
+    'UNDER_REVIEW',
+    'ACCEPTED',
+    'REJECTED',
+    'WAITLIST',
+]);
+function currentStudentScope(req) {
+    return (0, school_context_util_1.studentScopeWhere)(req.schoolId, req.school?.isDefault ?? false);
+}
+function currentClassScope(req) {
+    return (0, school_context_util_1.classScopeWhere)(req.schoolId, req.school?.isDefault ?? false);
+}
+function currentAdmissionScope(req) {
+    return (0, school_context_util_1.admissionScopeWhere)(req.schoolId, req.school?.isDefault ?? false);
+}
+// ——— Secrétariat : admissions ———
+router.get('/admissions/stats', requireStaffModule('admissions'), async (req, res) => {
+    try {
+        const scope = currentAdmissionScope(req);
+        const [pending, underReview, accepted, total] = await Promise.all([
+            prisma_1.default.admission.count({ where: { ...scope, status: 'PENDING' } }),
+            prisma_1.default.admission.count({ where: { ...scope, status: 'UNDER_REVIEW' } }),
+            prisma_1.default.admission.count({ where: { ...scope, status: 'ACCEPTED' } }),
+            prisma_1.default.admission.count({ where: scope }),
+        ]);
+        res.json({ pending, underReview, accepted, total });
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/admissions/classes', requireStaffModule('admissions'), async (req, res) => {
+    try {
+        const classes = await prisma_1.default.class.findMany({
+            where: currentClassScope(req),
+            select: { id: true, name: true, level: true, academicYear: true },
+            orderBy: [{ academicYear: 'desc' }, { name: 'asc' }],
+        });
+        res.json(classes);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/admissions', requireStaffModule('admissions'), async (req, res) => {
+    try {
+        const { status, academicYear, q } = req.query;
+        const scope = currentAdmissionScope(req);
+        const admissions = await prisma_1.default.admission.findMany({
+            where: {
+                AND: [
+                    scope,
+                    ...(status && typeof status === 'string' ? [{ status: status }] : []),
+                    ...(academicYear && typeof academicYear === 'string' ? [{ academicYear }] : []),
+                    ...(q && typeof q === 'string' && q.trim()
+                        ? [
+                            {
+                                OR: [
+                                    { firstName: { contains: q.trim() } },
+                                    { lastName: { contains: q.trim() } },
+                                    { email: { contains: q.trim() } },
+                                    { reference: { contains: q.trim() } },
+                                ],
+                            },
+                        ]
+                        : []),
+                ],
+            },
+            include: {
+                proposedClass: { select: { id: true, name: true, level: true, academicYear: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 150,
+        });
+        res.json(admissions);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.patch('/admissions/:id', requireStaffModule('admissions'), (0, express_validator_1.body)('status').optional().isString(), async (req, res) => {
+    try {
+        const errors = (0, express_validator_1.validationResult)(req);
+        if (!errors.isEmpty())
+            return res.status(400).json({ errors: errors.array() });
+        const existing = await prisma_1.default.admission.findFirst({
+            where: { id: req.params.id, ...currentAdmissionScope(req) },
+        });
+        if (!existing)
+            return res.status(404).json({ error: 'Dossier introuvable' });
+        if (existing.status === 'ENROLLED') {
+            return res.status(400).json({ error: 'Dossier déjà inscrit — modification limitée' });
+        }
+        const { status, adminNotes, proposedClassId } = req.body ?? {};
+        if (status && !SECRETARY_ADMISSION_STATUSES.has(status)) {
+            return res.status(400).json({ error: 'Statut non autorisé au secrétariat' });
+        }
+        const updated = await prisma_1.default.admission.update({
+            where: { id: req.params.id },
+            data: {
+                ...(status !== undefined && { status: status }),
+                ...(adminNotes !== undefined && { adminNotes: adminNotes === '' ? null : String(adminNotes) }),
+                ...(proposedClassId !== undefined && {
+                    proposedClassId: proposedClassId === '' || proposedClassId === null ? null : proposedClassId,
+                }),
+                ...(status !== undefined &&
+                    status !== existing.status && {
+                    reviewedAt: new Date(),
+                    reviewedById: req.user.id,
+                }),
+            },
+            include: { proposedClass: { select: { id: true, name: true, level: true } } },
+        });
+        res.json(updated);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.post('/admissions/:id/enroll', requireStaffModule('admissions'), [
+    (0, express_validator_1.body)('password')
+        .optional({ values: 'falsy' })
+        .trim()
+        .custom(password_util_1.optionalPasswordPolicyValidator)
+        .withMessage(password_util_1.PASSWORD_POLICY_HINT),
+], async (req, res) => {
+    try {
+        const errors = (0, express_validator_1.validationResult)(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        const result = await (0, admission_enroll_util_1.enrollStudentFromAdmission)(req.params.id, req.user.id, req.body, req, req.schoolId);
+        res.status(201).json(result);
+    }
+    catch (error) {
+        const err = error;
+        console.error('POST /staff/admissions/:id/enroll:', error);
+        const code = err.statusCode && err.statusCode >= 400 && err.statusCode < 600 ? err.statusCode : 500;
+        res.status(code).json({ error: err.message || 'Erreur serveur' });
+    }
+});
+router.get('/students/:id/enrollment-dossier', requireStaffModule('admissions'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!/^[a-f\d]{24}$/i.test(id)) {
+            return res.status(400).json({ error: 'Identifiant élève invalide' });
+        }
+        const schoolId = req.schoolId;
+        const inScope = await prisma_1.default.student.findFirst({
+            where: {
+                id,
+                ...(0, school_context_util_1.studentScopeWhere)(schoolId, req.school?.isDefault ?? false),
+            },
+            select: { id: true },
+        });
+        if (!inScope) {
+            return res.status(404).json({ error: 'Élève introuvable dans cet établissement.' });
+        }
+        const payload = await (0, student_enrollment_dossier_util_1.buildStudentEnrollmentDossierPayload)(id);
+        if (!payload) {
+            return res.status(404).json({ error: 'Élève non trouvé' });
+        }
+        res.json(payload);
+    }
+    catch (error) {
+        console.error('GET /staff/students/:id/enrollment-dossier:', error);
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Erreur serveur',
+        });
+    }
+});
+// ——— Secrétariat : rendez-vous parents ———
+router.get('/appointments/stats', requireStaffModule('appointments'), async (req, res) => {
+    try {
+        const now = new Date();
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(now);
+        endOfDay.setHours(23, 59, 59, 999);
+        const [pending, today, confirmed] = await Promise.all([
+            prisma_1.default.parentTeacherAppointment.count({
+                where: { status: 'PENDING', student: currentStudentScope(req) },
+            }),
+            prisma_1.default.parentTeacherAppointment.count({
+                where: {
+                    scheduledStart: { gte: startOfDay, lte: endOfDay },
+                    status: { not: 'CANCELLED' },
+                    student: currentStudentScope(req),
+                },
+            }),
+            prisma_1.default.parentTeacherAppointment.count({
+                where: { status: 'CONFIRMED', student: currentStudentScope(req) },
+            }),
+        ]);
+        res.json({ pending, today, confirmed });
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/appointments', requireStaffModule('appointments'), async (req, res) => {
+    try {
+        const { status, from, to, q } = req.query;
+        const rows = await prisma_1.default.parentTeacherAppointment.findMany({
+            where: {
+                student: currentStudentScope(req),
+                ...(status && typeof status === 'string'
+                    ? { status: status }
+                    : {}),
+                ...(from && typeof from === 'string' ? { scheduledStart: { gte: new Date(from) } } : {}),
+                ...(to && typeof to === 'string' ? { scheduledStart: { lte: new Date(to) } } : {}),
+            },
+            include: {
+                student: {
+                    include: {
+                        user: { select: { firstName: true, lastName: true } },
+                        class: { select: { name: true } },
+                    },
+                },
+                parent: { include: { user: { select: { firstName: true, lastName: true, phone: true, email: true } } } },
+                teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+            },
+            orderBy: { scheduledStart: 'asc' },
+            take: 120,
+        });
+        let filtered = rows;
+        if (q && typeof q === 'string' && q.trim()) {
+            const needle = q.trim().toLowerCase();
+            filtered = rows.filter((r) => {
+                if (!r.student?.user || !r.teacher?.user)
+                    return false;
+                const student = `${r.student.user.firstName} ${r.student.user.lastName}`.toLowerCase();
+                const parent = `${r.parent.user.firstName} ${r.parent.user.lastName}`.toLowerCase();
+                const teacher = `${r.teacher.user.firstName} ${r.teacher.user.lastName}`.toLowerCase();
+                return student.includes(needle) || parent.includes(needle) || teacher.includes(needle);
+            });
+        }
+        res.json(filtered);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+// ——— Secrétariat : registre élèves ———
+router.get('/registry/students', requireStaffModule('student_registry'), async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim();
+        if (q.length < 2)
+            return res.json([]);
+        const students = await prisma_1.default.student.findMany({
+            where: {
+                AND: [
+                    { isActive: true },
+                    currentStudentScope(req),
+                    {
+                        OR: [
+                            { studentId: { contains: q } },
+                            { user: { firstName: { contains: q } } },
+                            { user: { lastName: { contains: q } } },
+                            { user: { email: { contains: q } } },
+                        ],
+                    },
+                ],
+            },
+            take: 40,
+            orderBy: { user: { lastName: 'asc' } },
+            include: {
+                user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+                class: { select: { name: true, level: true, academicYear: true } },
+                parents: {
+                    include: {
+                        parent: { include: { user: { select: { firstName: true, lastName: true, phone: true } } } },
+                    },
+                },
+                _count: { select: { identityDocuments: true } },
+            },
+        });
+        res.json(students);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/registry/students/:id', requireStaffModule('student_registry'), async (req, res) => {
+    try {
+        const student = await prisma_1.default.student.findFirst({
+            where: { id: req.params.id, isActive: true, ...currentStudentScope(req) },
+            include: {
+                user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+                class: { select: { name: true, level: true, academicYear: true } },
+                parents: {
+                    include: {
+                        parent: { include: { user: { select: { firstName: true, lastName: true, phone: true, email: true } } } },
+                    },
+                },
+                identityDocuments: { orderBy: { createdAt: 'desc' }, take: 20 },
+                schoolHistory: { orderBy: { academicYear: 'desc' }, take: 10 },
+            },
+        });
+        if (!student)
+            return res.status(404).json({ error: 'Élève introuvable' });
+        res.json(student);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+// ——— Économe / comptabilité : trésorerie ———
+router.get('/treasury/summary', requireStaffModule('treasury'), async (req, res) => {
+    try {
+        const now = new Date();
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const [fees, paymentsToday, paymentsMonth, overdueCount] = await Promise.all([
+            prisma_1.default.tuitionFee.findMany({
+                where: { student: currentStudentScope(req) },
+                select: {
+                    id: true,
+                    amount: true,
+                    isPaid: true,
+                    dueDate: true,
+                    studentId: true,
+                    payments: { where: { status: 'COMPLETED' }, select: { amount: true } },
+                },
+            }),
+            prisma_1.default.payment.aggregate({
+                where: { status: 'COMPLETED', paidAt: { gte: startOfDay }, student: currentStudentScope(req) },
+                _sum: { amount: true },
+                _count: true,
+            }),
+            prisma_1.default.payment.aggregate({
+                where: { status: 'COMPLETED', paidAt: { gte: startOfMonth }, student: currentStudentScope(req) },
+                _sum: { amount: true },
+                _count: true,
+            }),
+            prisma_1.default.tuitionFee.count({
+                where: { isPaid: false, dueDate: { lt: now }, student: currentStudentScope(req) },
+            }),
+        ]);
+        let totalOutstanding = 0;
+        let unpaidLines = 0;
+        for (const fee of fees) {
+            const paid = fee.payments.reduce((s, p) => s + p.amount, 0);
+            const remaining = Math.max(0, fee.amount - paid);
+            if (remaining > 0) {
+                totalOutstanding += remaining;
+                unpaidLines += 1;
+            }
+        }
+        res.json({
+            totalOutstanding: Math.round(totalOutstanding),
+            unpaidLines,
+            overdueCount,
+            collectedToday: Math.round(paymentsToday._sum.amount ?? 0),
+            paymentsTodayCount: paymentsToday._count,
+            collectedMonth: Math.round(paymentsMonth._sum.amount ?? 0),
+            paymentsMonthCount: paymentsMonth._count,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/treasury/overdue', requireStaffModule('treasury'), async (req, res) => {
+    try {
+        const now = new Date();
+        const fees = await prisma_1.default.tuitionFee.findMany({
+            where: { isPaid: false, dueDate: { lt: now }, student: currentStudentScope(req) },
+            include: {
+                student: {
+                    include: {
+                        user: { select: { firstName: true, lastName: true } },
+                        class: { select: { name: true } },
+                    },
+                },
+                payments: { where: { status: 'COMPLETED' } },
+            },
+            orderBy: { dueDate: 'asc' },
+            take: 80,
+        });
+        res.json(fees.map((f) => {
+            const paid = f.payments.reduce((s, p) => s + p.amount, 0);
+            const remaining = Math.max(0, f.amount - paid);
+            return { ...f, totalPaid: paid, remainingAmount: remaining };
+        }));
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/treasury/recent-payments', requireStaffModule('treasury'), async (req, res) => {
+    try {
+        const rows = await prisma_1.default.payment.findMany({
+            where: { status: 'COMPLETED', student: currentStudentScope(req) },
+            orderBy: { paidAt: 'desc' },
+            take: 50,
+            include: {
+                student: { include: { user: { select: { firstName: true, lastName: true } } } },
+                tuitionFee: { select: { period: true, academicYear: true } },
+            },
+        });
+        res.json(rows);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/treasury/pending-cash', requireStaffAnyModule(CASH_VALIDATION_MODULES), async (req, res) => {
+    try {
+        const rows = await (0, cash_payment_validation_util_1.listPendingCashPayments)(prisma_1.default, req.schoolId);
+        res.json(rows);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.post('/treasury/pending-cash/:id/validate', requireStaffAnyModule(CASH_VALIDATION_MODULES), async (req, res) => {
+    try {
+        const staff = await prisma_1.default.user.findUnique({
+            where: { id: req.user.id },
+            select: { id: true, firstName: true, lastName: true, role: true },
+        });
+        if (!staff)
+            return res.status(404).json({ error: 'Utilisateur introuvable' });
+        const name = [staff.firstName, staff.lastName].filter(Boolean).join(' ').trim() || 'Économe';
+        const payment = await (0, cash_payment_validation_util_1.validateCashPayment)(prisma_1.default, req.params.id, {
+            id: staff.id,
+            role: staff.role,
+            name,
+        }, req.schoolId);
+        res.json({ payment, message: 'Paiement espèces validé et pris en compte' });
+    }
+    catch (error) {
+        const err = error;
+        if (err.status && err.status !== 500)
+            return res.status(err.status).json({ error: err.message });
+        res.status(500).json({ error: err.message || 'Erreur serveur' });
+    }
+});
+router.post('/treasury/pending-cash/:id/reject', requireStaffAnyModule(CASH_VALIDATION_MODULES), async (req, res) => {
+    try {
+        const staff = await prisma_1.default.user.findUnique({
+            where: { id: req.user.id },
+            select: { firstName: true, lastName: true },
+        });
+        const name = [staff?.firstName, staff?.lastName].filter(Boolean).join(' ').trim() || 'Économe';
+        const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined;
+        const payment = await (0, cash_payment_validation_util_1.rejectCashPayment)(prisma_1.default, req.params.id, { name }, reason, req.schoolId);
+        res.json({ payment, message: 'Déclaration espèces refusée' });
+    }
+    catch (error) {
+        const err = error;
+        if (err.status && err.status !== 500)
+            return res.status(err.status).json({ error: err.message });
+        res.status(500).json({ error: err.message || 'Erreur serveur' });
+    }
+});
+// ——— Directeur des études : pilotage ———
+router.get('/academic/overview', requireStaffModule('academic_overview'), async (req, res) => {
+    try {
+        const [classCount, studentCount, pendingValidations, gradeAgg, classes] = await Promise.all([
+            prisma_1.default.class.count({ where: currentClassScope(req) }),
+            prisma_1.default.student.count({ where: { isActive: true, ...currentStudentScope(req) } }),
+            prisma_1.default.academicChangeRequest.count({ where: { status: 'PENDING_STUDIES_DIRECTOR' } }),
+            prisma_1.default.grade.aggregate({
+                where: { student: currentStudentScope(req) },
+                _avg: { score: true },
+                _count: true,
+            }),
+            prisma_1.default.class.findMany({
+                where: currentClassScope(req),
+                select: {
+                    id: true,
+                    name: true,
+                    level: true,
+                    academicYear: true,
+                    _count: { select: { students: true, courses: true } },
+                },
+                orderBy: { name: 'asc' },
+            }),
+        ]);
+        res.json({
+            classCount,
+            studentCount,
+            pendingValidations,
+            gradesCount: gradeAgg._count,
+            averageScore: gradeAgg._avg.score != null ? Math.round(gradeAgg._avg.score * 100) / 100 : null,
+            classes,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/academic/class-averages', requireStaffModule('academic_overview'), async (req, res) => {
+    try {
+        const classId = typeof req.query.classId === 'string' ? req.query.classId : undefined;
+        const grades = await prisma_1.default.grade.findMany({
+            where: {
+                student: {
+                    ...currentStudentScope(req),
+                    ...(classId ? { classId } : {}),
+                },
+            },
+            select: { score: true, maxScore: true, student: { select: { classId: true } } },
+        });
+        const byClass = new Map();
+        for (const g of grades) {
+            const cid = g.student.classId;
+            if (!cid)
+                continue;
+            const normalized = g.maxScore > 0 ? (g.score / g.maxScore) * 20 : g.score;
+            const cur = byClass.get(cid) ?? { sum: 0, count: 0 };
+            cur.sum += normalized;
+            cur.count += 1;
+            byClass.set(cid, cur);
+        }
+        const classIds = [...byClass.keys()];
+        const classRows = classIds.length > 0
+            ? await prisma_1.default.class.findMany({
+                where: { id: { in: classIds }, ...currentClassScope(req) },
+                select: { id: true, name: true, level: true },
+            })
+            : [];
+        const nameById = new Map(classRows.map((c) => [c.id, c]));
+        res.json(classIds.map((id) => {
+            const agg = byClass.get(id);
+            return {
+                classId: id,
+                class: nameById.get(id) ?? null,
+                averageOn20: agg.count > 0 ? Math.round((agg.sum / agg.count) * 100) / 100 : null,
+                gradeCount: agg.count,
+            };
+        }));
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+// ——— Directeur des études : conseils de classe ———
+router.get('/class-councils', requireStaffModule('class_councils'), async (req, res) => {
+    try {
+        const { classId, period, academicYear } = req.query;
+        const rows = await prisma_1.default.classCouncilSession.findMany({
+            where: {
+                class: currentClassScope(req),
+                ...(classId && typeof classId === 'string' ? { classId } : {}),
+                ...(period && typeof period === 'string' ? { period } : {}),
+                ...(academicYear && typeof academicYear === 'string' ? { academicYear } : {}),
+            },
+            include: { class: { select: { id: true, name: true, level: true } } },
+            orderBy: { meetingDate: 'desc' },
+            take: 100,
+        });
+        res.json(rows);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.get('/class-councils/classes', requireStaffModule('class_councils'), async (req, res) => {
+    try {
+        const classes = await prisma_1.default.class.findMany({
+            where: currentClassScope(req),
+            select: { id: true, name: true, level: true, academicYear: true },
+            orderBy: { name: 'asc' },
+        });
+        res.json(classes);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.post('/class-councils', requireStaffModule('class_councils'), async (req, res) => {
+    try {
+        const { classId, period, academicYear, title, meetingDate, summary, decisions, recommendations } = req.body ?? {};
+        if (!classId || !period || !academicYear || !meetingDate) {
+            return res.status(400).json({ error: 'classId, period, academicYear et meetingDate sont requis' });
+        }
+        const classRow = await prisma_1.default.class.findFirst({
+            where: { id: classId, ...currentClassScope(req) },
+            select: { id: true },
+        });
+        if (!classRow) {
+            return res.status(404).json({ error: 'Classe introuvable pour cet établissement' });
+        }
+        const created = await prisma_1.default.classCouncilSession.create({
+            data: {
+                classId,
+                period,
+                academicYear,
+                title: title?.trim() || null,
+                meetingDate: new Date(meetingDate),
+                summary: summary?.trim() || null,
+                decisions: decisions?.trim() || null,
+                recommendations: recommendations?.trim() || null,
+                createdById: req.user.id,
+            },
+            include: { class: { select: { id: true, name: true, level: true } } },
+        });
+        res.status(201).json(created);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+router.patch('/class-councils/:id', requireStaffModule('class_councils'), async (req, res) => {
+    try {
+        const { title, meetingDate, summary, decisions, recommendations } = req.body ?? {};
+        const existing = await prisma_1.default.classCouncilSession.findFirst({
+            where: { id: req.params.id, class: currentClassScope(req) },
+            select: { id: true },
+        });
+        if (!existing) {
+            return res.status(404).json({ error: 'Conseil introuvable pour cet établissement' });
+        }
+        const updated = await prisma_1.default.classCouncilSession.update({
+            where: { id: req.params.id },
+            data: {
+                ...(title !== undefined && { title: title?.trim() || null }),
+                ...(meetingDate !== undefined && { meetingDate: new Date(meetingDate) }),
+                ...(summary !== undefined && { summary: summary?.trim() || null }),
+                ...(decisions !== undefined && { decisions: decisions?.trim() || null }),
+                ...(recommendations !== undefined && { recommendations: recommendations?.trim() || null }),
+            },
+            include: { class: { select: { id: true, name: true, level: true } } },
+        });
+        res.json(updated);
+    }
+    catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+});
+exports.default = router;
+//# sourceMappingURL=staff-roles.routes.js.map

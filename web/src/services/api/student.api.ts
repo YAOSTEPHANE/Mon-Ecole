@@ -159,4 +159,20 @@ export const studentApi = {
     const response = await api.get('/student/orientation/placements');
     return response.data;
   },
+  getGamification: async () => {
+    const response = await api.get('/student/gamification');
+    return response.data;
+  },
+  getMockExams: async () => {
+    const response = await api.get('/student/mock-exams');
+    return response.data;
+  },
+  getMockExam: async (id: string) => {
+    const response = await api.get(`/student/mock-exams/${id}`);
+    return response.data;
+  },
+  submitMockExam: async (id: string, answers: Record<string, string>) => {
+    const response = await api.post(`/student/mock-exams/${id}/submit`, { answers });
+    return response.data;
+  },
 };

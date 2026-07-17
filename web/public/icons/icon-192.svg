@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" role="img" aria-label="�cole � jour">
+  <rect width="192" height="192" rx="36" fill="#78350f"/>
+  <path fill="#fef3c7" d="M96 36 L160 68 V132 L96 164 L32 132 V68 Z"/>
+  <path fill="#92400e" d="M96 52 L140 74 V122 L96 144 L52 122 V74 Z"/>
+  <rect x="86" y="100" width="20" height="36" rx="3" fill="#fef3c7"/>
+  <circle cx="96" cy="82" r="14" fill="#fef3c7"/>
+</svg>

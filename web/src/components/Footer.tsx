@@ -31,14 +31,14 @@ type SocialNetwork = {
 const SOCIAL_NETWORKS: SocialNetwork[] = [
   {
     name: 'Facebook',
-    href: 'https://web.facebook.com/profile.php?id=61560392676453',
+    href: 'https://www.facebook.com/',
     icon: FiFacebook,
     buttonClass:
       'bg-[#1877F2] hover:bg-[#1464d8] text-white shadow-[0_4px_14px_rgba(24,119,242,0.35)] hover:shadow-[0_6px_20px_rgba(24,119,242,0.45)]',
   },
   {
     name: 'Instagram',
-    href: 'https://www.instagram.com/tranlefet/',
+    href: 'https://www.instagram.com/',
     icon: FiInstagram,
     buttonClass:
       'bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737] text-white shadow-[0_4px_14px_rgba(225,48,108,0.35)] hover:shadow-[0_6px_20px_rgba(225,48,108,0.45)] hover:brightness-110',
@@ -52,7 +52,7 @@ const SOCIAL_NETWORKS: SocialNetwork[] = [
   },
   {
     name: 'TikTok',
-    href: 'https://www.tiktok.com/@tranlefet',
+    href: 'https://www.tiktok.com/',
     icon: FaTiktok,
     buttonClass:
       'bg-[#010101] hover:bg-black text-white ring-1 ring-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.5)] hover:shadow-[0_6px_20px_rgba(254,44,85,0.25)]',
@@ -70,7 +70,7 @@ const SOCIAL_NETWORKS: SocialNetwork[] = [
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { branding, navigationLogoAbsolute } = useAppBranding();
-  const displayTitle = (branding.appTitle && branding.appTitle.trim()) || 'Gestion scolaire';
+  const displayTitle = (branding.appTitle && branding.appTitle.trim()) || 'Mon Ecole';
   const tagline =
     (branding.appTagline && branding.appTagline.trim()) || DEFAULT_TAGLINE;
 

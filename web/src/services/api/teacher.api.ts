@@ -165,4 +165,20 @@ export const teacherApi = {
     const response = await api.put(`/teacher/messaging/${messageId}/read`);
     return response.data;
   },
+  getMockExams: async () => {
+    const response = await api.get('/teacher/mock-exams');
+    return response.data;
+  },
+  getMockExamClasses: async () => {
+    const response = await api.get('/teacher/mock-exams/exam-classes');
+    return response.data;
+  },
+  createMockExam: async (data: Record<string, unknown>) => {
+    const response = await api.post('/teacher/mock-exams', data);
+    return response.data;
+  },
+  publishMockExam: async (id: string, isPublished = true) => {
+    const response = await api.patch(`/teacher/mock-exams/${id}/publish`, { isPublished });
+    return response.data;
+  },
 };

@@ -127,10 +127,10 @@ async function main() {
 
   await prisma.user.create({
     data: {
-      email: 'superadmin@tranlefet.ci',
+      email: 'kouassistephane489@gmail.com',
       password: hashedPassword,
       firstName: 'Super',
-      lastName: 'Admin CPTB',
+      lastName: 'Admin Mon Ecole',
       role: 'SUPER_ADMIN',
       phone: '0788948712',
       isActive: true,
@@ -1804,7 +1804,7 @@ async function main() {
 
   console.log('✅ Seed terminé avec succès !');
   console.log('\n📊 Résumé des données créées :');
-  console.log(`   - 1 Super administrateur (superadmin@tranlefet.ci / password123)`);
+  console.log(`   - 1 Super administrateur (kouassistephane489@gmail.com / password123)`);
   console.log(`   - 1 Administrateur (admin@school.com / password123)`);
   console.log(`   - 3 Enseignants (teacher1@school.com … / password123)`);
   console.log(`   - 9 Élèves (student1@school.com … student9@school.com / password123)`);

@@ -15,6 +15,13 @@ import {
   isTeacherEngagementKind,
   normalizeTeacherEngagementKind,
 } from '../utils/teacher-engagement-kind.util';
+import {
+  accumulatePeriod,
+  minutesToHours,
+  parseHoursGroupBy,
+  sortedPeriodBuckets,
+  type PeriodBucket,
+} from '../utils/hours-summary.util';
 
 const router = express.Router();
 
@@ -149,6 +156,125 @@ router.get('/teachers/attendance', async (req, res) => {
       })),
     );
   } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+/** Décompte des heures enseignées par jour / semaine / mois. */
+router.get('/teachers/attendance/summary', async (req, res) => {
+  try {
+    const teacherId = typeof req.query.teacherId === 'string' ? req.query.teacherId.trim() : '';
+    const from = typeof req.query.from === 'string' ? req.query.from.trim().slice(0, 10) : '';
+    const to = typeof req.query.to === 'string' ? req.query.to.trim().slice(0, 10) : '';
+    const groupBy = parseHoursGroupBy(req.query.groupBy);
+
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Paramètres from et to requis (YYYY-MM-DD)' });
+    }
+
+    const teachers = await prisma.teacher.findMany({
+      where: teacherId ? { id: teacherId } : undefined,
+      select: {
+        id: true,
+        employeeId: true,
+        maxWeeklyHours: true,
+        engagementKind: true,
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+      orderBy: { employeeId: 'asc' },
+    });
+
+    type TeacherAgg = {
+      teacherId: string;
+      employeeId: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      engagementKind: string | null;
+      maxWeeklyHours: number | null;
+      teachingMinutes: number;
+      plannedMinutes: number;
+      sessions: number;
+      hours: number;
+      byPeriod: ReturnType<typeof sortedPeriodBuckets>;
+    };
+
+    const byTeacher = new Map<string, TeacherAgg & { _period: Map<string, PeriodBucket> }>();
+    for (const t of teachers) {
+      byTeacher.set(t.id, {
+        teacherId: t.id,
+        employeeId: t.employeeId,
+        firstName: t.user.firstName,
+        lastName: t.user.lastName,
+        email: t.user.email,
+        engagementKind: t.engagementKind as string | null,
+        maxWeeklyHours: t.maxWeeklyHours,
+        teachingMinutes: 0,
+        plannedMinutes: 0,
+        sessions: 0,
+        hours: 0,
+        byPeriod: [],
+        _period: new Map(),
+      });
+    }
+
+    const teacherIds = teachers.map((t) => t.id);
+    const rows =
+      teacherIds.length === 0
+        ? []
+        : await prisma.teacherAttendance.findMany({
+            where: {
+              attendanceDate: { gte: from, lte: to },
+              teacherId: { in: teacherIds },
+            },
+            orderBy: [{ attendanceDate: 'asc' }],
+          });
+
+    const byPeriod = new Map<string, PeriodBucket>();
+    let teachingMinutesTotal = 0;
+    let plannedMinutesTotal = 0;
+
+    for (const row of rows) {
+      const mins = row.teachingMinutes ?? 0;
+      const planned = row.plannedMinutes ?? 0;
+      teachingMinutesTotal += mins;
+      plannedMinutesTotal += planned;
+      accumulatePeriod(byPeriod, row.attendanceDate, groupBy, mins, planned);
+
+      const cur = byTeacher.get(row.teacherId);
+      if (!cur) continue;
+      cur.teachingMinutes += mins;
+      cur.plannedMinutes += planned;
+      cur.sessions += 1;
+      cur.hours = minutesToHours(cur.teachingMinutes);
+      accumulatePeriod(cur._period, row.attendanceDate, groupBy, mins, planned);
+    }
+
+    const byTeacherList = [...byTeacher.values()]
+      .map(({ _period, ...rest }) => ({
+        ...rest,
+        hours: minutesToHours(rest.teachingMinutes),
+        plannedHours: minutesToHours(rest.plannedMinutes),
+        byPeriod: sortedPeriodBuckets(_period),
+      }))
+      .sort((a, b) => b.hours - a.hours || `${a.lastName}`.localeCompare(b.lastName, 'fr'));
+
+    res.json({
+      filters: { from, to, groupBy, teacherId: teacherId || null },
+      totals: {
+        sessions: rows.length,
+        teachingMinutes: teachingMinutesTotal,
+        plannedMinutes: plannedMinutesTotal,
+        hours: minutesToHours(teachingMinutesTotal),
+        plannedHours: minutesToHours(plannedMinutesTotal),
+        teachersCount: byTeacherList.filter((t) => t.sessions > 0).length,
+        teachersListed: byTeacherList.length,
+      },
+      byPeriod: sortedPeriodBuckets(byPeriod),
+      byTeacher: byTeacherList,
+    });
+  } catch (error: unknown) {
+    console.error('GET /admin/teachers/attendance/summary:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });

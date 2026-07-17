@@ -608,7 +608,7 @@ const PerformanceManagement = () => {
                       cx="50%"
                       cy="50%"
                       dataKey="value"
-                      activeShape={PremiumPieActiveShape}
+                      shape={PremiumPieActiveShape}
                       {...premiumPieGeometry(usageData.length)}
                     >
                       {usageData.map((_, index) => (

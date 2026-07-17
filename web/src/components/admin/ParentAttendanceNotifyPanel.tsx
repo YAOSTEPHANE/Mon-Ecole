@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import { FiBell, FiSend } from 'react-icons/fi';
 import { format, parseISO, subDays } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 function getParentReceiverIds(student: any): { id: string; label: string }[] {

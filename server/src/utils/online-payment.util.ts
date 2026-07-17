@@ -1,0 +1,185 @@
+import type { Payment, Prisma, PrismaClient, Role } from '@prisma/client';
+import prisma from './prisma';
+import { autoReceiptUrl } from './tuition-financial-automation.util';
+import { syncTuitionFeePaidStatusForFeeId } from './tuition-fee-paid-sync.util';
+import { notifyParentsForStudent } from './parent-notify.util';
+import { assertPaymentInSchool } from './school-access-guard.util';
+import {
+  initiateOnlineCheckout,
+  type PaymentProviderId,
+} from './payment-providers.util';
+
+type Db = PrismaClient | Prisma.TransactionClient;
+
+const PAYMENT_INCLUDE = {
+  tuitionFee: { select: { period: true, academicYear: true, amount: true } },
+  student: {
+    include: {
+      user: { select: { firstName: true, lastName: true, email: true } },
+      class: { select: { name: true, level: true } },
+    },
+  },
+  payer: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+} satisfies Prisma.PaymentInclude;
+
+export async function listPendingMobileMoneyPayments(client: Db = prisma, schoolId?: string) {
+  return client.payment.findMany({
+    where: {
+      status: 'PENDING',
+      paymentMethod: 'MOBILE_MONEY',
+      payerRole: { in: ['STUDENT', 'PARENT'] },
+      ...(schoolId ? { student: { OR: [{ schoolId }, { class: { schoolId } }] } } : {}),
+    },
+    orderBy: { createdAt: 'asc' },
+    include: PAYMENT_INCLUDE,
+  });
+}
+
+/**
+ * Finalise un paiement en ligne (Mobile Money / carte) après webhook ou validation admin.
+ */
+export async function completeOnlinePayment(
+  client: Db,
+  paymentId: string,
+  opts: {
+    transactionId?: string;
+    providerNote?: string;
+    schoolId?: string;
+  } = {}
+) {
+  if (opts.schoolId) {
+    await assertPaymentInSchool(paymentId, opts.schoolId);
+  }
+  const payment = await client.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) {
+    throw Object.assign(new Error('Paiement introuvable'), { status: 404 });
+  }
+  if (payment.status === 'COMPLETED') {
+    return client.payment.findUnique({
+      where: { id: paymentId },
+      include: PAYMENT_INCLUDE,
+    });
+  }
+  if (payment.status !== 'PENDING') {
+    throw Object.assign(new Error('Ce paiement ne peut plus être confirmé'), { status: 400 });
+  }
+  if (payment.paymentMethod !== 'MOBILE_MONEY' && payment.paymentMethod !== 'CARD') {
+    throw Object.assign(new Error('Méthode non éligible à la confirmation en ligne'), { status: 400 });
+  }
+
+  const note = opts.providerNote
+    ? payment.notes
+      ? `${payment.notes} — ${opts.providerNote}`
+      : opts.providerNote
+    : payment.notes;
+
+  const updated = await client.payment.update({
+    where: { id: paymentId },
+    data: {
+      status: 'COMPLETED',
+      transactionId: opts.transactionId || `MM-${Date.now()}`,
+      paidAt: new Date(),
+      receiptUrl: autoReceiptUrl(payment.paymentReference || paymentId),
+      notes: note,
+    },
+    include: PAYMENT_INCLUDE,
+  });
+
+  await syncTuitionFeePaidStatusForFeeId(client, payment.tuitionFeeId);
+
+  try {
+    await notifyParentsForStudent(payment.studentId, {
+      type: 'PAYMENT',
+      title: 'Paiement Mobile Money confirmé',
+      content: `Un paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été confirmé.`,
+      link: '/parent?tab=payments',
+    });
+  } catch (e) {
+    console.error('notify payment completed:', e);
+  }
+
+  return updated;
+}
+
+export async function failOnlinePayment(
+  client: Db,
+  paymentId: string,
+  reason: string,
+  schoolId?: string
+) {
+  if (schoolId) await assertPaymentInSchool(paymentId, schoolId);
+  const payment = await client.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) throw Object.assign(new Error('Paiement introuvable'), { status: 404 });
+  if (payment.status !== 'PENDING') {
+    throw Object.assign(new Error('Paiement non modifiable'), { status: 400 });
+  }
+  return client.payment.update({
+    where: { id: paymentId },
+    data: {
+      status: 'FAILED',
+      notes: payment.notes ? `${payment.notes} — Échec: ${reason}` : `Échec: ${reason}`,
+    },
+    include: PAYMENT_INCLUDE,
+  });
+}
+
+export function assertWebhookSecret(headerSecret: string | undefined, bodySecret: string | undefined) {
+  const expected = process.env.PAYMENT_WEBHOOK_SECRET?.trim();
+  if (!expected) {
+    throw Object.assign(
+      new Error('PAYMENT_WEBHOOK_SECRET non configuré côté serveur'),
+      { status: 503 }
+    );
+  }
+  const provided = headerSecret || bodySecret;
+  if (!provided || provided !== expected) {
+    throw Object.assign(new Error('Secret webhook invalide'), { status: 401 });
+  }
+}
+
+/** Après création d’un paiement PENDING en ligne : initie le checkout fournisseur. */
+export async function attachOnlineCheckout(
+  client: Db,
+  paymentId: string,
+  opts: {
+    method: 'MOBILE_MONEY' | 'CARD';
+    phoneNumber?: string;
+    operator?: string;
+    customerEmail?: string;
+    customerName?: string;
+    returnUrl?: string;
+  }
+) {
+  const payment = await client.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) throw Object.assign(new Error('Paiement introuvable'), { status: 404 });
+
+  const checkout = await initiateOnlineCheckout({
+    paymentId: payment.id,
+    paymentReference: payment.paymentReference || payment.id,
+    amount: payment.amount,
+    method: opts.method,
+    operator: opts.operator,
+    phoneNumber: opts.phoneNumber,
+    customerEmail: opts.customerEmail,
+    customerName: opts.customerName,
+    returnUrl: opts.returnUrl,
+    description: `Paiement scolarité ${payment.paymentReference || payment.id}`,
+  });
+
+  const noteExtra = `[${checkout.provider}/${checkout.mode}] ${checkout.message}${
+    checkout.ussdHint ? ` — ${checkout.ussdHint}` : ''
+  }`;
+
+  return client.payment.update({
+    where: { id: paymentId },
+    data: {
+      paymentProvider: checkout.provider as PaymentProviderId,
+      checkoutUrl: checkout.checkoutUrl || null,
+      transactionId: checkout.providerPaymentId || payment.transactionId,
+      notes: payment.notes ? `${payment.notes} | ${noteExtra}` : noteExtra,
+    },
+    include: PAYMENT_INCLUDE,
+  });
+}
+
+export type { Payment, Role };

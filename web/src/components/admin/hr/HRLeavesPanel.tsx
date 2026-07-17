@@ -6,7 +6,7 @@ import Button from '../../ui/Button';
 import Badge from '../../ui/Badge';
 import { FiCalendar, FiCheck, FiX } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 const LEAVE_TYPES: Record<string, string> = {

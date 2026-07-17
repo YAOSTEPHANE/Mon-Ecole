@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const CATEGORY_LABELS: Record<string, string> = {
   ADMINISTRATION: 'Administration',

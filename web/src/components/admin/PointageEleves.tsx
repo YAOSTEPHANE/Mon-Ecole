@@ -10,7 +10,7 @@ import NFCScanner from '../ui/NFCScanner';
 import FacePunchPanel from '../face/FacePunchPanel';
 import { FiUserCheck, FiCheck, FiX, FiClock, FiWifi } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 interface PointageElevesProps {
   /** Masque le bandeau titre (intégration dans le module Présences) */

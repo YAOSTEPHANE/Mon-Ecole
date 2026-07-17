@@ -101,6 +101,15 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${backend}/api/:path*`,
       });
+      // Socket.IO (temps réel) — même origine en dev si NEXT_PUBLIC_API_URL=/api
+      rewrites.push({
+        source: "/socket.io",
+        destination: `${backend}/socket.io`,
+      });
+      rewrites.push({
+        source: "/socket.io/:path*",
+        destination: `${backend}/socket.io/:path*`,
+      });
     }
 
     if (process.env.NEXT_PUBLIC_DISABLE_UPLOADS_REWRITE !== "1") {

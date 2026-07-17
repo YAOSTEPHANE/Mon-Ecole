@@ -17,6 +17,7 @@ import StudentExtracurricularPanel from '../../components/student/StudentExtracu
 import StudentOrientationPanel from '../../components/student/StudentOrientationPanel';
 import DigitalLibraryBrowser from '../../components/digital-library/DigitalLibraryBrowser';
 import ElearningHub from '../../components/elearning/ElearningHub';
+import StudentMockExamsPanel from '../../components/student/StudentMockExamsPanel';
 import {
   FiLayout,
   FiUser,
@@ -38,11 +39,12 @@ import {
   FiNavigation,
   FiCloud,
   FiMonitor,
+  FiTarget,
 } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import Card from '../../components/ui/Card';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
@@ -64,6 +66,7 @@ const VALID_TAB_IDS = [
   'messages',
   'digital-library',
   'elearning',
+  'mock-exams',
 ] as const;
 
 type TabId = (typeof VALID_TAB_IDS)[number];
@@ -119,6 +122,13 @@ const StudentDashboard = () => {
       { id: 'messages', label: 'Messages école', icon: FiMessageCircle, color: 'from-blue-500 to-indigo-600', description: 'Échanges avec l’administration' },
       { id: 'digital-library', label: 'Bibliothèque numérique', icon: FiCloud, color: 'from-sky-500 to-indigo-600', description: 'E-books, PDF et ressources pédagogiques en ligne' },
       { id: 'elearning', label: 'E-learning', icon: FiMonitor, color: 'from-violet-500 to-purple-600', description: 'Cours en ligne, quiz et classes virtuelles' },
+      {
+        id: 'mock-exams',
+        label: 'Examens blancs',
+        icon: FiTarget,
+        color: 'from-fuchsia-500 to-rose-600',
+        description: 'Entraînement BEPC / BAC pour les classes d’examen',
+      },
     ],
     []
   );
@@ -440,6 +450,7 @@ const StudentDashboard = () => {
                   {activeTab === 'messages' && <SchoolCommunication role="student" />}
                   {activeTab === 'digital-library' && <DigitalLibraryBrowser />}
                   {activeTab === 'elearning' && <ElearningHub mode="student" />}
+                  {activeTab === 'mock-exams' && <StudentMockExamsPanel />}
                 </div>
               </div>
             </main>

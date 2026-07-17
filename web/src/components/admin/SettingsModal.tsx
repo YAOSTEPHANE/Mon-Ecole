@@ -8,6 +8,7 @@ import {
   parseUserUiPreferences,
   type UserUiPreferences,
 } from '@/lib/userUiPreferences';
+import { setStoredLocale, type AppLocale } from '@/lib/i18n';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -163,6 +164,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     website: '',
     principal: '',
     code: '',
+    drena: '',
+    iepp: '',
+    status: '' as '' | 'PUBLIC' | 'PRIVATE' | 'COMMUNITY',
+    milieu: '' as '' | 'URBAN' | 'RURAL',
+    region: '',
+    classroomCount: '',
   });
 
   const [directorMessageDraft, setDirectorMessageDraft] = useState({
@@ -260,6 +267,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             website: typeof b.schoolWebsite === 'string' ? b.schoolWebsite : '',
             principal: typeof b.schoolPrincipal === 'string' ? b.schoolPrincipal : '',
             code: typeof b.schoolCode === 'string' ? b.schoolCode : '',
+            drena: typeof b.schoolDrena === 'string' ? b.schoolDrena : '',
+            iepp: typeof b.schoolIepp === 'string' ? b.schoolIepp : '',
+            status:
+              b.schoolStatus === 'PUBLIC' ||
+              b.schoolStatus === 'PRIVATE' ||
+              b.schoolStatus === 'COMMUNITY'
+                ? b.schoolStatus
+                : '',
+            milieu: b.schoolMilieu === 'URBAN' || b.schoolMilieu === 'RURAL' ? b.schoolMilieu : '',
+            region: typeof b.schoolRegion === 'string' ? b.schoolRegion : '',
+            classroomCount:
+              typeof b.classroomCount === 'number' && Number.isFinite(b.classroomCount)
+                ? String(b.classroomCount)
+                : '',
           });
           const resolvedDirector = resolveDirectorMessageContent({
             studiesDirectorName:
@@ -323,6 +344,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             website: '',
             principal: '',
             code: '',
+            drena: '',
+            iepp: '',
+            status: '',
+            milieu: '',
+            region: '',
+            classroomCount: '',
           });
         }
       }
@@ -410,6 +437,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
         schoolWebsite: schoolSettings.website.trim() || null,
         schoolPrincipal: schoolSettings.principal.trim() || null,
         schoolCode: schoolSettings.code.trim() || null,
+        schoolDrena: schoolSettings.drena.trim() || null,
+        schoolIepp: schoolSettings.iepp.trim() || null,
+        schoolStatus: schoolSettings.status || null,
+        schoolMilieu: schoolSettings.milieu || null,
+        schoolRegion: schoolSettings.region.trim() || null,
+        classroomCount: schoolSettings.classroomCount.trim()
+          ? Number(schoolSettings.classroomCount)
+          : null,
         studiesDirectorName: directorMessageDraft.name.trim() || null,
         studiesDirectorOccasionBadge: directorMessageDraft.occasionBadge.trim() || null,
         studiesDirectorMessageTitle: directorMessageDraft.messageTitle.trim() || null,
@@ -716,8 +751,117 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         value={schoolSettings.code}
                         onChange={(e) => setSchoolSettings({ ...schoolSettings, code: e.target.value })}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
-                        placeholder="253798"
+                        placeholder="Code établissement"
                       />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+                    <h4 className="text-sm font-bold text-emerald-950 mb-1">
+                      Fiche administrative MENA
+                    </h4>
+                    <p className="text-xs text-emerald-900/80 mb-3">
+                      Données utilisées pour les rapports DESPS / export MENA (effectifs, affectés État).
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">DRENA</label>
+                        <input
+                          type="text"
+                          value={schoolSettings.drena}
+                          onChange={(e) =>
+                            setSchoolSettings({ ...schoolSettings, drena: e.target.value })
+                          }
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                          placeholder="Ex. Bouaké 1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          IEPP / antenne
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolSettings.iepp}
+                          onChange={(e) =>
+                            setSchoolSettings({ ...schoolSettings, iepp: e.target.value })
+                          }
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                          placeholder="Inspection / antenne pédagogique"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Statut
+                        </label>
+                        <select
+                          value={schoolSettings.status}
+                          onChange={(e) =>
+                            setSchoolSettings({
+                              ...schoolSettings,
+                              status: e.target.value as typeof schoolSettings.status,
+                            })
+                          }
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white"
+                        >
+                          <option value="">Non renseigné</option>
+                          <option value="PRIVATE">Privé</option>
+                          <option value="PUBLIC">Public</option>
+                          <option value="COMMUNITY">Communautaire</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Milieu
+                        </label>
+                        <select
+                          value={schoolSettings.milieu}
+                          onChange={(e) =>
+                            setSchoolSettings({
+                              ...schoolSettings,
+                              milieu: e.target.value as typeof schoolSettings.milieu,
+                            })
+                          }
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white"
+                        >
+                          <option value="">Non renseigné</option>
+                          <option value="URBAN">Urbain</option>
+                          <option value="RURAL">Rural</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Région
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolSettings.region}
+                          onChange={(e) =>
+                            setSchoolSettings({ ...schoolSettings, region: e.target.value })
+                          }
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                          placeholder="Ex. Gbêkê"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Nombre de salles de classe
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={10000}
+                          value={schoolSettings.classroomCount}
+                          onChange={(e) =>
+                            setSchoolSettings({
+                              ...schoolSettings,
+                              classroomCount: e.target.value,
+                            })
+                          }
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                          placeholder="Ex. 12"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1419,7 +1563,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       </label>
                       <select
                         value={userSettings.language}
-                        onChange={(e) => setUserSettings({ ...userSettings, language: e.target.value })}
+                        onChange={(e) => {
+                          const language = e.target.value;
+                          setUserSettings({ ...userSettings, language });
+                          if (language === 'fr' || language === 'en') {
+                            setStoredLocale(language as AppLocale);
+                          }
+                        }}
                         aria-label="Langue"
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                       >

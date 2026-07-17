@@ -10,6 +10,8 @@ import {
 import { notifyUsersImportant } from '../utils/notify-important.util';
 import { notifyStaffOfPendingCashPayment } from '../utils/payment-cash-notify.util';
 import { notifyParentCashPaymentSubmitted } from '../utils/parent-notify.util';
+import { attachOnlineCheckout } from '../utils/online-payment.util';
+import { notifyParentWhatsApp } from '../utils/whatsapp.util';
 import {
   addMinutes,
   appointmentInclude,
@@ -23,6 +25,10 @@ import {
   buildPortalOfferingWhere,
   registerStudentForExtracurricular,
 } from '../utils/extracurricular.util';
+import {
+  subscribeStudentToCanteen,
+  subscribeStudentToTransport,
+} from '../utils/campus-services.util';
 import {
   getAcademicYearsWithTuitionBlockForParent,
   parentTuitionBlockFromYears,
@@ -1193,9 +1199,35 @@ router.post('/children/:studentId/payments', async (req: AuthRequest, res) => {
       );
     }
 
+    let onlinePayment = payment;
+    if (paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') {
+      const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0]?.trim();
+      onlinePayment = await attachOnlineCheckout(prisma, payment.id, {
+        method: paymentMethod,
+        phoneNumber,
+        operator,
+        customerEmail: req.user?.email,
+        customerName: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' '),
+        returnUrl: `${frontend}/parent?tab=payments`,
+      });
+      if (phoneNumber) {
+        void notifyParentWhatsApp(
+          phoneNumber,
+          'Paiement initié',
+          `Réf. ${payment.paymentReference} — ${paymentAmount.toLocaleString('fr-FR')} FCFA. ${
+            onlinePayment.checkoutUrl
+              ? `Ouvrez : ${onlinePayment.checkoutUrl}`
+              : 'Validez sur votre téléphone ou attendez la confirmation.'
+          }`
+        ).catch((e) => console.error('whatsapp payment:', e));
+      }
+    }
+
     res.status(201).json({
-      payment,
-      paymentUrl: `/payment/process/${payment.id}`,
+      payment: onlinePayment,
+      paymentUrl: onlinePayment.checkoutUrl || `/payment/process/${payment.id}`,
+      checkoutUrl: onlinePayment.checkoutUrl || null,
+      provider: onlinePayment.paymentProvider || null,
       message: 'Paiement initié avec succès',
     });
   } catch (error: any) {
@@ -1455,6 +1487,158 @@ router.get('/children/:studentId/discipline-records', async (req: AuthRequest, r
   } catch (error: unknown) {
     console.error('GET /parent/children/:studentId/discipline-records:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/children/:studentId/campus/canteen-plans', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+    const rows = await prisma.canteenMealPlan.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+        ...(academicYear ? { academicYear } : {}),
+      },
+      orderBy: [{ academicYear: 'desc' }, { name: 'asc' }],
+      include: { _count: { select: { subscriptions: true } } },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(msg.includes('associé') ? 403 : 500).json({ error: msg });
+  }
+});
+
+router.get('/children/:studentId/campus/canteen-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+    const rows = await prisma.canteenSubscription.findMany({
+      where: { studentId },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(msg.includes('associé') ? 403 : 500).json({ error: msg });
+  }
+});
+
+router.post('/children/:studentId/campus/canteen-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+    const planId = typeof req.body?.planId === 'string' ? req.body.planId : '';
+    if (!planId) return res.status(400).json({ error: 'planId requis' });
+    const result = await subscribeStudentToCanteen(studentId, planId);
+    res.status(201).json(result);
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status ?? 500;
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(msg.includes('associé') ? 403 : status).json({ error: msg });
+  }
+});
+
+router.get('/children/:studentId/campus/transport-routes', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+    const rows = await prisma.transportRoute.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+        ...(academicYear ? { academicYear } : {}),
+      },
+      orderBy: [{ academicYear: 'desc' }, { name: 'asc' }],
+      include: { _count: { select: { subscriptions: true } } },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(msg.includes('associé') ? 403 : 500).json({ error: msg });
+  }
+});
+
+router.get('/children/:studentId/campus/transport-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+    const rows = await prisma.transportSubscription.findMany({
+      where: { studentId },
+      include: { route: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(msg.includes('associé') ? 403 : 500).json({ error: msg });
+  }
+});
+
+router.post('/children/:studentId/campus/transport-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+    const routeId = typeof req.body?.routeId === 'string' ? req.body.routeId : '';
+    const stopLabel = typeof req.body?.stopLabel === 'string' ? req.body.stopLabel : undefined;
+    if (!routeId) return res.status(400).json({ error: 'routeId requis' });
+    const result = await subscribeStudentToTransport(studentId, routeId, stopLabel);
+    res.status(201).json(result);
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status ?? 500;
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(msg.includes('associé') ? 403 : status).json({ error: msg });
+  }
+});
+
+/** Dernière position GPS d’une ligne (parent — enfant inscrit uniquement). */
+router.get('/children/:studentId/campus/transport-routes/:routeId/tracking', async (req: AuthRequest, res) => {
+  try {
+    const { studentId, routeId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+
+    const sub = await prisma.transportSubscription.findFirst({
+      where: { studentId, routeId, status: 'ACTIVE' },
+    });
+    if (!sub) {
+      return res.status(403).json({ error: 'Enfant non inscrit sur cette ligne' });
+    }
+
+    const route = await prisma.transportRoute.findUnique({
+      where: { id: routeId },
+      select: { id: true, name: true, vehicleLabel: true },
+    });
+    if (!route) return res.status(404).json({ error: 'Ligne introuvable' });
+
+    const latest = await prisma.transportVehiclePing.findFirst({
+      where: { routeId },
+      orderBy: { recordedAt: 'desc' },
+    });
+    res.json({ route, latest });
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status ?? 500;
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(msg.includes('associé') ? 403 : status).json({ error: msg });
   }
 });
 

@@ -8,9 +8,9 @@ import toast from 'react-hot-toast';
 import { ACADEMIC_CHANGE_VALIDATION_MESSAGE } from '@/lib/academicValidationMessages';
 import { useAppBranding } from '@/contexts/AppBrandingContext';
 import {
-  generateTranlefetReportCardPdf,
-  TRANLEFET_DEFAULT_BRANDING,
-} from '@/lib/tranlefetReportCardPdf';
+  generateSchoolReportCardPdf,
+  SCHOOL_REPORT_CARD_DEFAULT_BRANDING,
+} from '@/lib/schoolReportCardPdf';
 import { getCurrentAcademicYear, getCurrentTrimester } from '@/lib/academicCalendar';
 import { resolveUploadFetchUrl } from '@/lib/uploadsPublicUrl';
 
@@ -74,15 +74,15 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
   const pdfBranding = useMemo(
     () => ({
       schoolName:
-        branding.schoolDisplayName?.trim() || TRANLEFET_DEFAULT_BRANDING.schoolName,
+        branding.schoolDisplayName?.trim() || SCHOOL_REPORT_CARD_DEFAULT_BRANDING.schoolName,
       schoolPhone:
-        branding.schoolPhone?.trim() || TRANLEFET_DEFAULT_BRANDING.schoolPhone,
+        branding.schoolPhone?.trim() || SCHOOL_REPORT_CARD_DEFAULT_BRANDING.schoolPhone,
       schoolAddress:
-        branding.schoolAddress?.trim() || TRANLEFET_DEFAULT_BRANDING.schoolAddress,
+        branding.schoolAddress?.trim() || SCHOOL_REPORT_CARD_DEFAULT_BRANDING.schoolAddress,
       schoolEmail:
-        branding.schoolEmail?.trim() || TRANLEFET_DEFAULT_BRANDING.schoolEmail,
+        branding.schoolEmail?.trim() || SCHOOL_REPORT_CARD_DEFAULT_BRANDING.schoolEmail,
       schoolCode:
-        branding.schoolCode?.trim() || TRANLEFET_DEFAULT_BRANDING.schoolCode,
+        branding.schoolCode?.trim() || SCHOOL_REPORT_CARD_DEFAULT_BRANDING.schoolCode,
       principalName: branding.schoolPrincipal?.trim() || '',
       studiesDirectorName: branding.studiesDirectorName?.trim() || '',
       logoDataUrl: reportCardPayload?.logoDataUrl ?? null,
@@ -91,9 +91,9 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
         navigationLogoAbsolute ??
         loginLogoAbsolute ??
         null,
-      city: branding.schoolAddress?.includes('Bouaké')
-        ? 'Bouaké'
-        : TRANLEFET_DEFAULT_BRANDING.city,
+      city:
+        branding.schoolAddress?.trim().split(',')[0]?.trim() ||
+        SCHOOL_REPORT_CARD_DEFAULT_BRANDING.city,
     }),
     [branding, navigationLogoAbsolute, loginLogoAbsolute, reportCardPayload?.logoDataUrl],
   );
@@ -112,8 +112,8 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
 
       // Generate PDF for each student
       for (const studentData of reportCardPayload.students) {
-        await generateTranlefetReportCardPdf(
-          studentData as Parameters<typeof generateTranlefetReportCardPdf>[0],
+        await generateSchoolReportCardPdf(
+          studentData as Parameters<typeof generateSchoolReportCardPdf>[0],
           {
             periodLabel,
             periodKey: selectedPeriod,
@@ -256,7 +256,7 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
               <p className="text-sm text-blue-800 font-medium mb-1">Instructions</p>
               <p className="text-sm text-blue-700">
                 Sélectionnez une classe, une période et une année scolaire. Le PDF reprend le modèle officiel
-                Tranlefet (colonnes Trim. 1–3, bilans lettres/sciences, résumé, distinctions, signatures).
+                Bulletin scolaire (colonnes Trim. 1–3, bilans lettres/sciences, résumé, distinctions, signatures).
                 Pour le <strong>3e trimestre</strong>, les moyennes et rangs des trimestres précédents sont
                 inclus automatiquement. L’enregistrement des moyennes en base passe par le{' '}
                 <strong>circuit de validation</strong> (prof. principal → éducateur → directeur des

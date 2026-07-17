@@ -3,6 +3,8 @@ import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import PendingCashPaymentsPanel from '../payments/PendingCashPaymentsPanel';
+import PendingMobileMoneyPanel from '../payments/PendingMobileMoneyPanel';
+import PlatformIntegrationsPanel from './PlatformIntegrationsPanel';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -19,7 +21,7 @@ import {
   FiDownload,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { formatFCFA } from '../../utils/currency';
 import toast from 'react-hot-toast';
 import { ADM } from './adminModuleLayout';
@@ -176,6 +178,8 @@ const PaymentsManagement: React.FC<PaymentsManagementProps> = ({
   return (
     <div className={compact ? ADM.root : 'space-y-4 text-sm'}>
       <PendingCashPaymentsPanel mode={pendingCashMode} compact />
+      {pendingCashMode === 'admin' && <PendingMobileMoneyPanel compact />}
+      {pendingCashMode === 'admin' && <PlatformIntegrationsPanel compact />}
       {/* Header */}
       <div
         className={`flex flex-wrap items-center justify-between gap-2 sm:gap-3 ${embedded ? 'justify-end' : ''}`}

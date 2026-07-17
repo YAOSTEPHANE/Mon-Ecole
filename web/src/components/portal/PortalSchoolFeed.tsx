@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { parentApi, studentApi } from '../../services/api';
 import Card from '../ui/Card';
 import { FiCalendar, FiImage } from 'react-icons/fi';

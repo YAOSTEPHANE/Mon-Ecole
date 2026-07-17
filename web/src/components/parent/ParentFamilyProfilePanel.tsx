@@ -10,7 +10,7 @@ import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
 import { FiSave, FiPlus, FiTrash2, FiHeart } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const CHANNEL_LABEL: Record<string, string> = {
   PHONE: 'Téléphone',

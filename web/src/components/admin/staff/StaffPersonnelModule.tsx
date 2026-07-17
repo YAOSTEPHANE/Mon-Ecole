@@ -24,7 +24,7 @@ import {
   FiBriefcase,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { formatFCFA } from '../../../utils/currency';
 import StaffModuleAccessField from './StaffModuleAccessField';
 import StaffModulesRecapPanel from './StaffModulesRecapPanel';
@@ -819,10 +819,36 @@ function StaffAttendanceBlock({
 }) {
   const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [status, setStatus] = useState('PRESENT');
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [workedHours, setWorkedHours] = useState('');
   const mut = useMutation({
-    mutationFn: () => adminApi.recordStaffAttendance(staffId, { attendanceDate: date, status, source: 'ADMIN' }),
+    mutationFn: () => {
+      const payload: {
+        attendanceDate: string;
+        status: string;
+        source: string;
+        checkInAt?: string | null;
+        checkOutAt?: string | null;
+        workedMinutes?: number | null;
+      } = {
+        attendanceDate: date,
+        status,
+        source: 'ADMIN',
+      };
+      if (checkIn) payload.checkInAt = `${date}T${checkIn}:00`;
+      if (checkOut) payload.checkOutAt = `${date}T${checkOut}:00`;
+      if (workedHours.trim()) {
+        const h = parseFloat(workedHours.replace(',', '.'));
+        if (Number.isFinite(h) && h >= 0) payload.workedMinutes = Math.round(h * 60);
+      }
+      return adminApi.recordStaffAttendance(staffId, payload);
+    },
     onSuccess: () => {
       toast.success('Présence enregistrée');
+      setCheckIn('');
+      setCheckOut('');
+      setWorkedHours('');
       onRefresh();
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erreur'),
@@ -840,7 +866,7 @@ function StaffAttendanceBlock({
     <div>
       <p className="text-xs font-semibold text-stone-700 uppercase tracking-wide mb-2 flex items-center gap-1">
         <FiCheckSquare className="w-3.5 h-3.5" />
-        Présences
+        Présences & heures
       </p>
       <div className="flex flex-wrap items-end gap-2 mb-3">
         <div>
@@ -866,6 +892,39 @@ function StaffAttendanceBlock({
             ))}
           </select>
         </div>
+        <div>
+          <label className="block text-[10px] text-stone-600 mb-0.5">Entrée</label>
+          <input
+            type="time"
+            value={checkIn}
+            onChange={(e) => setCheckIn(e.target.value)}
+            className="text-sm border border-stone-200 rounded-lg px-2 py-1"
+            aria-label="Heure d'entrée"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] text-stone-600 mb-0.5">Sortie</label>
+          <input
+            type="time"
+            value={checkOut}
+            onChange={(e) => setCheckOut(e.target.value)}
+            className="text-sm border border-stone-200 rounded-lg px-2 py-1"
+            aria-label="Heure de sortie"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] text-stone-600 mb-0.5">Heures (opt.)</label>
+          <input
+            type="number"
+            step="0.25"
+            min="0"
+            value={workedHours}
+            onChange={(e) => setWorkedHours(e.target.value)}
+            placeholder="ex. 8"
+            className="text-sm border border-stone-200 rounded-lg px-2 py-1 w-20"
+            aria-label="Heures travaillées"
+          />
+        </div>
         <Button type="button" size="sm" onClick={() => mut.mutate()} disabled={mut.isPending}>
           Enregistrer
         </Button>
@@ -876,28 +935,45 @@ function StaffAttendanceBlock({
             <tr>
               <th className="text-left px-2 py-1">Date</th>
               <th className="text-left px-2 py-1">Statut</th>
+              <th className="text-left px-2 py-1">Heures</th>
               <th className="text-right px-2 py-1"> </th>
             </tr>
           </thead>
           <tbody>
-            {(rows ?? []).map((r) => (
-              <tr key={r.id} className="border-t border-stone-100">
-                <td className="px-2 py-1">{r.attendanceDate}</td>
-                <td className="px-2 py-1">{STATUS_LABEL[r.status] ?? r.status}</td>
-                <td className="px-2 py-1 text-right">
-                  <button
-                    type="button"
-                    className="text-red-600 p-1"
-                    title="Supprimer"
-                    onClick={() => {
-                      if (window.confirm('Supprimer ce pointage ?')) delMut.mutate(r.id);
-                    }}
-                  >
-                    <FiTrash2 className="w-3.5 h-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {(rows ?? []).map((r) => {
+              const mins =
+                r.workedMinutes != null
+                  ? r.workedMinutes
+                  : r.checkInAt && r.checkOutAt
+                    ? Math.max(
+                        0,
+                        Math.round(
+                          (new Date(r.checkOutAt).getTime() - new Date(r.checkInAt).getTime()) / 60000
+                        )
+                      )
+                    : null;
+              return (
+                <tr key={r.id} className="border-t border-stone-100">
+                  <td className="px-2 py-1">{r.attendanceDate}</td>
+                  <td className="px-2 py-1">{STATUS_LABEL[r.status] ?? r.status}</td>
+                  <td className="px-2 py-1 tabular-nums">
+                    {mins != null ? `${(mins / 60).toFixed(2).replace('.', ',')} h` : '—'}
+                  </td>
+                  <td className="px-2 py-1 text-right">
+                    <button
+                      type="button"
+                      className="text-red-600 p-1"
+                      title="Supprimer"
+                      onClick={() => {
+                        if (window.confirm('Supprimer ce pointage ?')) delMut.mutate(r.id);
+                      }}
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {!rows?.length && <p className="p-3 text-stone-500 text-center text-xs">Aucun pointage.</p>}

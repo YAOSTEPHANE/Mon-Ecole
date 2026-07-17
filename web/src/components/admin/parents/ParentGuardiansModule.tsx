@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import { FiHeart, FiEye, FiTrash2, FiPlus, FiSave, FiUserPlus } from 'react-icons/fi';
 import AddParentModal from './AddParentModal';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 
 const CHANNELS = [
   'PHONE',

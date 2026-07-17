@@ -9,6 +9,7 @@ import PendingCashPaymentsPanel from '../payments/PendingCashPaymentsPanel';
 import PaymentRemindersPanel from './PaymentRemindersPanel';
 import PaymentReceiptsPanel from './PaymentReceiptsPanel';
 import StudentFinancialHistoryPanel from './StudentFinancialHistoryPanel';
+import FinancialServicePanel from './FinancialServicePanel';
 import {
   FiGrid,
   FiDollarSign,
@@ -16,6 +17,7 @@ import {
   FiBell,
   FiFileText,
   FiUser,
+  FiPieChart,
 } from 'react-icons/fi';
 import { formatFCFA } from '../../utils/currency';
 import { getCurrentAcademicYear } from '../../utils/academicYear';
@@ -23,7 +25,14 @@ import { ADM } from './adminModuleLayout';
 import toast from 'react-hot-toast';
 import Input from '../ui/Input';
 
-type FeesTab = 'overview' | 'billing' | 'payments' | 'reminders' | 'receipts' | 'history';
+type FeesTab =
+  | 'overview'
+  | 'service'
+  | 'billing'
+  | 'payments'
+  | 'reminders'
+  | 'receipts'
+  | 'history';
 
 const FeesManagementModule: React.FC = () => {
   const [tab, setTab] = useState<FeesTab>('overview');
@@ -101,6 +110,7 @@ const FeesManagementModule: React.FC = () => {
 
   const subTabs: { id: FeesTab; label: string; icon: typeof FiGrid }[] = [
     { id: 'overview', label: 'Vue d’ensemble', icon: FiGrid },
+    { id: 'service', label: 'Service financier', icon: FiPieChart },
     { id: 'billing', label: 'Facturation (frais)', icon: FiDollarSign },
     { id: 'payments', label: 'Suivi des paiements', icon: FiCreditCard },
     { id: 'reminders', label: 'Rappels', icon: FiBell },
@@ -157,6 +167,10 @@ const FeesManagementModule: React.FC = () => {
             <h3 className={ADM.helpTitle}>Parcours recommandé</h3>
             <ol className={ADM.helpOl}>
               <li>
+                <strong>Service financier</strong> : point général, paiements et impayés par classe /
+                niveau / sexe, dépenses.
+              </li>
+              <li>
                 <strong>Facturation</strong> : créer les frais (élève ou classe entière).
               </li>
               <li>
@@ -170,10 +184,6 @@ const FeesManagementModule: React.FC = () => {
               </li>
               <li>
                 <strong>Historique</strong> pour le détail par élève.
-              </li>
-              <li>
-                <strong>Rapports financiers</strong> : onglet admin « Statistiques & rapports », section
-                Financier (encaissements, impayés, graphiques).
               </li>
             </ol>
           </Card>
@@ -270,6 +280,7 @@ const FeesManagementModule: React.FC = () => {
         </div>
       )}
 
+      {tab === 'service' && <FinancialServicePanel />}
       {tab === 'billing' && <TuitionFeesManagement embedded compact />}
       {tab === 'payments' && (
         <div className="space-y-4">

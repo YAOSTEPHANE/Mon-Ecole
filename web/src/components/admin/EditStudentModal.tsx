@@ -21,6 +21,7 @@ import {
   FiSave,
   FiLoader
 } from 'react-icons/fi';
+import FneMatriculeVerifyActions from './FneMatriculeVerifyActions';
 import AdminUserPasswordSection from './AdminUserPasswordSection';
 import { useSchool } from '@/contexts/SchoolContext';
 import { useSchoolReady, schoolQueryKey } from '@/hooks/useSchoolReady';
@@ -65,6 +66,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
     classGroupId: '',
     enrollmentStatus: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ARCHIVED',
     stateAssignment: 'NOT_STATE_ASSIGNED' as 'STATE_ASSIGNED' | 'NOT_STATE_ASSIGNED',
+    nationalMatricule: '',
     isActive: true,
     
     // Informations de contact
@@ -98,6 +100,8 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
           (student.enrollmentStatus as 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ARCHIVED') || 'ACTIVE',
         stateAssignment:
           student.stateAssignment === 'STATE_ASSIGNED' ? 'STATE_ASSIGNED' : 'NOT_STATE_ASSIGNED',
+        nationalMatricule:
+          (student as { nationalMatricule?: string | null }).nationalMatricule || '',
         isActive: student.isActive !== undefined ? student.isActive : true,
         address: student.address || '',
         emergencyContact: student.emergencyContact || '',
@@ -288,6 +292,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
         : null,
       enrollmentStatus: formData.enrollmentStatus,
       stateAssignment: formData.stateAssignment,
+      nationalMatricule: formData.nationalMatricule.trim() || null,
       isActive: formData.isActive,
       address: formData.address || undefined,
       emergencyContact: formData.emergencyContact || undefined,
@@ -618,6 +623,34 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                   </p>
                 </div>
                 <p className="text-[10px] text-stone-600 mt-0.5">Le numéro d'élève ne peut pas être modifié</p>
+              </div>
+
+              <div>
+                <label htmlFor="edit-nationalMatricule" className="block text-xs font-semibold text-stone-700 mb-1">
+                  Matricule national FNE
+                </label>
+                <input
+                  id="edit-nationalMatricule"
+                  type="text"
+                  name="nationalMatricule"
+                  value={formData.nationalMatricule}
+                  onChange={handleChange}
+                  className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all font-mono"
+                  placeholder="Matricule Fichier National des Élèves"
+                />
+                <p className="mt-0.5 text-[10px] text-gray-500">
+                  Matricule officiel MENA (distinct du numéro d&apos;élève ci-dessus).
+                </p>
+                <FneMatriculeVerifyActions
+                  prefill={{
+                    lastName: formData.lastName,
+                    firstName: formData.firstName,
+                    dateOfBirth: formData.dateOfBirth,
+                  }}
+                  onSelectMatricule={(matricule) =>
+                    setFormData((prev) => ({ ...prev, nationalMatricule: matricule }))
+                  }
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

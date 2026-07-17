@@ -10,7 +10,7 @@ import LibraryBorrowerSearch, { type LibraryBorrowerRow } from '../../library/Li
 import LibraryBookMultiPicker from '../../library/LibraryBookMultiPicker';
 import { FiRefreshCw, FiPlus } from 'react-icons/fi';
 import { format, addDays } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 const roles: Record<string, string> = {

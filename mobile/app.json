@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "École à jour",
+    "slug": "ecole-a-jour",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "ecoleajour",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ci.tranlefet.ecoleajour"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F5F0E8",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "ci.tranlefet.ecoleajour",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-web-browser"
+    ]
+  }
+}

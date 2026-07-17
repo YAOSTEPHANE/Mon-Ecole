@@ -6,6 +6,7 @@ export const EVALUATION_TYPE_VALUES = [
   'LEVEL_HOMEWORK',
   'CLASS_HOMEWORK',
   'ORAL',
+  'MOCK_EXAM',
 ] as const;
 
 export type EvaluationTypeValue = (typeof EVALUATION_TYPE_VALUES)[number];
@@ -24,6 +25,7 @@ const EVALUATION_TYPE_LABELS: Record<EvaluationTypeValue, string> = {
   LEVEL_HOMEWORK: 'Devoir de niveau',
   CLASS_HOMEWORK: 'Devoir de classe',
   ORAL: 'Oral',
+  MOCK_EXAM: 'Examen blanc',
 };
 
 export function getEvaluationTypeLabel(type: string | null | undefined): string {

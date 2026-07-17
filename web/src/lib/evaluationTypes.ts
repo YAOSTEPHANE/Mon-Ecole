@@ -5,6 +5,7 @@ export const EVALUATION_TYPE_OPTIONS = [
   { value: 'LEVEL_HOMEWORK', label: 'Devoir de niveau' },
   { value: 'CLASS_HOMEWORK', label: 'Devoir de classe' },
   { value: 'ORAL', label: 'Oral' },
+  { value: 'MOCK_EXAM', label: 'Examen blanc' },
 ] as const;
 
 export type EvaluationTypeValue = (typeof EVALUATION_TYPE_OPTIONS)[number]['value'];
@@ -45,6 +46,7 @@ export function getEvaluationBadgeVariant(
 ): 'danger' | 'warning' | 'info' | 'success' | 'default' {
   switch (type) {
     case 'EXAM':
+    case 'MOCK_EXAM':
       return 'danger';
     case 'EVALUATION':
     case 'QUIZ':

@@ -42,6 +42,10 @@ export const authApi = {
     const response = await api.post('/auth/reset-password', { token, password });
     return response.data;
   },
+  exchangeOAuthCode: async (code: string): Promise<{ token: string }> => {
+    const response = await api.post('/auth/oauth/exchange', { code });
+    return response.data as { token: string };
+  },
   setupTwoFactor: async () => {
     const response = await api.post('/auth/2fa/setup');
     return response.data as { otpauthUrl: string; qrCodeDataUrl: string };

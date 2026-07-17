@@ -7,7 +7,7 @@ import Modal from '../../ui/Modal';
 import Badge from '../../ui/Badge';
 import { FiPlus, FiCheck, FiX } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 const stLabel: Record<string, string> = {

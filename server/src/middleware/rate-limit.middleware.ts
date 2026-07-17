@@ -33,6 +33,15 @@ export const publicFormLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+/** Recherche publique de matricule FNE (proxy vers SIGFNE). */
+export const fneLookupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isProd ? 30 : 300,
+  message: { error: 'Trop de recherches de matricule depuis cette adresse. Réessayez plus tard.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /**
  * Limite les tentatives de connexion (anti brute-force).
  */
@@ -74,6 +83,15 @@ export const authResetPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: isProd ? 25 : 200,
   message: { error: 'Trop de tentatives. Réessayez plus tard.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** Envois WhatsApp manuels depuis le back-office (anti-spam et maîtrise des coûts). */
+export const whatsappSendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: isProd ? 10 : 100,
+  message: { error: 'Trop de messages WhatsApp. Réessayez dans une minute.' },
   standardHeaders: true,
   legacyHeaders: false,
 });

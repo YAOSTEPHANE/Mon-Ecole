@@ -42,7 +42,7 @@ import {
   FiUser,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import StudentProgressModal from './StudentProgressModal';
 import { ADM } from './adminModuleLayout';
@@ -201,11 +201,11 @@ const PedagogicalTracking = () => {
   ];
 
   const getRiskBadge = (level: string) => {
-    if (level === 'high')
+    if (level === 'critical' || level === 'high')
       return (
         <Badge className="bg-red-100 text-red-800">
           <FiAlertCircle className="w-3 h-3 mr-1 inline" />
-          Risque élevé
+          {level === 'critical' ? 'Critique' : 'Risque élevé'}
         </Badge>
       );
     if (level === 'medium')
@@ -215,7 +215,9 @@ const PedagogicalTracking = () => {
           Risque moyen
         </Badge>
       );
-    return null;
+    return (
+      <Badge className="bg-stone-100 text-stone-700">Faible</Badge>
+    );
   };
 
   // Export functions for at-risk students
@@ -226,7 +228,18 @@ const PedagogicalTracking = () => {
     }
 
     try {
-      const headers = ['Élève', 'Classe', 'Moyenne', 'Absences non justifiées', 'Niveau de risque'];
+      const headers = [
+        'Élève',
+        'Classe',
+        'Moyenne',
+        'Absences non justifiées',
+        'Retards',
+        'Impayés',
+        'Score IA',
+        'Niveau IA',
+        'Facteurs',
+        'Niveau de risque',
+      ];
       const csvContent =
         '\ufeff' + // BOM for UTF-8
         headers.join(';') +
@@ -236,8 +249,13 @@ const PedagogicalTracking = () => {
             [
               `"${student.firstName} ${student.lastName}"`,
               `"${student.class}"`,
-              `${student.average.toFixed(2)}/20`,
+              `${Number(student.average ?? 0).toFixed(2)}/20`,
               student.unexcusedAbsences,
+              student.lateCount ?? 0,
+              student.unpaidAmount ?? 0,
+              student.aiScore ?? '',
+              student.aiLevel ?? student.riskLevel,
+              `"${(student.aiFactors || []).join(' | ')}"`,
               student.riskLevel,
             ].join(';')
           )
@@ -267,8 +285,13 @@ const PedagogicalTracking = () => {
       const jsonData = atRiskStudents.map((student: any) => ({
         élève: `${student.firstName} ${student.lastName}`,
         classe: student.class,
-        moyenne: `${student.average.toFixed(2)}/20`,
+        moyenne: `${Number(student.average ?? 0).toFixed(2)}/20`,
         absencesNonJustifiées: student.unexcusedAbsences,
+        retards: student.lateCount ?? 0,
+        impayés: student.unpaidAmount ?? 0,
+        scoreIA: student.aiScore,
+        niveauIA: student.aiLevel ?? student.riskLevel,
+        facteurs: student.aiFactors || [],
         niveauDeRisque: student.riskLevel,
       }));
 
@@ -455,7 +478,7 @@ const PedagogicalTracking = () => {
                     cx="50%"
                     cy="50%"
                     dataKey="count"
-                    activeShape={PremiumPieActiveShape}
+                    shape={PremiumPieActiveShape}
                     {...premiumPieGeometry(gradeDistribution.length)}
                   >
                     {gradeDistribution.map((_: unknown, index: number) => (
@@ -752,6 +775,7 @@ const PedagogicalTracking = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Classe</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Moyenne</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Absences</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Score IA</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Niveau de risque</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
                     </tr>
@@ -759,7 +783,7 @@ const PedagogicalTracking = () => {
                   <tbody>
                     {atRiskStudents.map((student: any) => (
                       <tr
-                        key={student.studentId}
+                        key={student.studentId || student.id}
                         className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                       >
                         <td className="py-3 px-4">
@@ -769,6 +793,11 @@ const PedagogicalTracking = () => {
                               {student.firstName} {student.lastName}
                             </span>
                           </div>
+                          {Array.isArray(student.aiFactors) && student.aiFactors.length > 0 && (
+                            <p className="mt-1 max-w-xs text-[11px] leading-snug text-stone-500">
+                              {student.aiFactors.slice(0, 3).join(' · ')}
+                            </p>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           <Badge className="bg-blue-100 text-blue-800">{student.class}</Badge>
@@ -776,20 +805,37 @@ const PedagogicalTracking = () => {
                         <td className="py-3 px-4">
                           <Badge
                             className={
-                              student.average >= 12
+                              Number(student.average ?? 0) >= 12
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : 'bg-red-100 text-red-800'
                             }
                           >
-                            {student.average.toFixed(2)}/20
+                            {Number(student.average ?? 0).toFixed(2)}/20
                           </Badge>
                         </td>
-                        <td className="py-3 px-4">{student.unexcusedAbsences}</td>
-                        <td className="py-3 px-4">{getRiskBadge(student.riskLevel)}</td>
+                        <td className="py-3 px-4">
+                          {student.unexcusedAbsences}
+                          {student.lateCount ? (
+                            <span className="ml-1 text-xs text-stone-500">(+{student.lateCount} retards)</span>
+                          ) : null}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-semibold tabular-nums text-stone-800">
+                            {student.aiScore != null ? student.aiScore : '—'}
+                          </span>
+                          {student.unpaidAmount > 0 && (
+                            <p className="text-[11px] text-rose-600">
+                              Impayés : {Number(student.unpaidAmount).toLocaleString('fr-FR')} FCFA
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {getRiskBadge(student.aiLevel || student.riskLevel)}
+                        </td>
                         <td className="py-3 px-4">
                           <button
                             onClick={() => {
-                              setSelectedStudent(student.studentId);
+                              setSelectedStudent(student.id || student.studentId);
                               setIsStudentProgressModalOpen(true);
                             }}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

@@ -169,13 +169,13 @@ async function main() {
 
   // --- Super admin ---
   console.log('\n-- Super-admin --');
-  const superToken = await login('superadmin@tranlefet.ci');
+  const superToken = await login('kouassistephane489@gmail.com');
   if (superToken) {
     await expectOk('GET /super-admin/overview', '/super-admin/overview', superToken);
     await expectOk('GET /super-admin/users', '/super-admin/users', superToken);
     await expectForbidden('Admin interdit sur /super-admin/overview', '/super-admin/overview', adminToken);
   } else {
-    skip('Super-admin', 'compte superadmin@tranlefet.ci indisponible');
+    skip('Super-admin', 'compte kouassistephane489@gmail.com indisponible');
   }
 
   // --- Teacher ---

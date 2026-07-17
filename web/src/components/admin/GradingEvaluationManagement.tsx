@@ -7,6 +7,8 @@ import GradeAveragesPanel from './GradeAveragesPanel';
 import GenerateReportCardModal from './GenerateReportCardModal';
 import GenerateReportModal from './GenerateReportModal';
 import GradingAdvancedPanel from './GradingAdvancedPanel';
+import YearEndPromotionPanel from './YearEndPromotionPanel';
+import MockExamsManagementPanel from './MockExamsManagementPanel';
 import AcademicValidationPanel from '../academic/AcademicValidationPanel';
 import Button from '../ui/Button';
 import {
@@ -18,10 +20,20 @@ import {
   FiBookOpen,
   FiSliders,
   FiCheckCircle,
+  FiFlag,
+  FiTarget,
 } from 'react-icons/fi';
 import { ADM } from './adminModuleLayout';
 
-type GradingTab = 'overview' | 'notation' | 'averages' | 'reports' | 'advanced' | 'validations';
+type GradingTab =
+  | 'overview'
+  | 'notation'
+  | 'averages'
+  | 'reports'
+  | 'advanced'
+  | 'promotion'
+  | 'mock-exams'
+  | 'validations';
 
 const GradingEvaluationManagement: React.FC = () => {
   const [tab, setTab] = useState<GradingTab>('overview');
@@ -46,6 +58,8 @@ const GradingEvaluationManagement: React.FC = () => {
     { id: 'notation', label: 'Notes & bulletins', icon: FiEdit3 },
     { id: 'averages', label: 'Moyennes', icon: FiBarChart2 },
     { id: 'advanced', label: 'Conseils & classement', icon: FiSliders },
+    { id: 'promotion', label: 'Admis / Doublant', icon: FiFlag },
+    { id: 'mock-exams', label: 'Examens blancs', icon: FiTarget },
     { id: 'validations', label: 'Validations', icon: FiCheckCircle },
     { id: 'reports', label: 'Relevés & rapports', icon: FiFileText },
   ];
@@ -111,6 +125,7 @@ const GradingEvaluationManagement: React.FC = () => {
                 <li>Saisir les notes (onglet Notes & bulletins)</li>
                 <li>Contrôler les moyennes (onglet Moyennes)</li>
                 <li>Générer bulletins PDF (onglet Relevés & rapports)</li>
+                <li>Déclarer Admis / Doublant après le T3</li>
               </ol>
             </Card>
           </div>
@@ -143,6 +158,10 @@ const GradingEvaluationManagement: React.FC = () => {
       {tab === 'averages' && <GradeAveragesPanel compact />}
 
       {tab === 'advanced' && <GradingAdvancedPanel compact />}
+
+      {tab === 'promotion' && <YearEndPromotionPanel compact />}
+
+      {tab === 'mock-exams' && <MockExamsManagementPanel mode="admin" compact />}
 
       {tab === 'validations' && (
         <AcademicValidationPanel title="Validations (directeur des études)" />

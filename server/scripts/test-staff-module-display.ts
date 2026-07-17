@@ -11,7 +11,7 @@ import {
 } from '../src/utils/staff-visible-modules.util';
 
 const API = process.env.API_URL?.replace(/\/+$/, '') || 'http://localhost:5000/api';
-const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'superadmin@tranlefet.ci';
+const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'kouassistephane489@gmail.com';
 const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'password123';
 
 type StaffModuleId = string;

@@ -39,14 +39,16 @@ import {
   FiCheckCircle,
   FiCloud,
   FiMonitor,
+  FiTarget,
 } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { format } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import { TEACHER_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+import MockExamsManagementPanel from '../../components/admin/MockExamsManagementPanel';
 
 const VALID_TAB_IDS = [
   'overview',
@@ -65,6 +67,7 @@ const VALID_TAB_IDS = [
   'validations',
   'digital-library',
   'elearning',
+  'mock-exams',
 ] as const;
 
 type TabId = (typeof VALID_TAB_IDS)[number];
@@ -108,6 +111,13 @@ const TeacherDashboard = () => {
       },
       { id: 'digital-library', label: 'Bibliothèque numérique', icon: FiCloud, color: 'from-sky-500 to-indigo-600', description: 'E-books, PDF et ressources pédagogiques' },
       { id: 'elearning', label: 'E-learning', icon: FiMonitor, color: 'from-violet-500 to-purple-600', description: 'Cours en ligne, classes virtuelles et banque de ressources' },
+      {
+        id: 'mock-exams',
+        label: 'Examens blancs',
+        icon: FiTarget,
+        color: 'from-fuchsia-500 to-rose-600',
+        description: 'Créer des examens blancs pour les classes d’examen (3ème, Terminale)',
+      },
     ],
     []
   );
@@ -277,6 +287,7 @@ const TeacherDashboard = () => {
                 {activeTab === 'messaging' && <TeacherInternalMessaging />}
                 {activeTab === 'digital-library' && <DigitalLibraryBrowser />}
                 {activeTab === 'elearning' && <ElearningHub mode="teacher" />}
+                {activeTab === 'mock-exams' && <MockExamsManagementPanel mode="teacher" />}
               </div>
             </div>
           </main>
