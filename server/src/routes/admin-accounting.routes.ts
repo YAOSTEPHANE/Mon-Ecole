@@ -5,12 +5,23 @@ import type { SchoolContextRequest } from '../utils/school-context.util';
 import { studentScopeWhere } from '../utils/school-context.util';
 import {
   assertBudgetLineInSchool,
+  assertCashRegisterInSchool,
   assertPettyCashInSchool,
   assertSchoolExpenseInSchool,
   assertSupplierInSchool,
   resolveAccountingScope,
   resolvePaymentStudentScope,
 } from '../utils/admin-accounting-scope.util';
+import {
+  COUNTER_CASH_REGISTER_ID,
+  COUNTER_MOBILE_REGISTER_ID,
+  computeRegisterBalance,
+  counterRegisterVirtual,
+  sortCashMovements,
+  summarizeRegisterPeriod,
+  type CashMovementRow,
+  type CashRegisterSummary,
+} from '../utils/accounting-cash.util';
 
 const router = express.Router();
 
@@ -32,6 +43,312 @@ const EXPENSE_LEDGER: Record<
 const TUITION_REVENUE = { code: '706', label: 'Produits — scolarité et frais annexes' };
 const PETTY_LEDGER_IN = { code: '530', label: 'Caisse — entrées' };
 const PETTY_LEDGER_OUT = { code: '530', label: 'Caisse — sorties' };
+
+async function ensureDefaultCashRegisters(schoolId: string) {
+  const existing = await prisma.cashRegister.count({ where: { schoolId } });
+  if (existing > 0) return;
+  await prisma.cashRegister.createMany({
+    data: [
+      {
+        schoolId,
+        code: 'CAISSE-01',
+        name: 'Petite caisse principale',
+        type: 'PETTY',
+        description: 'Caisse pour dépenses courantes et fonds de roulement',
+        openingFloat: 0,
+      },
+      {
+        schoolId,
+        code: 'GUICHET-01',
+        name: 'Guichet scolarité',
+        type: 'COUNTER',
+        description: 'Suivi des mouvements manuels guichet (encaissements auto depuis les paiements)',
+        openingFloat: 0,
+      },
+    ],
+  });
+}
+
+// --- Caisses ---
+
+router.get('/cash-registers', async (req: SchoolContextRequest, res) => {
+  try {
+    const { schoolId, where } = resolveAccountingScope(req);
+    await ensureDefaultCashRegisters(schoolId);
+    const rows = await prisma.cashRegister.findMany({
+      where,
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+    });
+    res.json(rows);
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/cash-registers', async (req: SchoolContextRequest, res) => {
+  try {
+    const { schoolId } = resolveAccountingScope(req);
+    const { code, name, type, description, openingFloat, isActive } = req.body ?? {};
+    if (!code || !name) {
+      return res.status(400).json({ error: 'code et name sont requis' });
+    }
+    const t = String(type ?? 'PETTY').toUpperCase();
+    if (!['PETTY', 'COUNTER', 'AUXILIARY'].includes(t)) {
+      return res.status(400).json({ error: 'type invalide' });
+    }
+    const row = await prisma.cashRegister.create({
+      data: {
+        schoolId,
+        code: String(code).trim().toUpperCase(),
+        name: String(name).trim(),
+        type: t as 'PETTY' | 'COUNTER' | 'AUXILIARY',
+        description: description ? String(description) : null,
+        openingFloat: openingFloat != null ? Math.round(Number(openingFloat)) : 0,
+        isActive: isActive !== false,
+      },
+    });
+    res.status(201).json(row);
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.put('/cash-registers/:id', async (req: SchoolContextRequest, res) => {
+  try {
+    if (!(await assertCashRegisterInSchool(req.params.id, req))) {
+      return res.status(404).json({ error: 'Caisse introuvable' });
+    }
+    const { name, description, openingFloat, isActive, type } = req.body ?? {};
+    const data: Prisma.CashRegisterUpdateInput = {};
+    if (name != null) data.name = String(name).trim();
+    if (description !== undefined) data.description = description ? String(description) : null;
+    if (openingFloat != null) data.openingFloat = Math.round(Number(openingFloat));
+    if (isActive !== undefined) data.isActive = Boolean(isActive);
+    if (type != null) {
+      const t = String(type).toUpperCase();
+      if (!['PETTY', 'COUNTER', 'AUXILIARY'].includes(t)) {
+        return res.status(400).json({ error: 'type invalide' });
+      }
+      data.type = t as 'PETTY' | 'COUNTER' | 'AUXILIARY';
+    }
+    const row = await prisma.cashRegister.update({ where: { id: req.params.id }, data });
+    res.json(row);
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.delete('/cash-registers/:id', async (req: SchoolContextRequest, res) => {
+  try {
+    if (!(await assertCashRegisterInSchool(req.params.id, req))) {
+      return res.status(404).json({ error: 'Caisse introuvable' });
+    }
+    const linked = await prisma.pettyCashMovement.count({
+      where: { cashRegisterId: req.params.id },
+    });
+    if (linked > 0) {
+      return res.status(400).json({
+        error: 'Impossible de supprimer une caisse avec des mouvements. Désactivez-la plutôt.',
+      });
+    }
+    await prisma.cashRegister.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Supprimé' });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/accounting/cash/overview', async (req: SchoolContextRequest, res) => {
+  try {
+    const { schoolId, where: acctWhere } = resolveAccountingScope(req);
+    const studentWhere = resolvePaymentStudentScope(req);
+    await ensureDefaultCashRegisters(schoolId);
+
+    const fromQ = typeof req.query.from === 'string' ? req.query.from.trim() : '';
+    const toQ = typeof req.query.to === 'string' ? req.query.to.trim() : '';
+    const registerId =
+      typeof req.query.registerId === 'string' && req.query.registerId !== 'all'
+        ? req.query.registerId
+        : null;
+
+    const rangeStart = fromQ ? new Date(fromQ) : null;
+    const rangeEnd = toQ ? new Date(toQ) : null;
+    if (rangeStart && Number.isNaN(rangeStart.getTime())) {
+      return res.status(400).json({ error: 'Paramètre from invalide' });
+    }
+    if (rangeEnd && Number.isNaN(rangeEnd.getTime())) {
+      return res.status(400).json({ error: 'Paramètre to invalide' });
+    }
+
+    const [registers, movements, payments] = await Promise.all([
+      prisma.cashRegister.findMany({ where: acctWhere, orderBy: { name: 'asc' } }),
+      prisma.pettyCashMovement.findMany({
+        where: acctWhere,
+        include: {
+          cashRegister: { select: { id: true, code: true, name: true } },
+          recordedBy: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: { movementDate: 'desc' },
+      }),
+      prisma.payment.findMany({
+        where: {
+          status: 'COMPLETED',
+          student: studentWhere,
+          paymentMethod: { in: ['CASH', 'MOBILE_MONEY'] },
+          ...(rangeStart && rangeEnd ? { paidAt: { gte: rangeStart, lte: rangeEnd } } : {}),
+        },
+        select: {
+          id: true,
+          amount: true,
+          paymentMethod: true,
+          paymentReference: true,
+          paidAt: true,
+          createdAt: true,
+          student: {
+            select: {
+              user: { select: { firstName: true, lastName: true } },
+            },
+          },
+          tuitionFee: { select: { period: true } },
+        },
+        orderBy: { paidAt: 'desc' },
+      }),
+    ]);
+
+    const registerSummaries: CashRegisterSummary[] = [];
+    const defaultPettyId =
+      registers.find((r) => r.type === 'PETTY' && r.isActive)?.id ?? registers.find((r) => r.type === 'PETTY')?.id;
+
+    for (const reg of registers) {
+      const regMoves = movements.filter(
+        (m) => m.cashRegisterId === reg.id || (!m.cashRegisterId && reg.id === defaultPettyId),
+      );
+      const period = summarizeRegisterPeriod(regMoves, rangeStart, rangeEnd);
+      registerSummaries.push({
+        id: reg.id,
+        code: reg.code,
+        name: reg.name,
+        type: reg.type,
+        isActive: reg.isActive,
+        openingFloat: Math.round(reg.openingFloat),
+        balance: computeRegisterBalance(
+          reg.openingFloat,
+          regMoves.map((m) => ({ type: m.type, amount: m.amount })),
+        ),
+        ...period,
+      });
+    }
+
+    const cashPayments = payments.filter((p) => p.paymentMethod === 'CASH');
+    const mobilePayments = payments.filter((p) => p.paymentMethod === 'MOBILE_MONEY');
+    const cashTotal = cashPayments.reduce((s, p) => s + p.amount, 0);
+    const mobileTotal = mobilePayments.reduce((s, p) => s + p.amount, 0);
+
+    registerSummaries.push(
+      counterRegisterVirtual(
+        COUNTER_CASH_REGISTER_ID,
+        'GUICHET-ESP',
+        'Guichet — espèces (paiements)',
+        'COUNTER',
+        cashTotal,
+        cashPayments.length,
+      ),
+      counterRegisterVirtual(
+        COUNTER_MOBILE_REGISTER_ID,
+        'GUICHET-MM',
+        'Guichet — mobile money',
+        'COUNTER',
+        mobileTotal,
+        mobilePayments.length,
+      ),
+    );
+
+    const unified: CashMovementRow[] = [];
+
+    for (const m of movements) {
+      if (rangeStart && m.movementDate < rangeStart) continue;
+      if (rangeEnd && m.movementDate > rangeEnd) continue;
+      const effectiveRegisterId = m.cashRegisterId ?? defaultPettyId ?? 'unknown';
+      if (registerId && effectiveRegisterId !== registerId) continue;
+      const reg = registers.find((r) => r.id === effectiveRegisterId);
+      unified.push({
+        id: m.id,
+        date: m.movementDate.toISOString(),
+        registerId: effectiveRegisterId,
+        registerName: reg?.name ?? m.cashRegister?.name ?? 'Petite caisse',
+        registerCode: reg?.code ?? m.cashRegister?.code ?? 'CAISSE',
+        kind: m.type,
+        amount: Math.round(m.amount),
+        label: m.reason,
+        reference: m.reference,
+        recordedBy: `${m.recordedBy.firstName} ${m.recordedBy.lastName}`,
+        source: 'PETTY',
+      });
+    }
+
+    if (!registerId || registerId === COUNTER_CASH_REGISTER_ID) {
+      for (const p of cashPayments) {
+        unified.push({
+          id: `pay-${p.id}`,
+          date: (p.paidAt ?? p.createdAt).toISOString(),
+          registerId: COUNTER_CASH_REGISTER_ID,
+          registerName: 'Guichet — espèces (paiements)',
+          registerCode: 'GUICHET-ESP',
+          kind: 'COLLECTION',
+          amount: Math.round(p.amount),
+          label: `Scolarité ${p.tuitionFee.period} — ${p.student.user.firstName} ${p.student.user.lastName}`,
+          reference: p.paymentReference,
+          paymentMethod: 'CASH',
+          source: 'PAYMENT',
+        });
+      }
+    }
+
+    if (!registerId || registerId === COUNTER_MOBILE_REGISTER_ID) {
+      for (const p of mobilePayments) {
+        unified.push({
+          id: `pay-${p.id}`,
+          date: (p.paidAt ?? p.createdAt).toISOString(),
+          registerId: COUNTER_MOBILE_REGISTER_ID,
+          registerName: 'Guichet — mobile money',
+          registerCode: 'GUICHET-MM',
+          kind: 'COLLECTION',
+          amount: Math.round(p.amount),
+          label: `Scolarité ${p.tuitionFee.period} — ${p.student.user.firstName} ${p.student.user.lastName}`,
+          reference: p.paymentReference,
+          paymentMethod: 'MOBILE_MONEY',
+          source: 'PAYMENT',
+        });
+      }
+    }
+
+    const physicalRegisters = registerSummaries.filter((r) => !r.isVirtual);
+    const physicalIn = physicalRegisters.reduce((s, r) => s + r.periodIn, 0);
+    const physicalOut = physicalRegisters.reduce((s, r) => s + r.periodOut, 0);
+    const counterCollections = Math.round(cashTotal + mobileTotal);
+    const consolidated = {
+      registerCount: physicalRegisters.length,
+      totalPhysicalBalance: physicalRegisters.reduce((s, r) => s + r.balance, 0),
+      periodIn: Math.round(physicalIn + counterCollections),
+      periodOut: physicalOut,
+      counterCollections,
+      movementCount: unified.length,
+      netFlow: Math.round(physicalIn + counterCollections - physicalOut),
+    };
+
+    res.json({
+      period: {
+        from: rangeStart?.toISOString() ?? null,
+        to: rangeEnd?.toISOString() ?? null,
+      },
+      registers: registerSummaries,
+      consolidated,
+      movements: sortCashMovements(unified),
+    });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
 
 // --- Fournisseurs ---
 
@@ -244,7 +561,10 @@ router.get('/petty-cash-movements', async (req: SchoolContextRequest, res) => {
     const rows = await prisma.pettyCashMovement.findMany({
       where,
       orderBy: { movementDate: 'desc' },
-      include: { recordedBy: { select: { firstName: true, lastName: true } } },
+      include: {
+        recordedBy: { select: { firstName: true, lastName: true } },
+        cashRegister: { select: { id: true, code: true, name: true } },
+      },
     });
     res.json(rows);
   } catch (e: unknown) {
@@ -256,7 +576,7 @@ router.post('/petty-cash-movements', async (req: SchoolContextRequest, res) => {
   try {
     const { schoolId } = resolveAccountingScope(req);
     const adminId = req.user!.id;
-    const { movementDate, type, amount, reason, reference } = req.body ?? {};
+    const { movementDate, type, amount, reason, reference, cashRegisterId } = req.body ?? {};
     if (!movementDate || !type || amount == null || !reason) {
       return res.status(400).json({ error: 'movementDate, type, amount et reason sont requis' });
     }
@@ -264,9 +584,23 @@ router.post('/petty-cash-movements', async (req: SchoolContextRequest, res) => {
     if (t !== 'IN' && t !== 'OUT') return res.status(400).json({ error: 'type doit être IN ou OUT' });
     const amt = Math.round(Number(amount));
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Montant invalide' });
+    await ensureDefaultCashRegisters(schoolId);
+    let registerId: string | null = cashRegisterId ? String(cashRegisterId) : null;
+    if (registerId) {
+      if (!(await assertCashRegisterInSchool(registerId, req))) {
+        return res.status(400).json({ error: 'Caisse introuvable' });
+      }
+    } else {
+      const defaultReg = await prisma.cashRegister.findFirst({
+        where: { schoolId, type: 'PETTY', isActive: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      registerId = defaultReg?.id ?? null;
+    }
     const row = await prisma.pettyCashMovement.create({
       data: {
         schoolId,
+        cashRegisterId: registerId,
         movementDate: new Date(movementDate),
         type: t,
         amount: amt,
@@ -274,6 +608,7 @@ router.post('/petty-cash-movements', async (req: SchoolContextRequest, res) => {
         reference: reference ? String(reference) : null,
         recordedByUserId: adminId,
       },
+      include: { cashRegister: { select: { id: true, code: true, name: true } } },
     });
     res.status(201).json(row);
   } catch (e: unknown) {
@@ -518,6 +853,9 @@ router.get('/accounting/journal', async (req: SchoolContextRequest, res) => {
       amount: number;
       ledgerCode: string;
       ledgerLabel: string;
+      paymentMethod: string | null;
+      debit: number;
+      credit: number;
     };
     const rows: JRow[] = [];
 
@@ -538,15 +876,19 @@ router.get('/accounting/journal', async (req: SchoolContextRequest, res) => {
       },
     });
     for (const p of pays) {
+      const payAmount = Math.round(p.amount);
       rows.push({
         id: `pay-${p.id}`,
         date: (p.paidAt || p.createdAt).toISOString(),
         kind: 'REVENUE',
         label: `Scolarité — ${p.tuitionFee.period} (${p.tuitionFee.academicYear}) — ${p.student.user.firstName} ${p.student.user.lastName}`,
         reference: p.paymentReference,
-        amount: Math.round(p.amount),
+        amount: payAmount,
         ledgerCode: TUITION_REVENUE.code,
         ledgerLabel: TUITION_REVENUE.label,
+        paymentMethod: p.paymentMethod,
+        debit: 0,
+        credit: payAmount,
       });
     }
 
@@ -563,15 +905,19 @@ router.get('/accounting/journal', async (req: SchoolContextRequest, res) => {
     });
     for (const e of exps) {
       const L = EXPENSE_LEDGER[e.category];
+      const expAmount = Math.round(e.amount);
       rows.push({
         id: `exp-${e.id}`,
         date: e.expenseDate.toISOString(),
         kind: 'EXPENSE',
         label: `${e.description}${e.supplier ? ` — ${e.supplier.name}` : ''}`,
         reference: e.reference,
-        amount: Math.round(e.amount),
+        amount: expAmount,
         ledgerCode: L.code,
         ledgerLabel: L.label,
+        paymentMethod: e.paymentMethod,
+        debit: expAmount,
+        credit: 0,
       });
     }
 
@@ -583,15 +929,20 @@ router.get('/accounting/journal', async (req: SchoolContextRequest, res) => {
     }
     const pcs = await prisma.pettyCashMovement.findMany({ where: pcWhere });
     for (const c of pcs) {
+      const pcAmount = Math.round(c.amount);
+      const isIn = c.type === 'IN';
       rows.push({
         id: `pc-${c.id}`,
         date: c.movementDate.toISOString(),
-        kind: c.type === 'IN' ? 'PETTY_IN' : 'PETTY_OUT',
+        kind: isIn ? 'PETTY_IN' : 'PETTY_OUT',
         label: c.reason,
         reference: c.reference,
-        amount: Math.round(c.amount),
+        amount: pcAmount,
         ledgerCode: PETTY_LEDGER_IN.code,
-        ledgerLabel: c.type === 'IN' ? `${PETTY_LEDGER_IN.label} (entrée)` : `${PETTY_LEDGER_OUT.label} (sortie)`,
+        ledgerLabel: isIn ? `${PETTY_LEDGER_IN.label} (entrée)` : `${PETTY_LEDGER_OUT.label} (sortie)`,
+        paymentMethod: null,
+        debit: isIn ? 0 : pcAmount,
+        credit: isIn ? pcAmount : 0,
       });
     }
 

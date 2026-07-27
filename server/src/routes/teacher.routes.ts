@@ -8,6 +8,7 @@ import { notifyParentsNewAssignment } from '../utils/parent-notify.util';
 import { appointmentInclude } from '../utils/parent-teacher-appointment.util';
 import { punchStudentCourseAttendance } from '../utils/attendance-punch.util';
 import { toAttendanceDateKey, upsertTeacherAttendance } from '../utils/teacher-attendance.util';
+import { punchTeacherCourseAttendance } from '../utils/attendance-punch.util';
 import { EVALUATION_TYPE_VALUES } from '../utils/evaluation-type.util';
 import {
   createGradeChangeRequest,
@@ -23,6 +24,7 @@ import {
   type MockQuestionInput,
 } from '../utils/mock-exam.util';
 import { defaultExamKindForLevel, isExamClassLevel } from '../utils/exam-class.util';
+import { autoExcuseAbsenceRecords } from '../utils/student-absence-permission.util';
 
 const router = express.Router();
 
@@ -107,15 +109,70 @@ router.get('/my-attendance', async (req: AuthRequest, res) => {
 
     const date = parseTeacherAttendanceDate(req.query.date);
     const attendanceDate = toAttendanceDateKey(date);
-    const attendance = await prisma.teacherAttendance.findFirst({
+    const sessions = await prisma.teacherAttendance.findMany({
       where: { teacherId, attendanceDate },
-      orderBy: [{ checkInAt: 'desc' }, { updatedAt: 'desc' }],
+      orderBy: [{ scheduledStartAt: 'asc' }, { checkInAt: 'asc' }],
     });
 
-    res.json({ attendance, attendanceDate });
+    const courseIds = [...new Set(sessions.map((s) => s.courseId).filter(Boolean))] as string[];
+    const courses =
+      courseIds.length > 0
+        ? await prisma.course.findMany({
+            where: { id: { in: courseIds } },
+            select: { id: true, name: true, code: true },
+          })
+        : [];
+    const courseMap = new Map(courses.map((c) => [c.id, c]));
+
+    res.json({
+      attendanceDate,
+      sessions: sessions.map((s) => ({
+        ...s,
+        course: s.courseId ? courseMap.get(s.courseId) ?? null : null,
+      })),
+      /** 1re session pour compatibilité */
+      attendance: sessions[0] ?? null,
+    });
   } catch (error: unknown) {
     console.error('GET /teacher/my-attendance:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/my-attendance/mark-departure', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) {
+      return res.status(404).json({ error: 'Profil enseignant non trouvé' });
+    }
+
+    const result = await punchTeacherCourseAttendance({
+      teacherId,
+      at: new Date(),
+      source: 'SELF',
+      courseId: typeof req.body?.courseId === 'string' ? req.body.courseId : undefined,
+      recordedByUserId: req.user!.id,
+    });
+
+    if (result.punchPhase !== 'CHECK_OUT') {
+      return res.status(400).json({
+        error:
+          result.punchPhase === 'ALREADY_COMPLETE'
+            ? 'Ce cours est déjà clôturé.'
+            : 'Aucune arrivée enregistrée à clôturer pour ce cours.',
+        punchPhase: result.punchPhase,
+      });
+    }
+
+    res.status(200).json({
+      attendance: result.attendance,
+      punchPhase: result.punchPhase,
+      message: 'Départ enregistré',
+    });
+  } catch (error: unknown) {
+    const statusCode = (error as { statusCode?: number })?.statusCode ?? 500;
+    console.error('POST /teacher/my-attendance/mark-departure:', error);
+    res.status(statusCode).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 
@@ -632,10 +689,27 @@ router.post(
         )
       );
 
+      await autoExcuseAbsenceRecords(absences);
+      const refreshedAbsences = await prisma.absence.findMany({
+        where: { id: { in: absences.map((a) => a.id) } },
+        include: {
+          student: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
       res.status(201).json({
-        message: `Prise d'appel initialisée: ${absences.length} élèves marqués comme absents`,
-        absences,
-        total: absences.length,
+        message: `Prise d'appel initialisée: ${refreshedAbsences.length} élèves marqués comme absents`,
+        absences: refreshedAbsences,
+        total: refreshedAbsences.length,
       });
     } catch (error: any) {
       console.error('Error initializing attendance:', error);
@@ -710,7 +784,12 @@ router.post(
         )
       );
 
-      res.status(201).json(absences);
+      await autoExcuseAbsenceRecords(absences);
+      const refreshedAbsences = await prisma.absence.findMany({
+        where: { id: { in: absences.map((a) => a.id) } },
+      });
+
+      res.status(201).json(refreshedAbsences);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2046,7 +2125,15 @@ router.get('/mock-exams/exam-classes', async (req: AuthRequest, res) => {
       },
     });
     const seen = new Set<string>();
-    const classes = [];
+    const classes: Array<{
+      id: string;
+      name: string;
+      level: string;
+      academicYear: string;
+      courseId: string;
+      courseName: string;
+      suggestedExamKind: ReturnType<typeof defaultExamKindForLevel>;
+    }> = [];
     for (const c of courses) {
       if (!isExamClassLevel(c.class.level) || seen.has(c.class.id)) continue;
       seen.add(c.class.id);

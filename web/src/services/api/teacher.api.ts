@@ -46,6 +46,10 @@ export const teacherApi = {
     const response = await api.post('/teacher/my-attendance/mark-present', data ?? {});
     return response.data;
   },
+  markMyAttendanceDeparture: async (data?: { courseId?: string }) => {
+    const response = await api.post('/teacher/my-attendance/mark-departure', data ?? {});
+    return response.data;
+  },
   getStudentByNFC: async (nfcId: string) => {
     const response = await api.get(`/teacher/students/nfc/${nfcId}`);
     return response.data;

@@ -13,6 +13,11 @@ import { ADM } from './adminModuleLayout';
 import { formatFCFA } from '../../utils/currency';
 import { getCurrentAcademicYear } from '../../utils/academicYear';
 import toast from 'react-hot-toast';
+import AccountingTransactionJournalSection from './AccountingTransactionJournalSection';
+import AccountingClassFinancialSituationSection from './AccountingClassFinancialSituationSection';
+import AccountingCashManagementSection from './AccountingCashManagementSection';
+import { exportJournalCsv, type AccountingJournalRow } from '../../lib/accountingJournal';
+import { adminApi } from '../../services/api';
 import {
   FiBook,
   FiList,
@@ -20,10 +25,11 @@ import {
   FiTrendingUp,
   FiShoppingCart,
   FiTruck,
-  FiDollarSign,
   FiDownload,
   FiPlus,
   FiTrash2,
+  FiUsers,
+  FiArchive,
 } from 'react-icons/fi';
 
 type Sub =
@@ -33,7 +39,8 @@ type Sub =
   | 'budget'
   | 'expenses'
   | 'suppliers'
-  | 'petty'
+  | 'cash'
+  | 'by_class'
   | 'reports';
 
 const EXPENSE_CAT_LABEL: Record<string, string> = {
@@ -94,22 +101,22 @@ const AccountingManagementModule: React.FC = () => {
     enabled: sub === 'expenses',
   });
 
-  const { data: petty, refetch: refetchPetty } = useQuery({
-    queryKey: ['admin-petty-cash'],
-    queryFn: () => adminAccountingApi.getPettyCashMovements({}),
-    enabled: sub === 'petty',
-  });
-
-  const { data: pettyBal, refetch: refetchPettyBal } = useQuery({
+  const { data: pettyBal } = useQuery({
     queryKey: ['admin-petty-balance'],
     queryFn: adminAccountingApi.getPettyCashBalance,
-    enabled: sub === 'petty' || sub === 'bilan',
+    enabled: sub === 'bilan',
   });
 
   const { data: budgetLines } = useQuery({
     queryKey: ['admin-budget-lines', academicYear],
     queryFn: () => adminAccountingApi.getBudgetLines({ academicYear }),
     enabled: sub === 'budget',
+  });
+
+  const { data: financialBreakdown, isLoading: loadFinClass } = useQuery({
+    queryKey: ['admin-financial-breakdown-by-class', academicYear],
+    queryFn: () => adminApi.getFinancialBreakdown({ academicYear }),
+    enabled: sub === 'by_class',
   });
 
   const [supForm, setSupForm] = useState({ name: '', contactName: '', email: '', phone: '' });
@@ -145,28 +152,6 @@ const AccountingManagementModule: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['admin-accounting-summary'] });
       toast.success('Dépense enregistrée');
       setExpForm((f) => ({ ...f, amount: '', description: '' }));
-    },
-    onError: (e: { response?: { data?: { error?: string } } }) => toast.error(e.response?.data?.error || 'Erreur'),
-  });
-
-  const [pcForm, setPcForm] = useState({
-    movementDate: format(new Date(), 'yyyy-MM-dd'),
-    type: 'OUT' as 'IN' | 'OUT',
-    amount: '',
-    reason: '',
-  });
-  const createPc = useMutation({
-    mutationFn: () =>
-      adminAccountingApi.createPettyCashMovement({
-        ...pcForm,
-        amount: parseFloat(pcForm.amount),
-      }),
-    onSuccess: () => {
-      refetchPetty();
-      refetchPettyBal();
-      qc.invalidateQueries({ queryKey: ['admin-accounting-summary'] });
-      toast.success('Mouvement enregistré');
-      setPcForm((f) => ({ ...f, amount: '', reason: '' }));
     },
     onError: (e: { response?: { data?: { error?: string } } }) => toast.error(e.response?.data?.error || 'Erreur'),
   });
@@ -209,45 +194,22 @@ const AccountingManagementModule: React.FC = () => {
       toast.success('Supprimé');
     },
   });
-  const delPc = useMutation({
-    mutationFn: adminAccountingApi.deletePettyCashMovement,
-    onSuccess: () => {
-      refetchPetty();
-      refetchPettyBal();
-      toast.success('Supprimé');
-    },
-  });
 
-  const exportJournalCsv = () => {
-    if (!journal || !Array.isArray(journal)) return;
-    const header = ['Date', 'Type', 'Compte', 'Libellé', 'Réf.', 'Montant FCFA'];
-    const lines = (journal as Array<Record<string, unknown>>).map((r) =>
-      [
-        format(new Date(String(r.date)), 'yyyy-MM-dd', { locale: fr }),
-        String(r.kind),
-        String(r.ledgerCode),
-        `"${String(r.label).replace(/"/g, '""')}"`,
-        r.reference ?? '',
-        String(r.amount),
-      ].join(';')
-    );
-    const blob = new Blob([`\uFEFF${header.join(';')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `journal-operations-${academicYear}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+  const exportJournalCsvHandler = () => {
+    if (!journal || !Array.isArray(journal) || journal.length === 0) return;
+    exportJournalCsv(journal as AccountingJournalRow[], academicYear);
     toast.success('Export CSV');
   };
 
   const tabs: { id: Sub; label: string; icon: typeof FiBook }[] = [
     { id: 'bilan', label: 'Bilan & résultat', icon: FiTrendingUp },
-    { id: 'journal', label: 'Journal', icon: FiList },
+    { id: 'journal', label: 'Journal des transactions', icon: FiList },
     { id: 'ledger', label: 'Grand livre', icon: FiLayers },
     { id: 'budget', label: 'Budget prévisionnel', icon: FiBook },
     { id: 'expenses', label: 'Dépenses', icon: FiShoppingCart },
     { id: 'suppliers', label: 'Fournisseurs', icon: FiTruck },
-    { id: 'petty', label: 'Petite caisse', icon: FiDollarSign },
+    { id: 'cash', label: 'Gestion des caisses', icon: FiArchive },
+    { id: 'by_class', label: 'Situation par classe', icon: FiUsers },
     { id: 'reports', label: 'Rapports', icon: FiDownload },
   ];
 
@@ -350,40 +312,11 @@ const AccountingManagementModule: React.FC = () => {
       )}
 
       {sub === 'journal' && (
-        <Card className="p-0 overflow-hidden border border-stone-200">
-          {loadJ ? (
-            <p className="p-4 text-sm text-stone-500">Chargement…</p>
-          ) : (
-            <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
-              <table className="min-w-full text-xs">
-                <thead className="bg-stone-50 sticky top-0">
-                  <tr>
-                    <th className="px-2 py-2 text-left">Date</th>
-                    <th className="px-2 py-2 text-left">Type</th>
-                    <th className="px-2 py-2 text-left">Compte</th>
-                    <th className="px-2 py-2 text-left">Libellé</th>
-                    <th className="px-2 py-2 text-right">Montant</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {((journal as any[]) ?? []).map((r) => (
-                    <tr key={r.id} className="border-t border-stone-100">
-                      <td className="px-2 py-1.5 whitespace-nowrap">
-                        {format(new Date(r.date), 'dd/MM/yyyy', { locale: fr })}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Badge className="text-[9px]">{r.kind}</Badge>
-                      </td>
-                      <td className="px-2 py-1.5 font-mono text-[10px]">{r.ledgerCode}</td>
-                      <td className="px-2 py-1.5 text-stone-700 max-w-xs truncate">{r.label}</td>
-                      <td className="px-2 py-1.5 text-right tabular-nums">{formatFCFA(r.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+        <AccountingTransactionJournalSection
+          rows={(journal as AccountingJournalRow[]) ?? []}
+          academicYear={academicYear}
+          isLoading={loadJ}
+        />
       )}
 
       {sub === 'ledger' && (
@@ -627,58 +560,15 @@ const AccountingManagementModule: React.FC = () => {
         </div>
       )}
 
-      {sub === 'petty' && (
-        <div className="space-y-4">
-          <Card className="p-4 border border-indigo-100 bg-indigo-50/30">
-            <p className="text-sm font-semibold text-indigo-950">Solde actuel : {formatFCFA(pettyBal?.balance ?? 0)}</p>
-          </Card>
-          <Card className="p-3 border border-stone-200 grid sm:grid-cols-3 gap-2">
-            <Input type="date" label="Date" value={pcForm.movementDate} onChange={(e) => setPcForm((f) => ({ ...f, movementDate: e.target.value }))} />
-            <div>
-              <label className="text-xs font-medium text-stone-700">Sens</label>
-              <select
-                aria-label="Sens du mouvement de caisse"
-                className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2 text-sm"
-                value={pcForm.type}
-                onChange={(e) => setPcForm((f) => ({ ...f, type: e.target.value as 'IN' | 'OUT' }))}
-              >
-                <option value="IN">Entrée (alimentation)</option>
-                <option value="OUT">Sortie (dépense caisse)</option>
-              </select>
-            </div>
-            <Input label="Montant (FCFA)" value={pcForm.amount} onChange={(e) => setPcForm((f) => ({ ...f, amount: e.target.value }))} />
-            <Input label="Motif" className="sm:col-span-3" value={pcForm.reason} onChange={(e) => setPcForm((f) => ({ ...f, reason: e.target.value }))} />
-            <Button type="button" size="sm" onClick={() => createPc.mutate()} disabled={createPc.isPending}>
-              Enregistrer
-            </Button>
-          </Card>
-          <Card className="border border-stone-200 divide-y divide-stone-100">
-            {((petty as any[]) ?? []).map((m) => (
-              <div key={m.id} className="px-3 py-2 flex justify-between items-center text-sm">
-                <div>
-                  <span className="font-medium">{format(new Date(m.movementDate), 'dd/MM/yyyy', { locale: fr })}</span>
-                  <span className="mx-2 text-stone-400">·</span>
-                  {m.reason}
-                  <Badge className="ml-2 text-[9px]" variant={m.type === 'IN' ? 'success' : 'danger'}>
-                    {m.type}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold tabular-nums">{formatFCFA(m.amount)}</span>
-                  <button
-                    type="button"
-                    className="text-red-600"
-                    onClick={() => {
-                      if (window.confirm('Supprimer ?')) delPc.mutate(m.id);
-                    }}
-                  >
-                    <FiTrash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </Card>
-        </div>
+      {sub === 'cash' && <AccountingCashManagementSection />}
+
+      {sub === 'by_class' && (
+        <AccountingClassFinancialSituationSection
+          academicYear={academicYear}
+          byClass={financialBreakdown?.paymentsAndUnpaid?.byClass ?? []}
+          overview={financialBreakdown?.overview}
+          isLoading={loadFinClass}
+        />
       )}
 
       {sub === 'reports' && (
@@ -687,7 +577,7 @@ const AccountingManagementModule: React.FC = () => {
             Export CSV du journal (mêmes filtres année / dates que ci-dessus). Les rapports détaillés financiers
             élèves / familles restent aussi disponibles dans « Rapports & statistiques ».
           </p>
-          <Button type="button" size="sm" variant="secondary" onClick={exportJournalCsv} disabled={!journal?.length}>
+          <Button type="button" size="sm" variant="secondary" onClick={exportJournalCsvHandler} disabled={!journal?.length}>
             <FiDownload className="mr-1 inline w-4 h-4" />
             Télécharger le journal (CSV)
           </Button>

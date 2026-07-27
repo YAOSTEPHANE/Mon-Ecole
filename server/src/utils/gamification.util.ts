@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import prisma from './prisma';
 
 export async function awardGamificationPoints(opts: {
@@ -15,7 +16,7 @@ export async function awardGamificationPoints(opts: {
       points: opts.points,
       label: opts.label,
       badgeCode: opts.badgeCode ?? null,
-      metadata: opts.metadata ?? undefined,
+      metadata: (opts.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
     },
   });
 }

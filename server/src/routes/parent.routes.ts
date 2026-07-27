@@ -39,6 +39,17 @@ import {
 } from '../utils/prisma-relation-exists.util';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth.middleware';
 import { guardParentOwnsStudentParam } from '../middleware/parent-student-guard.middleware';
+import {
+  permissionRequestInclude,
+  enrichPermissionRequestWithReviewer,
+  enrichPermissionRequestsWithReviewers,
+  STUDENT_ABSENCE_PERMISSION_MOTIFS,
+  validatePermissionPeriod,
+} from '../utils/student-absence-permission.util';
+import {
+  notifyAdminsOfNewAbsencePermissionRequest,
+  notifyFamilyAbsencePermissionSubmitted,
+} from '../utils/student-absence-permission-notify.util';
 
 const router = express.Router();
 
@@ -896,6 +907,82 @@ router.get('/children/:studentId/absences', async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/children/:studentId/absence-permission-requests', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const requests = await prisma.studentAbsencePermissionRequest.findMany({
+      where: { studentId },
+      include: permissionRequestInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(await enrichPermissionRequestsWithReviewers(requests));
+  } catch (error: unknown) {
+    console.error('GET /parent/children/:studentId/absence-permission-requests:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post(
+  '/children/:studentId/absence-permission-requests',
+  [
+    body('startDate').isISO8601(),
+    body('endDate').isISO8601(),
+    body('motif').isIn([...STUDENT_ABSENCE_PERMISSION_MOTIFS]),
+    body('reasonDetail').isString().trim().isLength({ min: 10, max: 2000 }),
+    body('justificationDocuments').optional().isArray(),
+    body('justificationDocuments.*').optional().isString(),
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { studentId } = req.params;
+      const { startDate, endDate, motif, reasonDetail, justificationDocuments } = req.body;
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const periodError = validatePermissionPeriod(start, end);
+      if (periodError) {
+        return res.status(400).json({ error: periodError });
+      }
+
+      const docs = Array.isArray(justificationDocuments)
+        ? justificationDocuments.filter((u: unknown): u is string => typeof u === 'string' && u.length > 0)
+        : [];
+
+      const request = await prisma.studentAbsencePermissionRequest.create({
+        data: {
+          studentId,
+          requestedByUserId: req.user!.id,
+          requestedByRole: 'PARENT',
+          motif,
+          startDate: start,
+          endDate: end,
+          reasonDetail: reasonDetail.trim(),
+          justificationDocuments: docs,
+        },
+        include: permissionRequestInclude,
+      });
+
+      void notifyAdminsOfNewAbsencePermissionRequest(request.id).catch((notifyError) => {
+        console.error('notifyAdminsOfNewAbsencePermissionRequest:', notifyError);
+      });
+      void notifyFamilyAbsencePermissionSubmitted(request.id, 'PARENT').catch((notifyError) => {
+        console.error('notifyFamilyAbsencePermissionSubmitted:', notifyError);
+      });
+
+      res.status(201).json(await enrichPermissionRequestWithReviewer(request));
+    } catch (error: unknown) {
+      console.error('POST /parent/children/:studentId/absence-permission-requests:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  }
+);
+
 // Obtenir l'emploi du temps d'un enfant
 router.get('/children/:studentId/schedule', async (req: AuthRequest, res) => {
   try {
@@ -1199,17 +1286,27 @@ router.post('/children/:studentId/payments', async (req: AuthRequest, res) => {
       );
     }
 
-    let onlinePayment = payment;
+    let onlinePayment: typeof payment & {
+      checkoutUrl?: string | null;
+      paymentProvider?: string | null;
+    } = payment;
     if (paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') {
       const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0]?.trim();
-      onlinePayment = await attachOnlineCheckout(prisma, payment.id, {
+      const checkoutPayment = await attachOnlineCheckout(prisma, payment.id, {
         method: paymentMethod,
         phoneNumber,
         operator,
         customerEmail: req.user?.email,
-        customerName: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' '),
+        customerName: req.user?.email ?? '',
         returnUrl: `${frontend}/parent?tab=payments`,
       });
+      onlinePayment = {
+        ...payment,
+        checkoutUrl: checkoutPayment.checkoutUrl,
+        paymentProvider: checkoutPayment.paymentProvider,
+        transactionId: checkoutPayment.transactionId,
+        notes: checkoutPayment.notes,
+      };
       if (phoneNumber) {
         void notifyParentWhatsApp(
           phoneNumber,

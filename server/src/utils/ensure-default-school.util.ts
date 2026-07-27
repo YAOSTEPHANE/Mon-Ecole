@@ -29,15 +29,23 @@ export async function ensureDefaultSchool(): Promise<string> {
     throw new SchoolPrismaNotReadyError();
   }
 
-  const existingDefault = await schools.findFirst({
+  const defaultSchools = (await schools.findMany({
     where: { isDefault: true, isActive: true },
+    orderBy: { createdAt: 'asc' },
     select: { id: true },
-  });
-  if (existingDefault) {
-    await backfillOrphanRecords(existingDefault.id);
+  })) as { id: string }[];
+  if (defaultSchools.length > 0) {
+    const keeper = defaultSchools[0]!;
+    if (defaultSchools.length > 1) {
+      await schools.updateMany({
+        where: { id: { in: defaultSchools.slice(1).map((s) => s.id) } },
+        data: { isDefault: false },
+      });
+    }
+    await backfillOrphanRecords(keeper.id);
     const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
-    await seedSchoolStaffMetiers(existingDefault.id);
-    return existingDefault.id;
+    await seedSchoolStaffMetiers(keeper.id);
+    return keeper.id;
   }
 
   const any = await schools.findFirst({
@@ -67,23 +75,48 @@ export async function ensureDefaultSchool(): Promise<string> {
     'Établissement principal';
 
   let slug = slugify(displayName);
-  const slugTaken = await schools.findUnique({ where: { slug } });
-  if (slugTaken) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+  const slugTaken = await schools.findFirst({ where: { slug }, select: { id: true } });
+  if (slugTaken) {
+    await schools.update({
+      where: { id: slugTaken.id },
+      data: { isDefault: true },
+    });
+    await backfillOrphanRecords(slugTaken.id);
+    const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
+    await seedSchoolStaffMetiers(slugTaken.id);
+    return slugTaken.id;
+  }
 
-  const school = (await schools.create({
-    data: {
-      name: displayName,
-      slug,
-      shortName: legacyBranding?.appTitle?.trim() || null,
-      address: legacyBranding?.schoolAddress?.trim() || null,
-      phone: legacyBranding?.schoolPhone?.trim() || null,
-      email: legacyBranding?.schoolEmail?.trim() || null,
-      website: legacyBranding?.schoolWebsite?.trim() || null,
-      principalName: legacyBranding?.schoolPrincipal?.trim() || null,
-      isDefault: true,
-      isActive: true,
-    },
-  })) as { id: string };
+  let school: { id: string };
+  try {
+    school = (await schools.create({
+      data: {
+        name: displayName,
+        slug,
+        shortName: legacyBranding?.appTitle?.trim() || null,
+        address: legacyBranding?.schoolAddress?.trim() || null,
+        phone: legacyBranding?.schoolPhone?.trim() || null,
+        email: legacyBranding?.schoolEmail?.trim() || null,
+        website: legacyBranding?.schoolWebsite?.trim() || null,
+        principalName: legacyBranding?.schoolPrincipal?.trim() || null,
+        isDefault: true,
+        isActive: true,
+      },
+    })) as { id: string };
+  } catch (error) {
+    const raced = await schools.findFirst({
+      where: { slug },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (raced) {
+      await backfillOrphanRecords(raced.id);
+      const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
+      await seedSchoolStaffMetiers(raced.id);
+      return raced.id;
+    }
+    throw error;
+  }
 
   if (brandingDelegate && legacyBranding) {
     await brandingDelegate.upsert({

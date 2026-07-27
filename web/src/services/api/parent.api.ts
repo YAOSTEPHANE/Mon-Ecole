@@ -36,6 +36,23 @@ export const parentApi = {
     const response = await api.get(`/parent/children/${studentId}/absences`);
     return response.data;
   },
+  getChildAbsencePermissionRequests: async (studentId: string) => {
+    const response = await api.get(`/parent/children/${studentId}/absence-permission-requests`);
+    return response.data;
+  },
+  createChildAbsencePermissionRequest: async (
+    studentId: string,
+    data: {
+      startDate: string;
+      endDate: string;
+      motif: 'MEDICAL' | 'FAMILIAL' | 'OTHER';
+      reasonDetail: string;
+      justificationDocuments?: string[];
+    }
+  ) => {
+    const response = await api.post(`/parent/children/${studentId}/absence-permission-requests`, data);
+    return response.data;
+  },
   getChildSchedule: async (studentId: string) => {
     const response = await api.get(`/parent/children/${studentId}/schedule`);
     return response.data;

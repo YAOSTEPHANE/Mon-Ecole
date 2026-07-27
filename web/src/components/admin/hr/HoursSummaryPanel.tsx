@@ -252,7 +252,7 @@ const HoursSummaryPanel: React.FC<Props> = ({ mode }) => {
             </h3>
             <p className="text-xs text-teal-900/80 mt-1">
               {mode === 'teachers'
-                ? 'Total des minutes enseignées (pointages) pour chaque enseignant, avec détail jour / semaine / mois.'
+                ? 'Total des heures décomptées de l’arrivée du professeur jusqu’à la fin du cours (emploi du temps), avec détail jour / semaine / mois.'
                 : 'Total des minutes travaillées (entrée/sortie ou saisie) pour chaque membre du personnel.'}
             </p>
           </div>
@@ -498,7 +498,7 @@ const HoursSummaryPanel: React.FC<Props> = ({ mode }) => {
                             open={open}
                             onToggle={() => setExpandedId(open ? null : t.teacherId)}
                             rank={idx + 1}
-                            name={`${t.firstName} ${t.lastName}`}
+                            name={`${fmtHours(t.hours)} h — ${t.firstName} ${t.lastName}`}
                             sub={t.employeeId}
                             hours={t.hours}
                             sessions={t.sessions}

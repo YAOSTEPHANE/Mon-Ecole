@@ -376,7 +376,7 @@ const AdminDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="ADMIN">
       <PremiumPortalShell variant="admin">
-      <div className="min-h-screen">
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-stretch">
         <AdminSidebar
           mainTabs={mainTabs}
           bottomTabs={bottomTabs}
@@ -388,14 +388,10 @@ const AdminDashboard = () => {
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
         />
 
-        <div
-          className={`flex min-w-0 flex-col transition-[padding] duration-300 ease-in-out ${
-            sidebarCollapsed ? 'lg:pl-[4.25rem]' : 'lg:pl-64'
-          }`}
-        >
+        <div className="flex min-w-0 flex-1 flex-col">
           {/* Header */}
-          <header className="sticky top-16 z-20 glass-nav shadow-[0_8px_30px_-12px_rgba(12,10,9,0.08)]">
-            <div className="px-2.5 sm:px-5 py-2 sm:py-2.5">
+          <header className="dash-command-bar sticky top-16 z-20">
+            <div className="px-2.5 sm:px-5 py-2.5 sm:py-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <button
@@ -453,7 +449,7 @@ const AdminDashboard = () => {
                     placeholder="Recherche globale…"
                     aria-label="Recherche globale, valider avec Entrée"
                     autoComplete="off"
-                    className="w-full pl-10 pr-3 py-2 sm:py-2.5 bg-white/95 border border-stone-200/90 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-amber-500/35 focus:border-amber-400/50 hover:border-stone-300"
+                    className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
                   />
                 </div>
                 </div>
@@ -461,8 +457,8 @@ const AdminDashboard = () => {
             </div>
           </header>
 
-          <main className="flex-1 px-3 sm:px-6 py-4 sm:py-6 overflow-y-auto overflow-x-hidden pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
-            <div className="max-w-[1200px] mx-auto space-y-4 sm:space-y-5">
+          <main className="dash-workspace flex-1 px-3 sm:px-6 py-5 sm:py-6 overflow-y-auto overflow-x-hidden pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
+            <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6">
               <PremiumModuleHeader
                 title={activeTabMeta.label}
                 description={activeTabMeta.description}

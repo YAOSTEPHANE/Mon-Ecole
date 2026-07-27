@@ -16,7 +16,7 @@ import {
   Cell,
 } from 'recharts';
 import { CHART_GRID, CHART_MARGIN_COMPACT, CHART_AXIS_TICK, chartBlueRed, CHART_ANIMATION_MS, RechartsViewport, PremiumChartCard, PremiumTooltip, BarGradientsMulti, PREMIUM_BAR_RADIUS_TOP, PREMIUM_BAR_MAX_SIZE, PREMIUM_CHART_ANIMATION, CHART_CURSOR, CHART_GRID_SOFT } from '../charts';
-import { PremiumOverviewHero, PremiumStatGrid, PremiumKpiCard } from '../dashboard/premium';
+import { PremiumOverviewHero, PremiumStatGrid, PremiumKpiCard, PremiumSectionTitle } from '../dashboard/premium';
 import GdprUserRightsPanel from '../gdpr/GdprUserRightsPanel';
 import PortalSchoolFeed from '../portal/PortalSchoolFeed';
 import { format } from 'date-fns';
@@ -127,7 +127,7 @@ const ParentOverview = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <PremiumOverviewHero
         eyebrow="Espace familles"
         title={format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
@@ -135,7 +135,9 @@ const ParentOverview = () => {
         description="Vue consolidée par enfant : résultats, assiduité et messages."
       />
 
-            <PortalSchoolFeed role="parent" compact />
+      <section className="dash-section-panel">
+        <PortalSchoolFeed role="parent" compact />
+      </section>
 
       {selectedChildData && tuitionBlock?.active && (tuitionBlock.hiddenAcademicYears?.length ?? 0) > 0 && (
         <Card className="border-l-4 border-amber-500 bg-amber-50/90 ring-1 ring-amber-200/80">
@@ -156,9 +158,9 @@ const ParentOverview = () => {
 
       {/* Sélection d'enfant */}
       {children && children.length > 1 && (
-        <Card variant="premium" className="ring-1 ring-slate-900/5">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Sélectionner un enfant</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section className="dash-section-panel">
+          <PremiumSectionTitle title="Sélectionner un enfant" subtitle="Choisissez le profil à consulter" icon={FiUsers} />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {children.map((child: any) => (
               <button
                 key={child.id}
@@ -188,80 +190,53 @@ const ParentOverview = () => {
               </button>
             ))}
           </div>
-        </Card>
+        </section>
       )}
 
       {/* Statistiques */}
       {selectedChildData && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <section className="dash-section-panel">
+            <PremiumSectionTitle title="Indicateurs clés" subtitle={`Suivi de ${selectedChildData.user.firstName}`} icon={FiAward} />
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {stats.map((stat, index) => {
               const Icon = stat.icon;
+              const accent =
+                stat.color.includes('green') ? 'emerald' :
+                stat.color.includes('blue') ? 'blue' :
+                stat.color.includes('yellow') ? 'amber' :
+                stat.color.includes('red') ? 'rose' :
+                stat.color.includes('purple') ? 'violet' :
+                stat.color.includes('orange') ? 'amber' : 'slate';
               return (
-                <Card key={index} variant="premium" hover className="overflow-hidden ring-1 ring-slate-900/5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
-                      <div className="flex items-baseline space-x-1">
-                        <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                        {stat.subtitle && (
-                          <p className="text-sm text-gray-500">{stat.subtitle}</p>
-                        )}
-                      </div>
-                      {stat.badge && (
-                        <div className="mt-2">
-                          <Badge variant={stat.badgeVariant} size="sm">
-                            {stat.badge}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white transform rotate-3 hover:rotate-6 transition-transform`}>
-                      <Icon className="w-8 h-8" />
-                    </div>
-                  </div>
-                </Card>
+                <PremiumKpiCard
+                  key={index}
+                  label={stat.title}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={Icon}
+                  accent={accent}
+                  trend={stat.badge}
+                />
               );
             })}
-          </div>
+            </div>
+          </section>
 
           {parentKpi?.cards && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <Card variant="premium" className="p-4 ring-1 ring-slate-900/5">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase">Impayés (famille)</p>
-                <p className="text-xl font-bold text-rose-800 mt-1 tabular-nums">
-                  {new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(
-                    parentKpi.cards.tuitionUnpaidAmount ?? 0
-                  )}{' '}
-                  <span className="text-xs font-normal text-slate-600">FCFA</span>
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">{parentKpi.cards.tuitionUnpaidCount} ligne(s)</p>
-              </Card>
-              <Card variant="premium" className="p-4 ring-1 ring-slate-900/5">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase flex items-center gap-1">
-                  <FiClock className="w-3.5 h-3.5" /> RDV en attente
-                </p>
-                <p className="text-xl font-bold text-slate-900 mt-1">{parentKpi.cards.pendingAppointments}</p>
-              </Card>
-              <Card variant="premium" className="p-4 ring-1 ring-slate-900/5">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase flex items-center gap-1">
-                  <FiBell className="w-3.5 h-3.5" /> Notifications
-                </p>
-                <p className="text-xl font-bold text-slate-900 mt-1">{parentKpi.cards.unreadNotifications}</p>
-                <p className="text-xs text-slate-500 mt-0.5">non lues</p>
-              </Card>
-              <Card variant="premium" className="p-4 ring-1 ring-slate-900/5">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase flex items-center gap-1">
-                  <FiCreditCard className="w-3.5 h-3.5" /> KPI
-                </p>
-                <p className="text-xs text-slate-600 mt-2 leading-snug">
-                  Visualisation des moyennes récentes par enfant (120 j.).
-                </p>
-              </Card>
-            </div>
+            <section className="dash-section-panel">
+              <PremiumSectionTitle title="Finances & rendez-vous" subtitle="Alertes famille" icon={FiCreditCard} />
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <PremiumKpiCard label="Impayés (famille)" value={`${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(parentKpi.cards.tuitionUnpaidAmount ?? 0)} FCFA`} subtitle={`${parentKpi.cards.tuitionUnpaidCount} ligne(s)`} icon={FiCreditCard} accent="rose" />
+              <PremiumKpiCard label="RDV en attente" value={parentKpi.cards.pendingAppointments} icon={FiClock} accent="amber" />
+              <PremiumKpiCard label="Notifications" value={parentKpi.cards.unreadNotifications} subtitle="non lues" icon={FiBell} accent="indigo" />
+              <PremiumKpiCard label="Moyennes" value="120 j." subtitle="Visualisation par enfant" icon={FiAward} accent="blue" />
+              </div>
+            </section>
           )}
 
           {parentKpi?.charts?.averageByChild && parentKpi.charts.averageByChild.some((x: { average20: number | null }) => x.average20 != null) && (
+            <section className="dash-section-panel">
             <PremiumChartCard
               title="Moyennes par enfant"
               subtitle="Notes des 120 derniers jours"
@@ -306,6 +281,7 @@ const ParentOverview = () => {
                 </BarChart>
               </RechartsViewport>
             </PremiumChartCard>
+            </section>
           )}
 
           {/* Informations de l'enfant sélectionné */}

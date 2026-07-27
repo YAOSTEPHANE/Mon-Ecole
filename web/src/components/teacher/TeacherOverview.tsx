@@ -23,7 +23,7 @@ import {
 import {
   PremiumOverviewHero,
   PremiumStatGrid,
-  PremiumGlassCard,
+  PremiumSectionTitle,
 } from '../dashboard/premium';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -106,7 +106,7 @@ const TeacherOverview = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <PremiumOverviewHero
         eyebrow="Pilotage pédagogique"
         title={format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
@@ -114,9 +114,13 @@ const TeacherOverview = () => {
         description="Agrégation de vos cours, effectifs suivis et charge documentaire."
       />
 
-      <PremiumStatGrid items={stats} columns={4} />
+      <section className="dash-section-panel">
+        <PremiumSectionTitle title="Indicateurs clés" subtitle="Synthèse de votre activité" icon={FiBook} />
+        <PremiumStatGrid items={stats} columns={4} />
+      </section>
 
       {teachKpi?.charts?.gradesByMonth && teachKpi.charts.gradesByMonth.length > 0 && (
+        <section className="dash-section-panel">
         <PremiumChartCard
           title="KPI & tendance des notes (90 j.)"
           subtitle={`Moyenne sur 20 · ${teachKpi.cards?.gradesRecorded90d ?? 0} note(s) · RDV parents : ${teachKpi.cards?.pendingParentAppointments ?? 0}`}
@@ -142,13 +146,13 @@ const TeacherOverview = () => {
             </LineChart>
           </RechartsViewport>
         </PremiumChartCard>
+        </section>
       )}
 
-      {/* Prochaines actions */}
       {upcomingAssignments.length > 0 && (
-        <Card variant="premium" className="ring-1 ring-slate-900/5">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Devoirs à venir</h3>
-          <div className="space-y-3">
+        <section className="dash-section-panel">
+        <PremiumSectionTitle title="Devoirs à venir" subtitle="Échéances proches" icon={FiFileText} />
+        <div className="space-y-3">
             {upcomingAssignments.map((assignment: any) => {
               const dueDate = new Date(assignment.dueDate);
               const now = new Date();
@@ -184,14 +188,13 @@ const TeacherOverview = () => {
                 </div>
               );
             })}
-          </div>
-        </Card>
+        </div>
+        </section>
       )}
 
-      {/* Alertes */}
       {totalAbsences > 0 && (
-        <Card className="border-l-4 border-orange-500">
-          <div className="flex items-start space-x-4">
+        <section className="dash-section-panel border-l-4 border-l-orange-500">
+          <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
               <FiAlertCircle className="w-6 h-6 text-orange-600" />
             </div>
@@ -203,7 +206,7 @@ const TeacherOverview = () => {
               </p>
             </div>
           </div>
-        </Card>
+        </section>
       )}
     </div>
   );

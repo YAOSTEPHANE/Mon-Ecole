@@ -52,11 +52,13 @@ const AdminSidebar = ({
       )}
 
       <aside
-        className={`fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] border-r border-white/10 bg-black shadow-2xl
-          transition-[transform,width] duration-300 ease-in-out
+        className={`dash-sidebar-rail relative z-50 shrink-0 border-r border-white/10
+          transition-[transform,width] duration-300 ease-premium
           w-[min(16rem,calc(100vw-2rem))]
+          fixed top-16 left-0 h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)]
           ${collapsed ? 'lg:w-[4.25rem]' : 'lg:w-64'}
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:sticky lg:top-16 lg:left-auto lg:translate-x-0 lg:self-start`}
         aria-label="Navigation administration"
       >
         <div className="flex h-full min-h-0 flex-col">
@@ -104,8 +106,11 @@ const AdminSidebar = ({
             </button>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
-            <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain pr-0.5 text-[10px] leading-tight">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2">
+            <nav
+              className="dash-sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 text-[10px] leading-tight"
+              aria-label="Modules administration"
+            >
               {mainTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -117,11 +122,11 @@ const AdminSidebar = ({
                     aria-label={tab.label}
                     aria-current={isActive ? 'page' : undefined}
                     onClick={() => closeOnNavigate(tab.id)}
-                    className={`flex w-full min-h-[36px] items-center gap-2 rounded-lg px-2 py-1.5 font-medium transition-all lg:min-h-0 lg:py-1.5 ${
+                    className={`flex w-full min-h-[36px] items-center gap-2 rounded-xl px-2 py-1.5 font-medium transition-all duration-300 ease-premium lg:min-h-0 lg:py-1.5 ${
                       collapsed ? 'lg:justify-center lg:px-1.5 lg:gap-0' : ''
                     } ${
                       isActive
-                        ? `bg-gradient-to-r ${tab.color} text-white shadow-[0_0_28px_-8px_rgba(251,191,36,0.45)] ring-1 ring-amber-400/30`
+                        ? `bg-gradient-to-r ${tab.color} text-white shadow-[0_0_28px_-8px_rgba(251,191,36,0.5)] ring-1 ring-cptb-gold/35`
                         : 'text-zinc-400 hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]'
                     }`}
                   >
@@ -138,43 +143,44 @@ const AdminSidebar = ({
                   </button>
                 );
               })}
-            </nav>
-            <div className="mt-auto shrink-0 border-t border-white/10 pt-2">
-              <nav className="space-y-0.5 text-[10px] leading-tight">
-                {bottomTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      title={tab.label}
-                      aria-label={tab.label}
-                      aria-current={isActive ? 'page' : undefined}
-                      onClick={() => closeOnNavigate(tab.id)}
-                      className={`flex w-full min-h-[36px] items-center gap-2 rounded-lg px-2 py-1.5 font-medium transition-all lg:min-h-0 lg:py-1.5 ${
-                        collapsed ? 'lg:justify-center lg:px-1.5 lg:gap-0' : ''
-                      } ${
-                        isActive
-                          ? `bg-gradient-to-r ${tab.color} text-white shadow-[0_0_24px_-8px_rgba(251,191,36,0.4)] ring-1 ring-amber-400/25`
-                          : 'text-zinc-400 hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]'
-                      }`}
-                    >
-                      <Icon
-                        className={`h-3.5 w-3.5 shrink-0 ${
-                          isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
+
+              {bottomTabs.length > 0 ? (
+                <div className="mt-2 border-t border-white/10 pt-2 space-y-0.5">
+                  {bottomTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        title={tab.label}
+                        aria-label={tab.label}
+                        aria-current={isActive ? 'page' : undefined}
+                        onClick={() => closeOnNavigate(tab.id)}
+                        className={`flex w-full min-h-[36px] items-center gap-2 rounded-xl px-2 py-1.5 font-medium transition-all duration-300 ease-premium lg:min-h-0 lg:py-1.5 ${
+                          collapsed ? 'lg:justify-center lg:px-1.5 lg:gap-0' : ''
+                        } ${
+                          isActive
+                            ? `bg-gradient-to-r ${tab.color} text-white shadow-[0_0_24px_-8px_rgba(251,191,36,0.45)] ring-1 ring-cptb-gold/30`
+                            : 'text-zinc-400 hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]'
                         }`}
-                      />
-                      <span
-                        className={`min-w-0 truncate text-left ${collapsed ? 'lg:hidden' : ''}`}
                       >
-                        {tab.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
+                        <Icon
+                          className={`h-3.5 w-3.5 shrink-0 ${
+                            isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
+                          }`}
+                        />
+                        <span
+                          className={`min-w-0 truncate text-left ${collapsed ? 'lg:hidden' : ''}`}
+                        >
+                          {tab.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </nav>
           </div>
         </div>
       </aside>

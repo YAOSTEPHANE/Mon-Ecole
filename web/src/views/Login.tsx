@@ -154,18 +154,15 @@ const Login = () => {
       <div className="w-full max-w-md relative z-10">
         <div className="relative">
           {/* Glow effect derrière la carte */}
-          <div
-            className="absolute -inset-3 bg-gradient-to-r from-amber-600/35 via-stone-700/30 to-amber-500/35 rounded-[2rem] blur-3xl opacity-40"
-            aria-hidden
-          />
+          <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-r from-cptb-blue/25 via-cptb-gold/30 to-amber-500/30 opacity-45 blur-3xl" aria-hidden />
           
           {/* Carte principale */}
-          <div className="relative premium-card-surface rounded-[1.5rem] sm:rounded-[1.75rem] p-5 sm:p-8 lg:p-10 border border-white/80 shadow-premium ring-1 ring-amber-900/10">
+          <div className="premium-card-surface relative rounded-[1.5rem] border border-white/85 p-5 shadow-premium ring-1 ring-cptb-gold/15 sm:rounded-[1.75rem] sm:p-8 lg:p-10 animate-dash-enter">
             {/* Logo */}
             <div className="text-center mb-8">
               <div className="relative inline-block mb-4">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/40 to-stone-800/40 rounded-2xl blur-xl" aria-hidden />
-                <div className="relative inline-flex items-center justify-center w-20 h-20 overflow-hidden bg-gradient-to-br from-stone-900 to-stone-800 rounded-2xl ring-2 ring-amber-500/35 transform transition-transform duration-300 hover:scale-105 shadow-lg">
+                <div className="relative inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#0a0f2e] via-cptb-blue-dark to-stone-900 shadow-lg ring-2 ring-cptb-gold/40 transition-transform duration-300 hover:scale-105">
                   {loginLogoAbsolute ? (
                     <img
                       src={loginLogoAbsolute}

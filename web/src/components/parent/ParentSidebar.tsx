@@ -33,16 +33,19 @@ const ParentSidebar = ({ items, activeTab, onTabChange, selectedChild, isOpen, o
       )}
 
       <aside
-        className={`fixed top-16 left-0 h-[calc(100vh-4rem)] z-50 transition-transform duration-300 ease-in-out w-64
-          bg-white/92 backdrop-blur-xl border-r border-stone-200/90 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)]
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        className={`relative z-50 shrink-0 border-r border-amber-200/20 bg-white/94 shadow-dash-card backdrop-blur-xl
+          transition-transform duration-300 ease-premium
+          w-[min(16rem,calc(100vw-2rem))] lg:w-64
+          fixed top-16 left-0 h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)]
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:sticky lg:top-16 lg:left-auto lg:translate-x-0 lg:self-start`}
         aria-label="Navigation espace parent"
       >
         <div className="flex flex-col h-full min-h-0">
-          <div className="flex items-center justify-between px-3 py-2.5 border-b border-stone-200/80 shrink-0">
+          <div className="flex shrink-0 items-center justify-between border-b border-amber-200/25 px-3 py-2.5">
             <div>
-              <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">Menu</p>
-              <h2 className="text-sm font-bold text-stone-900 tracking-tight">Espace parent</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-500">Menu</p>
+              <h2 className="font-display text-sm font-bold tracking-tight text-stone-900">Espace parent</h2>
             </div>
             <button
               type="button"
@@ -54,7 +57,7 @@ const ParentSidebar = ({ items, activeTab, onTabChange, selectedChild, isOpen, o
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-2 space-y-1 min-h-0 text-xs leading-snug">
+          <nav className="dash-sidebar-scroll flex-1 overflow-y-auto overscroll-contain px-2 py-2 space-y-1 min-h-0 text-xs leading-snug">
             {items.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;

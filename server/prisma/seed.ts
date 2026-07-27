@@ -42,6 +42,7 @@ async function main() {
   await prisma.studentAllergyRecord.deleteMany();
   await prisma.studentHealthDossier.deleteMany();
   await prisma.healthCampaign.deleteMany();
+  await prisma.studentAbsencePermissionRequest.deleteMany();
   await prisma.student.deleteMany();
   await prisma.parent.deleteMany();
   await prisma.teacherLeave.deleteMany();

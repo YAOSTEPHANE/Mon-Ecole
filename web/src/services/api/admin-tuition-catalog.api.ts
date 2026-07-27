@@ -127,4 +127,41 @@ export const adminTuitionCatalogApi = {
     const response = await api.post('/admin/tuition-payment-schedule-templates/apply-to-student', data);
     return response.data;
   },
+  replicateTuitionYear: async (data: { sourceYear: string; targetYear?: string }) => {
+    const response = await api.post('/admin/tuition-fee-catalog/replicate-year', data);
+    return response.data as {
+      message: string;
+      sourceYear: string;
+      targetYear: string;
+      catalogsCopied: number;
+      catalogsSkipped: number;
+      templatesCopied: number;
+      templatesSkipped: number;
+    };
+  },
+  getStudentScholarships: async (params?: { academicYear?: string; studentId?: string }) => {
+    const response = await api.get('/admin/student-scholarships', { params });
+    return response.data;
+  },
+  createStudentScholarship: async (data: {
+    studentId: string;
+    academicYear: string;
+    label: string;
+    fixedAmount?: number;
+    percentOff?: number;
+    feeType?: string;
+    notes?: string;
+    isActive?: boolean;
+  }) => {
+    const response = await api.post('/admin/student-scholarships', data);
+    return response.data;
+  },
+  updateStudentScholarship: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.put(`/admin/student-scholarships/${id}`, data);
+    return response.data;
+  },
+  deleteStudentScholarship: async (id: string) => {
+    const response = await api.delete(`/admin/student-scholarships/${id}`);
+    return response.data;
+  },
 };

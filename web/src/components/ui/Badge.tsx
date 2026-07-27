@@ -16,24 +16,24 @@ const Badge: React.FC<BadgeProps> = ({
   style,
 }) => {
   const variants = {
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    danger: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
-    default: 'bg-gray-100 text-gray-800',
-    secondary: 'bg-slate-100 text-slate-800',
+    success: 'bg-emerald-50 text-emerald-800 ring-emerald-200/80',
+    warning: 'bg-amber-50 text-amber-900 ring-amber-200/80',
+    danger: 'bg-rose-50 text-rose-800 ring-rose-200/80',
+    info: 'bg-blue-50 text-blue-900 ring-blue-200/80',
+    default: 'bg-stone-100 text-stone-800 ring-stone-200/80',
+    secondary: 'bg-slate-100 text-slate-800 ring-slate-200/80',
   };
-  
+
   const sizes = {
-    sm: 'px-2 py-1 text-xs',
-    md: 'px-3 py-1 text-sm',
-    lg: 'px-4 py-2 text-base',
+    sm: 'px-2 py-0.5 text-[10px]',
+    md: 'px-2.5 py-1 text-xs',
+    lg: 'px-3.5 py-1.5 text-sm',
   };
 
   return (
     <span
       style={style}
-      className={`inline-flex items-center rounded-full font-semibold ${variants[variant]} ${sizes[size]} ${className}`.trim()}
+      className={`inline-flex items-center rounded-full font-semibold tracking-wide ring-1 ring-inset ${variants[variant]} ${sizes[size]} ${className}`.trim()}
     >
       {children}
     </span>
@@ -41,9 +41,3 @@ const Badge: React.FC<BadgeProps> = ({
 };
 
 export default Badge;
-
-
-
-
-
-

@@ -47,6 +47,11 @@ export default function DirectorDashboard() {
     queryFn: () => adminApi.getStudentsAtRisk() as Promise<Array<{ aiScore?: number; aiLevel?: string; firstName?: string; lastName?: string; class?: string }>>,
     staleTime: 60_000,
   });
+  const { data: permissionStats } = useQuery({
+    queryKey: ['admin-absence-permission-request-stats'],
+    queryFn: () => adminApi.getAbsencePermissionRequestStats(),
+    staleTime: 30_000,
+  });
 
   const payChart = kpis?.charts?.paymentsByMonth?.map((x: { label: string; amount: number }) => ({ label: x.label, k: Math.round(x.amount / 1000), amount: x.amount })) ?? [];
   const perf = summary?.performance;
@@ -127,6 +132,19 @@ export default function DirectorDashboard() {
                   </Link>
                   <Link href="/admin?tab=pedagogical" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-900 hover:bg-rose-100">
                     Suivi pédagogique
+                  </Link>
+                  <Link
+                    href="/admin?tab=attendance&attendanceTab=overview"
+                    className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-900 hover:bg-cyan-100"
+                  >
+                    Tableau de bord classe & période
+                  </Link>
+                  <Link
+                    href="/admin?tab=attendance&attendanceTab=permissions"
+                    className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-900 hover:bg-teal-100"
+                  >
+                    Permissions d&apos;absence
+                    {(permissionStats?.pending ?? 0) > 0 ? ` (${permissionStats?.pending} en attente)` : ''}
                   </Link>
                 </div>
               </div>

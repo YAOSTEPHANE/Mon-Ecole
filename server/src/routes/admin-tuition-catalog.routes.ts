@@ -1,11 +1,15 @@
 import express from 'express';
 import type { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
+import { getCurrentAcademicYear } from '../utils/report-card.util';
 import {
   addDays,
+  assertInstallmentSumWithinStructure,
   parseScheduleLines,
   splitTotalByPercents,
 } from '../utils/tuition-catalog.util';
+import { replicateTuitionStructures } from '../utils/tuition-replicate-year.util';
+import { computeScholarshipDiscount } from '../utils/student-scholarship.util';
 import {
   getLevelTuitionRates,
   getClassTuitionRates,
@@ -160,14 +164,25 @@ router.post('/tuition-fee-catalog', async (req, res) => {
       periodLabelHint,
       sortOrder,
       isActive,
+      scheduleTemplateId,
     } = req.body;
     if (!label || defaultAmount == null) {
       return res.status(400).json({ error: 'label et defaultAmount sont requis' });
     }
+    const year = academicYear ? String(academicYear).trim() : getCurrentAcademicYear();
+    if (scheduleTemplateId) {
+      const tpl = await prisma.tuitionPaymentScheduleTemplate.findUnique({
+        where: { id: String(scheduleTemplateId) },
+      });
+      if (!tpl || !tpl.isActive) {
+        return res.status(400).json({ error: 'Gabarit d’échéancier introuvable ou inactif' });
+      }
+      parseScheduleLines(tpl.lines);
+    }
     const row = await prisma.tuitionFeeCatalog.create({
       data: {
         label: String(label).trim(),
-        academicYear: academicYear ? String(academicYear) : null,
+        academicYear: year,
         scope: scope || 'BY_LEVEL',
         classLevel: classLevel ? String(classLevel) : null,
         classId: classId || null,
@@ -178,14 +193,17 @@ router.post('/tuition-fee-catalog', async (req, res) => {
         periodLabelHint: periodLabelHint ? String(periodLabelHint) : null,
         sortOrder: sortOrder != null ? Number(sortOrder) : 0,
         isActive: isActive !== false,
+        scheduleTemplateId: scheduleTemplateId ? String(scheduleTemplateId) : null,
       },
       include: {
         class: { select: { id: true, name: true, level: true } },
+        scheduleTemplate: { select: { id: true, name: true } },
       },
     });
     res.status(201).json(row);
   } catch (e: unknown) {
-    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+    const msg = e instanceof Error ? e.message : 'Erreur serveur';
+    res.status(400).json({ error: msg });
   }
 });
 
@@ -204,12 +222,24 @@ router.put('/tuition-fee-catalog/:id', async (req, res) => {
       periodLabelHint,
       sortOrder,
       isActive,
+      scheduleTemplateId,
     } = req.body;
+    if (scheduleTemplateId) {
+      const tpl = await prisma.tuitionPaymentScheduleTemplate.findUnique({
+        where: { id: String(scheduleTemplateId) },
+      });
+      if (!tpl || !tpl.isActive) {
+        return res.status(400).json({ error: 'Gabarit d’échéancier introuvable ou inactif' });
+      }
+      parseScheduleLines(tpl.lines);
+    }
     const row = await prisma.tuitionFeeCatalog.update({
       where: { id: req.params.id },
       data: {
         ...(label !== undefined && { label: String(label).trim() }),
-        ...(academicYear !== undefined && { academicYear: academicYear ? String(academicYear) : null }),
+        ...(academicYear !== undefined && {
+          academicYear: academicYear ? String(academicYear).trim() : getCurrentAcademicYear(),
+        }),
         ...(scope !== undefined && { scope }),
         ...(classLevel !== undefined && { classLevel: classLevel ? String(classLevel) : null }),
         ...(classId !== undefined && { classId: classId || null }),
@@ -222,9 +252,13 @@ router.put('/tuition-fee-catalog/:id', async (req, res) => {
         }),
         ...(sortOrder !== undefined && { sortOrder: Number(sortOrder) }),
         ...(isActive !== undefined && { isActive: Boolean(isActive) }),
+        ...(scheduleTemplateId !== undefined && {
+          scheduleTemplateId: scheduleTemplateId ? String(scheduleTemplateId) : null,
+        }),
       },
       include: {
         class: { select: { id: true, name: true, level: true } },
+        scheduleTemplate: { select: { id: true, name: true } },
       },
     });
     res.json(row);
@@ -236,6 +270,127 @@ router.put('/tuition-fee-catalog/:id', async (req, res) => {
 router.delete('/tuition-fee-catalog/:id', async (req, res) => {
   try {
     await prisma.tuitionFeeCatalog.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Supprimé' });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/** Réplique structures + gabarits d'une année source vers l'année active (sans doublons). */
+router.post('/tuition-fee-catalog/replicate-year', async (req, res) => {
+  try {
+    const { sourceYear, targetYear } = req.body as {
+      sourceYear?: string;
+      targetYear?: string;
+    };
+    const source = sourceYear ? String(sourceYear).trim() : '';
+    if (!source) {
+      return res.status(400).json({ error: 'sourceYear est requis' });
+    }
+    const target = targetYear ? String(targetYear).trim() : getCurrentAcademicYear();
+    const result = await replicateTuitionStructures(source, target);
+    res.status(201).json({
+      message: `Réplication vers ${target} : ${result.catalogsCopied} structure(s), ${result.templatesCopied} gabarit(s)`,
+      ...result,
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Erreur serveur';
+    res.status(400).json({ error: msg });
+  }
+});
+
+// --- Bourses étudiantes ---
+
+router.get('/student-scholarships', async (req, res) => {
+  try {
+    const academicYear = String(req.query.academicYear ?? '').trim();
+    const studentId = String(req.query.studentId ?? '').trim();
+    const rows = await prisma.studentScholarship.findMany({
+      where: {
+        ...(academicYear && { academicYear }),
+        ...(studentId && { studentId }),
+      },
+      orderBy: [{ academicYear: 'desc' }, { label: 'asc' }],
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            user: { select: { firstName: true, lastName: true } },
+            class: { select: { name: true } },
+          },
+        },
+      },
+    });
+    res.json(rows);
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/student-scholarships', async (req, res) => {
+  try {
+    const { studentId, academicYear, label, fixedAmount, percentOff, feeType, notes, isActive } =
+      req.body;
+    if (!studentId || !academicYear || !label) {
+      return res.status(400).json({ error: 'studentId, academicYear et label sont requis' });
+    }
+    const year = String(academicYear).trim() || getCurrentAcademicYear();
+    const row = await prisma.studentScholarship.create({
+      data: {
+        studentId: String(studentId),
+        academicYear: year,
+        label: String(label).trim(),
+        fixedAmount: fixedAmount != null ? Math.max(0, Number(fixedAmount)) : null,
+        percentOff: percentOff != null ? Math.min(100, Math.max(0, Number(percentOff))) : null,
+        feeType: feeType || null,
+        notes: notes ? String(notes) : null,
+        isActive: isActive !== false,
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+    res.status(201).json(row);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Erreur serveur';
+    res.status(400).json({ error: msg });
+  }
+});
+
+router.put('/student-scholarships/:id', async (req, res) => {
+  try {
+    const { label, fixedAmount, percentOff, feeType, notes, isActive } = req.body;
+    const row = await prisma.studentScholarship.update({
+      where: { id: req.params.id },
+      data: {
+        ...(label !== undefined && { label: String(label).trim() }),
+        ...(fixedAmount !== undefined && {
+          fixedAmount: fixedAmount != null ? Math.max(0, Number(fixedAmount)) : null,
+        }),
+        ...(percentOff !== undefined && {
+          percentOff: percentOff != null ? Math.min(100, Math.max(0, Number(percentOff))) : null,
+        }),
+        ...(feeType !== undefined && { feeType: feeType || null }),
+        ...(notes !== undefined && { notes: notes ? String(notes) : null }),
+        ...(isActive !== undefined && { isActive: Boolean(isActive) }),
+      },
+    });
+    res.json(row);
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.delete('/student-scholarships/:id', async (req, res) => {
+  try {
+    await prisma.studentScholarship.delete({ where: { id: req.params.id } });
     res.json({ message: 'Supprimé' });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
@@ -369,12 +524,10 @@ router.post('/tuition-fee-catalog/apply-to-students', async (req, res) => {
 
     const disc = discountAmount != null ? Math.max(0, Number(discountAmount)) : 0;
     const base = Number(catalog.defaultAmount);
-    const amount = Math.max(0, Math.round(base - disc));
     const due = new Date(anchorDueDate);
     if (Number.isNaN(due.getTime())) {
       return res.status(400).json({ error: 'anchorDueDate invalide' });
     }
-
     const period = `${catalog.label} | ${academicYear}`;
     const descParts = [catalog.programLabel, descriptionExtra, disc > 0 ? `Remise: ${disc} FCFA` : null]
       .filter(Boolean)
@@ -391,6 +544,17 @@ router.post('/tuition-fee-catalog/apply-to-students', async (req, res) => {
         skipped.push({ studentId: st.id, reason: 'Frais déjà existant pour cette période' });
         continue;
       }
+
+      const scholarships = await prisma.studentScholarship.findMany({
+        where: { studentId: st.id, academicYear: String(academicYear), isActive: true },
+      });
+      const scholarship = computeScholarshipDiscount(base, scholarships, catalog.feeType);
+      const totalDisc = Math.min(base, disc + scholarship.discount);
+      const amount = Math.max(0, Math.round(base - totalDisc));
+      const scholarshipLabel =
+        scholarship.label ||
+        (disc > 0 ? 'Remise manuelle' : null);
+
       const fee = await prisma.tuitionFee.create({
         data: {
           studentId: st.id,
@@ -402,8 +566,10 @@ router.post('/tuition-fee-catalog/apply-to-students', async (req, res) => {
           feeType: catalog.feeType,
           billingPeriod: catalog.billingPeriod,
           baseAmount: base,
-          discountAmount: disc,
+          discountAmount: totalDisc,
+          scholarshipLabel,
           catalogId: catalog.id,
+          billingStatus: 'ISSUED',
         },
       });
       created.push(fee);
@@ -452,10 +618,27 @@ router.post('/tuition-payment-schedule-templates/apply-to-student', async (req, 
     if (Number.isNaN(gross) || gross < 0) {
       return res.status(400).json({ error: 'totalAmount invalide' });
     }
+
+    let structureCap = gross;
+    if (catalogId) {
+      const linkedCatalog = await prisma.tuitionFeeCatalog.findUnique({
+        where: { id: String(catalogId) },
+      });
+      if (linkedCatalog) {
+        structureCap = Math.round(linkedCatalog.defaultAmount);
+        if (gross > structureCap) {
+          return res.status(400).json({
+            error: `Le montant (${gross} FCFA) dépasse la structure (${structureCap} FCFA)`,
+          });
+        }
+      }
+    }
+
     const discTotal =
       discountAmountRaw != null ? Math.min(gross, Math.max(0, Math.round(Number(discountAmountRaw)))) : 0;
     const net = Math.max(0, gross - discTotal);
     const amounts = splitTotalByPercents(net, lines);
+    assertInstallmentSumWithinStructure(structureCap, amounts);
     const discParts =
       discTotal > 0 ? splitTotalByPercents(discTotal, lines) : lines.map(() => 0);
     const anchor = new Date(anchorDueDate);
@@ -494,6 +677,7 @@ router.post('/tuition-payment-schedule-templates/apply-to-student', async (req, 
           scheduleTemplateId: tpl.id,
           installmentIndex: i + 1,
           catalogId: catalogId || null,
+          billingStatus: 'ISSUED',
         },
       });
       created.push(fee);

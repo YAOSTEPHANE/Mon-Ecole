@@ -35,6 +35,11 @@ import { getCurrentAcademicYear } from '../../utils/academicYear';
 import { ADM } from './adminModuleLayout';
 import TuitionFeeCatalogAndSchedulesPanel from './TuitionFeeCatalogAndSchedulesPanel';
 import { adminTuitionCatalogApi } from '../../services/api/admin-tuition-catalog.api';
+import {
+  resolveBillingStatus,
+  TUITION_BILLING_STATUS_LABELS,
+  TUITION_BILLING_STATUS_VARIANT,
+} from '../../lib/tuitionBilling';
 
 const FEE_TYPE_LABELS: Record<string, string> = {
   ENROLLMENT: 'Inscription',
@@ -1169,13 +1174,23 @@ const TuitionFeesManagement: React.FC<TuitionFeesManagementProps> = ({
                         {format(new Date(fee.dueDate), 'dd MMM yyyy', { locale: fr })}
                       </td>
                       <td className={tc}>
-                        {fee.isPaid ? (
-                          <Badge variant="success" size="sm">Payé</Badge>
-                        ) : new Date(fee.dueDate) < new Date() ? (
-                          <Badge variant="danger" size="sm">En retard</Badge>
-                        ) : (
-                          <Badge variant="warning" size="sm">En attente</Badge>
-                        )}
+                        {(() => {
+                          const billing = resolveBillingStatus(fee);
+                          const variant = TUITION_BILLING_STATUS_VARIANT[billing];
+                          return (
+                            <div className="flex flex-col gap-1 items-start">
+                              <Badge variant={variant} size="sm">
+                                {TUITION_BILLING_STATUS_LABELS[billing]}
+                              </Badge>
+                              {!fee.isPaid && new Date(fee.dueDate) < new Date() && billing !== 'PAID' ? (
+                                <Badge variant="danger" size="sm">En retard</Badge>
+                              ) : null}
+                              {fee.scholarshipLabel ? (
+                                <span className="text-[10px] text-teal-700">{fee.scholarshipLabel}</span>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className={tc}>
                         <div className="flex gap-2">

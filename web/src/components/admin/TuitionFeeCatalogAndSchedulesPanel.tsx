@@ -81,10 +81,17 @@ type Props = {
 
 const TuitionFeeCatalogAndSchedulesPanel: React.FC<Props> = ({ students, classes }) => {
   const qc = useQueryClient();
-  const [sub, setSub] = useState<'levelRates' | 'classRates' | 'catalog' | 'schedules' | 'apply'>(
-    'levelRates'
-  );
+  const [sub, setSub] = useState<
+    'levelRates' | 'classRates' | 'catalog' | 'schedules' | 'apply' | 'replicate' | 'scholarships'
+  >('levelRates');
   const [levelRatesYear, setLevelRatesYear] = useState(getCurrentAcademicYear());
+  const [replicateSourceYear, setReplicateSourceYear] = useState('');
+  const [replicateTargetYear, setReplicateTargetYear] = useState(getCurrentAcademicYear());
+  const [scholarshipYear, setScholarshipYear] = useState(getCurrentAcademicYear());
+  const [scholarshipStudentId, setScholarshipStudentId] = useState('');
+  const [scholarshipLabel, setScholarshipLabel] = useState('');
+  const [scholarshipFixed, setScholarshipFixed] = useState('');
+  const [scholarshipPercent, setScholarshipPercent] = useState('');
   const [levelAmounts, setLevelAmounts] = useState<Record<string, string>>({});
   const [classRatesYear, setClassRatesYear] = useState(getCurrentAcademicYear());
   const [classAmounts, setClassAmounts] = useState<Record<string, string>>({});
@@ -129,6 +136,57 @@ const TuitionFeeCatalogAndSchedulesPanel: React.FC<Props> = ({ students, classes
     }
     setClassAmounts(next);
   }, [classRatesData]);
+
+  const { data: scholarships, isLoading: loadScholarships } = useQuery({
+    queryKey: ['admin-student-scholarships', scholarshipYear],
+    queryFn: () => adminTuitionCatalogApi.getStudentScholarships({ academicYear: scholarshipYear }),
+    enabled: sub === 'scholarships',
+  });
+
+  const replicateYearMut = useMutation({
+    mutationFn: () =>
+      adminTuitionCatalogApi.replicateTuitionYear({
+        sourceYear: replicateSourceYear.trim(),
+        targetYear: replicateTargetYear.trim() || undefined,
+      }),
+    onSuccess: (d) => {
+      toast.success(d.message);
+      qc.invalidateQueries({ queryKey: ['admin-tuition-fee-catalog'] });
+      qc.invalidateQueries({ queryKey: ['admin-tuition-schedule-templates'] });
+    },
+    onError: (e: { response?: { data?: { error?: string } } }) =>
+      toast.error(e.response?.data?.error || 'Erreur'),
+  });
+
+  const createScholarshipMut = useMutation({
+    mutationFn: () =>
+      adminTuitionCatalogApi.createStudentScholarship({
+        studentId: scholarshipStudentId,
+        academicYear: scholarshipYear,
+        label: scholarshipLabel.trim(),
+        fixedAmount: scholarshipFixed.trim() ? Math.round(Number(scholarshipFixed)) : undefined,
+        percentOff: scholarshipPercent.trim() ? Number(scholarshipPercent) : undefined,
+      }),
+    onSuccess: () => {
+      toast.success('Bourse enregistrée');
+      setScholarshipLabel('');
+      setScholarshipFixed('');
+      setScholarshipPercent('');
+      qc.invalidateQueries({ queryKey: ['admin-student-scholarships'] });
+    },
+    onError: (e: { response?: { data?: { error?: string } } }) =>
+      toast.error(e.response?.data?.error || 'Erreur'),
+  });
+
+  const deleteScholarshipMut = useMutation({
+    mutationFn: (id: string) => adminTuitionCatalogApi.deleteStudentScholarship(id),
+    onSuccess: () => {
+      toast.success('Bourse supprimée');
+      qc.invalidateQueries({ queryKey: ['admin-student-scholarships'] });
+    },
+    onError: (e: { response?: { data?: { error?: string } } }) =>
+      toast.error(e.response?.data?.error || 'Erreur'),
+  });
 
   const saveLevelRatesMut = useMutation({
     mutationFn: () =>
@@ -505,6 +563,8 @@ const TuitionFeeCatalogAndSchedulesPanel: React.FC<Props> = ({ students, classes
             ['catalog', 'Autres barèmes'],
             ['schedules', 'Gabarits d’échéancier'],
             ['apply', 'Application classe / niveau'],
+            ['replicate', 'Réplication année'],
+            ['scholarships', 'Bourses'],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -1032,6 +1092,156 @@ const TuitionFeeCatalogAndSchedulesPanel: React.FC<Props> = ({ students, classes
               <FiSend className="mr-1 inline h-4 w-4" />
               Créer les échéances
             </Button>
+          </Card>
+        </div>
+      )}
+
+      {sub === 'replicate' && (
+        <Card className="space-y-4 p-4">
+          <p className="text-sm text-stone-600">
+            Copiez toutes les <strong>structures de frais</strong> et leurs <strong>gabarits d’échéancier</strong>{' '}
+            d’une année source vers l’année active, sans créer de doublons.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[10rem]">
+              <label className="mb-1 block text-xs font-medium text-stone-600">Année source</label>
+              <Input
+                value={replicateSourceYear}
+                onChange={(e) => setReplicateSourceYear(e.target.value)}
+                placeholder="2024-2025"
+              />
+            </div>
+            <div className="min-w-[10rem]">
+              <label className="mb-1 block text-xs font-medium text-stone-600">Année cible (active)</label>
+              <Input
+                value={replicateTargetYear}
+                onChange={(e) => setReplicateTargetYear(e.target.value)}
+                placeholder={getCurrentAcademicYear()}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                if (!replicateSourceYear.trim()) {
+                  toast.error('Indiquez l’année source');
+                  return;
+                }
+                replicateYearMut.mutate();
+              }}
+              disabled={replicateYearMut.isPending}
+            >
+              Répliquer les structures
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {sub === 'scholarships' && (
+        <div className="space-y-4">
+          <Card className="space-y-3 p-4">
+            <h3 className="text-sm font-semibold text-stone-900">Nouvelle bourse / aide</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Année scolaire"
+                value={scholarshipYear}
+                onChange={(e) => setScholarshipYear(e.target.value)}
+              />
+              <div>
+                <label className="text-xs font-medium text-stone-700">Élève</label>
+                <select
+                  aria-label="Élève boursier"
+                  className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2 text-sm"
+                  value={scholarshipStudentId}
+                  onChange={(e) => setScholarshipStudentId(e.target.value)}
+                >
+                  <option value="">— Sélectionner —</option>
+                  {(students ?? []).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.user?.firstName} {s.user?.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Input
+                label="Libellé (ex. Bourse excellence)"
+                value={scholarshipLabel}
+                onChange={(e) => setScholarshipLabel(e.target.value)}
+              />
+              <Input
+                label="Remise fixe (FCFA)"
+                type="number"
+                min={0}
+                value={scholarshipFixed}
+                onChange={(e) => setScholarshipFixed(e.target.value)}
+              />
+              <Input
+                label="Remise (%)"
+                type="number"
+                min={0}
+                max={100}
+                value={scholarshipPercent}
+                onChange={(e) => setScholarshipPercent(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={createScholarshipMut.isPending}
+              onClick={() => {
+                if (!scholarshipStudentId || !scholarshipLabel.trim()) {
+                  toast.error('Élève et libellé requis');
+                  return;
+                }
+                createScholarshipMut.mutate();
+              }}
+            >
+              Enregistrer la bourse
+            </Button>
+          </Card>
+
+          <Card className="overflow-hidden border border-stone-200">
+            {loadScholarships ? (
+              <p className="p-4 text-sm text-stone-500">Chargement…</p>
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead className="bg-stone-50 text-left text-xs uppercase text-stone-600">
+                  <tr>
+                    <th className="px-3 py-2">Élève</th>
+                    <th className="px-3 py-2">Libellé</th>
+                    <th className="px-3 py-2">Remise</th>
+                    <th className="px-3 py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(scholarships ?? []).map((row: any) => (
+                    <tr key={row.id} className="border-t border-stone-100">
+                      <td className="px-3 py-2">
+                        {row.student?.user?.firstName} {row.student?.user?.lastName}
+                        <span className="block text-xs text-stone-500">{row.student?.class?.name}</span>
+                      </td>
+                      <td className="px-3 py-2">{row.label}</td>
+                      <td className="px-3 py-2">
+                        {row.fixedAmount != null
+                          ? formatFCFA(row.fixedAmount)
+                          : row.percentOff != null
+                            ? `${row.percentOff} %`
+                            : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          className="text-red-600"
+                          onClick={() => deleteScholarshipMut.mutate(row.id)}
+                        >
+                          <FiTrash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </Card>
         </div>
       )}

@@ -92,8 +92,8 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   };
 
   return (
-    <PremiumGlassCard padding="sm" className="!p-0 overflow-hidden">
-      <div className="grid grid-cols-1 gap-px bg-stone-200/80 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <PremiumGlassCard padding="sm" className="!p-0 overflow-hidden ring-stone-200/60">
+      <div className="grid grid-cols-1 gap-px bg-stone-200/70 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {ACTIONS.map((action) => {
           const Icon = action.icon;
           const onClick = handlerMap[action.onKey];
@@ -102,22 +102,21 @@ const QuickActions: React.FC<QuickActionsProps> = ({
               key={action.label}
               type="button"
               onClick={() => onClick?.()}
-              className={`group relative flex items-start gap-3 bg-white/95 p-4 text-left transition-all duration-200 hover:bg-gradient-to-br hover:from-white hover:to-indigo-50/40 hover:shadow-inner focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${action.ring}`}
+              className={`dash-action-tile group relative flex items-start gap-3 bg-white/[0.98] p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 focus-visible:ring-offset-2 ${action.ring}`}
             >
               <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${action.gradient} text-white shadow-lg transition-transform duration-200 group-hover:scale-105 group-hover:shadow-xl`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${action.gradient} text-white shadow-[0_10px_24px_-10px_rgba(0,0,0,0.35)] ring-1 ring-white/30 transition-transform duration-300 ease-premium group-hover:scale-105`}
               >
                 <Icon className="h-5 w-5" aria-hidden />
               </div>
               <div className="min-w-0 pt-0.5">
-                <span className="block text-sm font-bold text-stone-900 group-hover:text-indigo-950">
+                <span className="block text-sm font-bold text-stone-900 group-hover:text-stone-950">
                   {action.label}
                 </span>
                 <span className="mt-0.5 block text-[11px] font-medium text-stone-500">
                   {action.description}
                 </span>
               </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 scale-x-0 bg-gradient-to-r from-indigo-500 to-violet-500 transition-transform duration-300 group-hover:scale-x-100" />
             </button>
           );
         })}

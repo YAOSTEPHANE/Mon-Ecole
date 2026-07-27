@@ -185,7 +185,7 @@ const ParentDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="PARENT">
       <PremiumPortalShell variant="parent">
-      <div className="min-h-screen">
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-stretch">
         <ParentSidebar
           items={navItems}
           activeTab={activeTab}
@@ -195,9 +195,9 @@ const ParentDashboard = () => {
           onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
 
-        <div className="lg:pl-64">
-          <header className="sticky top-16 z-30 glass-nav shadow-[0_8px_30px_-12px_rgba(12,10,9,0.08)]">
-            <div className="px-3 sm:px-6 py-2 sm:py-2.5">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="dash-command-bar sticky top-16 z-30 shrink-0">
+            <div className="px-3 sm:px-6 py-2.5 sm:py-3">
               <div className="flex flex-col gap-2 sm:gap-3">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
                   <div className="flex items-center gap-2 min-w-0">
@@ -236,7 +236,7 @@ const ParentDashboard = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Rechercher…"
-                    className="w-full pl-10 pr-3 py-2 sm:py-2.5 bg-white/95 border border-stone-200/90 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-amber-500/35 focus:border-amber-400/50 hover:border-stone-300"
+                    className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
                     aria-label="Recherche dans l’espace parent"
                   />
                 </div>
@@ -244,8 +244,8 @@ const ParentDashboard = () => {
             </div>
           </header>
 
-          <main className="px-3 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-x-hidden scroll-smooth">
-            <div className="max-w-[1200px] mx-auto space-y-4 sm:space-y-5">
+          <main className="dash-workspace flex-1 px-3 sm:px-6 py-5 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-x-hidden overflow-y-auto scroll-smooth">
+            <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6">
                             <PremiumModuleHeader
                 title={activeMeta.label}
                 description={activeDescription}

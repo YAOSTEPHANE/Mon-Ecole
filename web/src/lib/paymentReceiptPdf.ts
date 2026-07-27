@@ -159,13 +159,14 @@ function drawVerificationBlock(
   x: number,
   y: number,
   width: number,
-  reference: string,
+  receiptNumber: string,
+  verificationCode: string,
   generatedAt: string,
 ) {
   doc.setFillColor(...C.goldLight);
   doc.setDrawColor(...C.gold);
   doc.setLineWidth(0.25);
-  doc.roundedRect(x, y, width, 22, 2, 2, 'FD');
+  doc.roundedRect(x, y, width, 30, 2, 2, 'FD');
   doc.setTextColor(...C.inkSoft);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
@@ -173,11 +174,35 @@ function drawVerificationBlock(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...C.ink);
-  doc.text(`Réf. ${sanitizePdfText(reference)}`, x + 5, y + 12);
-  doc.text(`Émis le ${generatedAt}`, x + 5, y + 17);
+  doc.text(`N° ${sanitizePdfText(receiptNumber)}`, x + 5, y + 12);
+  doc.text(`Code : ${sanitizePdfText(verificationCode)}`, x + 5, y + 17);
   doc.setFontSize(6.5);
   doc.setTextColor(...C.inkSoft);
-  doc.text('Document électronique — valeur de reçu officiel', x + width - 5, y + 17, { align: 'right' });
+  doc.text(`Émis le ${generatedAt}`, x + 5, y + 22);
+  drawSimpleBarcode(doc, x + width - 58, y + 8, verificationCode, 50, 12);
+  doc.setFontSize(6);
+  doc.text('Vérification comptabilité', x + width - 5, y + 26, { align: 'right' });
+}
+
+/** Motif visuel type code-barres dérivé du code de vérification. */
+function drawSimpleBarcode(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  code: string,
+  width: number,
+  height: number,
+) {
+  const normalized = code.replace(/[^A-Z0-9]/gi, '').toUpperCase() || '0';
+  let cx = x;
+  const unit = width / (normalized.length * 2 + 2);
+  doc.setFillColor(0, 0, 0);
+  for (let i = 0; i < normalized.length; i++) {
+    const wide = normalized.charCodeAt(i) % 2 === 0;
+    const barW = wide ? unit * 1.4 : unit * 0.7;
+    doc.rect(cx, y, barW, height, 'F');
+    cx += barW + unit * 0.35;
+  }
 }
 
 function drawSignatureBlock(
@@ -210,6 +235,8 @@ export async function downloadPaymentReceiptPdf(
     status: string;
     paymentMethod?: string;
     paymentReference?: string | null;
+    receiptNumber?: string | null;
+    verificationCode?: string | null;
     transactionId?: string | null;
     createdAt: string;
     paidAt?: string | null;
@@ -237,6 +264,8 @@ export async function downloadPaymentReceiptPdf(
   const amount = resolvePaymentAmount(payment);
   const schoolName = branding?.schoolName?.trim() || 'Établissement scolaire';
   const reference = String(payment.paymentReference || payment.id.slice(-12));
+  const receiptNumber = String(payment.receiptNumber || reference);
+  const verificationCode = String(payment.verificationCode || reference.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 12));
   const paidDate = new Date(payment.paidAt || payment.createdAt);
   const generatedAt = format(new Date(), "dd MMMM yyyy 'à' HH:mm", { locale: fr });
   const paidAtLabel = format(paidDate, "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr });
@@ -307,7 +336,7 @@ export async function downloadPaymentReceiptPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...C.ink);
-  doc.text(sanitizePdfText(reference), metaX + metaW / 2, y + 12, { align: 'center' });
+  doc.text(sanitizePdfText(receiptNumber), metaX + metaW / 2, y + 12, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(...C.inkSoft);
@@ -436,8 +465,8 @@ export async function downloadPaymentReceiptPdf(
   y = Math.max(leftTableEnd, rightTableEnd) + 8;
 
   // —— Bloc vérification ——
-  drawVerificationBlock(doc, innerX, y, innerW, reference, generatedAt);
-  y += 28;
+  drawVerificationBlock(doc, innerX, y, innerW, receiptNumber, verificationCode, generatedAt);
+  y += 36;
 
   // —— Mentions & signatures ——
   doc.setFillColor(...C.line);
@@ -463,10 +492,10 @@ export async function downloadPaymentReceiptPdf(
   doc.setFontSize(6.5);
   doc.setTextColor(...C.inkSoft);
   doc.text(sanitizePdfText(schoolName), innerX, footerY);
-  doc.text(`Reçu ${reference}`, w / 2, footerY, { align: 'center' });
+  doc.text(`Reçu ${receiptNumber}`, w / 2, footerY, { align: 'center' });
   doc.text(generatedAt, innerX + innerW, footerY, { align: 'right' });
 
   doc.save(
-    `recu-paiement-${payment.paymentReference || payment.id.slice(-8)}-${format(new Date(), 'yyyyMMdd')}.pdf`,
+    `recu-${receiptNumber.replace(/[^a-zA-Z0-9-]/g, '')}-${format(new Date(), 'yyyyMMdd')}.pdf`,
   );
 }

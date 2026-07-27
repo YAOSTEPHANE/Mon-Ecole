@@ -55,3 +55,17 @@ export function addDays(d: Date, days: number): Date {
   x.setUTCDate(x.getUTCDate() + days);
   return x;
 }
+
+/** Vérifie que la somme des tranches ne dépasse pas le montant de la structure. */
+export function assertInstallmentSumWithinStructure(
+  structureAmount: number,
+  installmentAmounts: number[],
+): void {
+  const structure = Math.round(structureAmount);
+  const sum = installmentAmounts.reduce((s, a) => s + Math.round(a), 0);
+  if (sum > structure) {
+    throw new Error(
+      `La somme des tranches (${sum} FCFA) dépasse le montant de la structure (${structure} FCFA).`,
+    );
+  }
+}

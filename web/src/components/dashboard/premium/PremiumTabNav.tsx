@@ -27,8 +27,8 @@ export default function PremiumTabNav<T extends string>({
     <div
       className={`flex flex-wrap gap-1.5 rounded-2xl p-1.5 shadow-xl ring-1 ${
         isDark
-          ? 'bg-slate-950/95 ring-white/10 backdrop-blur-xl'
-          : 'bg-white/80 ring-stone-200/80 backdrop-blur-xl'
+          ? 'bg-gradient-to-b from-slate-950 to-[#0c0f1a] ring-white/10 backdrop-blur-xl'
+          : 'bg-white/90 ring-stone-200/70 shadow-dash-card backdrop-blur-xl'
       }`}
     >
       {items.map(({ id, label, icon: Icon }) => {
@@ -38,14 +38,14 @@ export default function PremiumTabNav<T extends string>({
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-premium ${
               selected
                 ? isDark
-                  ? 'bg-white text-slate-900 shadow-lg shadow-black/20'
-                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/25'
+                  ? 'bg-white text-slate-900 shadow-lg shadow-black/25 ring-1 ring-cptb-gold/30'
+                  : 'bg-gradient-to-r from-cptb-blue to-cptb-blue-dark text-white shadow-md shadow-cptb-blue/30 ring-1 ring-white/20'
                 : isDark
                   ? 'text-slate-400 hover:bg-white/10 hover:text-white'
-                  : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                  : 'text-stone-600 hover:bg-stone-100/90 hover:text-stone-900'
             }`}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden />

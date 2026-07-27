@@ -1,7 +1,8 @@
 import type { AbsenceStatus } from '@prisma/client';
 import prisma from './prisma';
 import { notifyParentsOfStudentPunch } from './attendance-parent-notify.util';
-import { parseTimeOnDate, toAttendanceDateKey, findActiveScheduleSlotForCourse, findActiveScheduleSlotForTeacher, resolveLateStatus, durationMinutesFromHHMM, scheduledCheckOutAt, computeTeacherTeachingMinutes } from './schedule-slot.util';
+import { parseTimeOnDate, toAttendanceDateKey, findActiveScheduleSlotForCourse, findActiveScheduleSlotForTeacher, resolveLateStatus, durationMinutesFromHHMM, computeTeacherTeachingMinutes } from './schedule-slot.util';
+import { computeStartTiming, computeEndTiming } from './teacher-session-timing.util';
 
 export type PunchPhase = 'CHECK_IN' | 'CHECK_OUT' | 'ALREADY_COMPLETE';
 
@@ -208,14 +209,138 @@ export async function punchTeacherCourseAttendance(params: {
   courseId?: string;
   recordedByUserId?: string | null;
 }) {
+  const dateKey = toAttendanceDateKey(params.at);
+  const grace = lateGraceMinutes();
+  const early = earlyCheckInMinutes();
+
   const slot = await findActiveScheduleSlotForTeacher(
     params.teacherId,
     params.at,
     params.courseId,
-    earlyCheckInMinutes(),
+    early,
   );
 
-  const courseId = params.courseId ?? slot?.courseId;
+  let courseId = params.courseId ?? slot?.courseId ?? undefined;
+
+  async function completeCheckout(
+    target: {
+      id: string;
+      checkInAt: Date | null;
+      courseId: string | null;
+      scheduleId: string | null;
+      scheduledEndAt: Date | null;
+      checkOutAt: Date | null;
+    },
+  ) {
+    if (!target.checkInAt) {
+      const err = new Error('Session sans arrivée enregistrée');
+      (err as Error & { statusCode?: number }).statusCode = 400;
+      throw err;
+    }
+
+    let endTime: string | null = null;
+    if (target.scheduleId) {
+      const sched = await prisma.schedule.findUnique({
+        where: { id: target.scheduleId },
+        select: { endTime: true },
+      });
+      endTime = sched?.endTime ?? null;
+    }
+    if (!endTime && slot && target.courseId === slot.courseId) {
+      endTime = slot.endTime;
+    }
+
+    const endTiming = endTime
+      ? computeEndTiming(params.at, endTime)
+      : {
+          scheduledEndAt: target.scheduledEndAt ?? target.checkOutAt ?? params.at,
+          minutesEarlyEnd: 0,
+          minutesOvertimeEnd: 0,
+        };
+
+    // Décompte = arrivée réelle → fin du cours (emploi du temps), pas le départ réel.
+    const teachingMinutes = computeTeacherTeachingMinutes(
+      target.checkInAt,
+      endTiming.scheduledEndAt,
+    );
+
+    const saved = await prisma.teacherAttendance.update({
+      where: { id: target.id },
+      data: {
+        actualCheckOutAt: params.at,
+        teachingMinutes,
+        scheduledEndAt: endTiming.scheduledEndAt,
+        checkOutAt: endTiming.scheduledEndAt,
+        minutesEarlyEnd: endTiming.minutesEarlyEnd,
+        minutesOvertimeEnd: endTiming.minutesOvertimeEnd,
+        source: params.source,
+        recordedByUserId: params.recordedByUserId ?? undefined,
+      },
+      include: {
+        teacher: {
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    return {
+      attendance: saved,
+      punchPhase: 'CHECK_OUT' as PunchPhase,
+      slot,
+      courseId: target.courseId,
+    };
+  }
+
+  // —— Départ : session ouverte pour le cours ciblé ——
+  if (courseId) {
+    const sessionKey = `${dateKey}:${courseId}`;
+    const existing = await prisma.teacherAttendance.findUnique({
+      where: { teacherId_sessionKey: { teacherId: params.teacherId, sessionKey } },
+    });
+    if (existing?.actualCheckOutAt) {
+      return {
+        attendance: existing,
+        punchPhase: 'ALREADY_COMPLETE' as PunchPhase,
+        slot,
+        courseId,
+      };
+    }
+    if (existing?.checkInAt && !existing.actualCheckOutAt) {
+      return completeCheckout(existing);
+    }
+  }
+
+  // —— Départ : sans courseId, clôturer la session ouverte la plus proche de la fin EDT ——
+  if (!courseId) {
+    const openSessions = await prisma.teacherAttendance.findMany({
+      where: {
+        teacherId: params.teacherId,
+        attendanceDate: dateKey,
+        checkInAt: { not: null },
+        actualCheckOutAt: null,
+      },
+      orderBy: { checkInAt: 'asc' },
+    });
+    if (openSessions.length > 0) {
+      const target =
+        openSessions.length === 1
+          ? openSessions[0]
+          : openSessions.reduce((best, row) => {
+              const end = row.scheduledEndAt ?? row.checkOutAt;
+              if (!end) return best;
+              const diff = Math.abs(params.at.getTime() - end.getTime());
+              const bestEnd = best.scheduledEndAt ?? best.checkOutAt;
+              if (!bestEnd) return row;
+              return diff < Math.abs(params.at.getTime() - bestEnd.getTime()) ? row : best;
+            });
+      return completeCheckout(target);
+    }
+  }
+
+  // —— Arrivée : nouveau pointage ——
+  courseId = courseId ?? slot?.courseId;
   if (!courseId) {
     const err = new Error(
       'Aucun cours en cours : précisez courseId ou vérifiez l’emploi du temps de l’enseignant.',
@@ -224,35 +349,21 @@ export async function punchTeacherCourseAttendance(params: {
     throw err;
   }
 
-  const dateKey = toAttendanceDateKey(params.at);
-  const sessionKey = `${dateKey}:${courseId}`;
-
-  const checkInAt = params.at;
-  const plannedMinutes = slot
-    ? durationMinutesFromHHMM(slot.startTime, slot.endTime)
-    : 55;
-  const checkOutAt = slot
-    ? scheduledCheckOutAt(checkInAt, slot.endTime)
-    : new Date(checkInAt.getTime() + plannedMinutes * 60_000);
-  const teachingMinutes = computeTeacherTeachingMinutes(checkInAt, checkOutAt);
-  const status: AbsenceStatus = slot
-    ? resolveLateStatus(checkInAt, slot.startTime, lateGraceMinutes())
-    : 'PRESENT';
-
-  const existing = await prisma.teacherAttendance.findUnique({
-    where: {
-      teacherId_sessionKey: { teacherId: params.teacherId, sessionKey },
-    },
-  });
-
-  if (existing?.checkInAt) {
-    return {
-      attendance: existing,
-      punchPhase: 'ALREADY_COMPLETE' as PunchPhase,
-      slot,
-      courseId,
-    };
+  if (!slot) {
+    const err = new Error(
+      'Aucun créneau actif pour l’arrivée (fenêtre : début − 20 min → fin du cours).',
+    );
+    (err as Error & { statusCode?: number }).statusCode = 400;
+    throw err;
   }
+
+  const sessionKey = `${dateKey}:${courseId}`;
+  const checkInAt = params.at;
+  const plannedMinutes = durationMinutesFromHHMM(slot.startTime, slot.endTime);
+  const startTiming = computeStartTiming(checkInAt, slot.startTime, grace);
+  const scheduledEndAt = parseTimeOnDate(slot.endTime, checkInAt);
+  const teachingMinutes = computeTeacherTeachingMinutes(checkInAt, scheduledEndAt);
+  const status: AbsenceStatus = resolveLateStatus(checkInAt, slot.startTime, grace);
 
   const saved = await prisma.teacherAttendance.upsert({
     where: {
@@ -263,12 +374,18 @@ export async function punchTeacherCourseAttendance(params: {
       sessionKey,
       attendanceDate: dateKey,
       courseId,
-      scheduleId: slot?.id,
+      scheduleId: slot.id,
       status,
       source: params.source,
       recordedByUserId: params.recordedByUserId ?? undefined,
       checkInAt,
-      checkOutAt,
+      checkOutAt: scheduledEndAt,
+      scheduledStartAt: startTiming.scheduledStartAt,
+      scheduledEndAt,
+      minutesLateStart: startTiming.minutesLateStart,
+      minutesEarlyStart: startTiming.minutesEarlyStart,
+      minutesEarlyEnd: 0,
+      minutesOvertimeEnd: 0,
       plannedMinutes,
       teachingMinutes,
     },
@@ -276,10 +393,14 @@ export async function punchTeacherCourseAttendance(params: {
       status,
       source: params.source,
       checkInAt,
-      checkOutAt,
+      checkOutAt: scheduledEndAt,
+      scheduledStartAt: startTiming.scheduledStartAt,
+      scheduledEndAt,
+      minutesLateStart: startTiming.minutesLateStart,
+      minutesEarlyStart: startTiming.minutesEarlyStart,
       plannedMinutes,
       teachingMinutes,
-      scheduleId: slot?.id,
+      scheduleId: slot.id,
       recordedByUserId: params.recordedByUserId ?? undefined,
     },
     include: {

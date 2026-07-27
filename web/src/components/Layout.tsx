@@ -195,7 +195,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, role, staffRo
           className={`h-0.5 w-full bg-gradient-to-r opacity-[0.98] shadow-[0_0_20px_-2px_rgba(201,162,39,0.45)] ${accent.bar}`}
           aria-hidden
         />
-        <nav className="glass-nav">
+        <nav className="glass-nav glass-nav-v2">
           <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-10">
             <div className="flex min-h-16 h-16 items-center justify-between gap-2 sm:gap-3">
               <Link

@@ -10,6 +10,7 @@ import { FiCalendar, FiBook, FiAlertCircle, FiCheckCircle, FiClock, FiFilter, Fi
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import AbsencePermissionRequestsPanel from '../attendance/AbsencePermissionRequestsPanel';
 
 type StudentAbsencesProps = {
   searchQuery?: string;
@@ -127,6 +128,14 @@ const StudentAbsences = ({
 
   return (
     <div className="space-y-6">
+      <AbsencePermissionRequestsPanel
+        mode="student"
+        queryKey={['student-absence-permission-requests']}
+        fetchRequests={studentApi.getAbsencePermissionRequests}
+        createRequest={studentApi.createAbsencePermissionRequest}
+        cancelRequest={studentApi.cancelAbsencePermissionRequest}
+      />
+
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card 

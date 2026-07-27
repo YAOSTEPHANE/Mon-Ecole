@@ -38,11 +38,23 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/logout',
 ];
 
-function isPublicAuthRequest(url: string | undefined): boolean {
-  if (!url) return false;
+/** Vérification de session — un 401 est normal si l'utilisateur n'est pas connecté. */
+const SESSION_PROBE_PATHS = ['/auth/me', '/auth/oauth/exchange'];
+
+function normalizeRequestPath(url: string | undefined): string {
+  if (!url) return '';
   const path = url.split('?')[0];
-  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return path.startsWith('/') ? path : `/${path}`;
+}
+
+function isPublicAuthRequest(url: string | undefined): boolean {
+  const normalized = normalizeRequestPath(url);
   return PUBLIC_AUTH_PATHS.some((p) => normalized === p || normalized.endsWith(p));
+}
+
+function isSessionProbeRequest(url: string | undefined): boolean {
+  const normalized = normalizeRequestPath(url);
+  return SESSION_PROBE_PATHS.some((p) => normalized === p || normalized.endsWith(p));
 }
 
 const api = axios.create({
@@ -142,7 +154,8 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const requestUrl = error.config?.url as string | undefined;
-      if (!isPublicAuthRequest(requestUrl)) {
+      const isSessionProbe = isSessionProbeRequest(requestUrl);
+      if (!isPublicAuthRequest(requestUrl) && !isSessionProbe) {
         try {
           localStorage.removeItem('token');
           delete (window as Window & { __smAccessToken?: string }).__smAccessToken;
@@ -151,6 +164,13 @@ api.interceptors.response.use(
         }
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
+        }
+      } else if (isSessionProbe) {
+        try {
+          localStorage.removeItem('token');
+          delete (window as Window & { __smAccessToken?: string }).__smAccessToken;
+        } catch {
+          /* ignore */
         }
       }
     }

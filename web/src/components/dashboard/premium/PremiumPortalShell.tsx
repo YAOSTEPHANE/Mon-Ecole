@@ -9,17 +9,6 @@ type PremiumPortalShellProps = {
   className?: string;
 };
 
-const VARIANT_MAP: Record<NonNullable<PremiumPortalShellProps['variant']>, 'admin' | 'super'> = {
-  admin: 'admin',
-  super: 'super',
-  teacher: 'admin',
-  student: 'admin',
-  parent: 'admin',
-  educator: 'admin',
-  staff: 'admin',
-  director: 'admin',
-};
-
 /** Enveloppe premium pour tous les espaces métier (portails rôle + admin). */
 export default function PremiumPortalShell({
   children,
@@ -27,7 +16,7 @@ export default function PremiumPortalShell({
   className = '',
 }: PremiumPortalShellProps) {
   return (
-    <PremiumDashboardShell variant={VARIANT_MAP[variant]}>
+    <PremiumDashboardShell variant={variant}>
       <div className={`min-h-[calc(100vh-4rem)] ${className}`}>{children}</div>
     </PremiumDashboardShell>
   );

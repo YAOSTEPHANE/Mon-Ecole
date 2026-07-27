@@ -89,6 +89,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: [...SECURITY_HEADERS, ...PRODUCTION_SECURITY_HEADERS] },
+      { source: "/", headers: [...NO_STORE_CACHE_HEADERS, ...SECURITY_HEADERS, ...PRODUCTION_SECURITY_HEADERS] },
+      { source: "/home", headers: [...NO_STORE_CACHE_HEADERS, ...SECURITY_HEADERS, ...PRODUCTION_SECURITY_HEADERS] },
       { source: "/inscription", headers: [...NO_STORE_CACHE_HEADERS, ...SECURITY_HEADERS, ...PRODUCTION_SECURITY_HEADERS] },
       { source: "/pre-inscription", headers: [...NO_STORE_CACHE_HEADERS, ...SECURITY_HEADERS, ...PRODUCTION_SECURITY_HEADERS] },
     ];

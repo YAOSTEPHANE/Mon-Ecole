@@ -20,7 +20,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div
-        className={`absolute inset-y-0 left-0 flex items-center pointer-events-none ${compact ? 'pl-2' : 'pl-3'}`}
+        className={`pointer-events-none absolute inset-y-0 left-0 flex items-center ${compact ? 'pl-2' : 'pl-3'}`}
       >
         <FiSearch className={`text-stone-400 ${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
       </div>
@@ -29,10 +29,10 @@ const SearchBar: React.FC<SearchBarProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full rounded-xl transition-all duration-200 border-stone-300/90 focus:border-amber-400/50 focus:ring-2 focus:ring-amber-500/20 ${
+        className={`w-full rounded-xl border-stone-200/90 bg-white/95 text-stone-900 shadow-sm transition-all duration-200 ease-premium placeholder:text-stone-400 hover:border-stone-300 focus:border-amber-400/50 focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
           compact
-            ? 'pl-8 pr-3 py-2 text-sm border bg-white/80 text-stone-900'
-            : 'pl-10 pr-4 py-3 border-2 bg-white'
+            ? 'border bg-white/90 py-2 pl-8 pr-3 text-sm'
+            : 'border-2 py-3 pl-10 pr-4'
         }`}
       />
     </div>
@@ -40,9 +40,3 @@ const SearchBar: React.FC<SearchBarProps> = ({
 };
 
 export default SearchBar;
-
-
-
-
-
-

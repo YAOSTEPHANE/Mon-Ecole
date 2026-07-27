@@ -35,6 +35,19 @@ import {
   parentTuitionBlockFromYears,
 } from '../utils/parent-academic-result-access.util';
 import { findSchedulesWithRelations } from '../utils/safe-schedule-query.util';
+import {
+  applyApprovedPermissionToAbsences,
+  enrichPermissionRequestWithReviewer,
+  enrichPermissionRequestsWithReviewers,
+  permissionRequestInclude,
+  STUDENT_ABSENCE_PERMISSION_MOTIFS,
+  validatePermissionPeriod,
+  ABSENCE_PERMISSION_DELETE_FORBIDDEN_MESSAGE,
+} from '../utils/student-absence-permission.util';
+import {
+  notifyAdminsOfNewAbsencePermissionRequest,
+  notifyFamilyAbsencePermissionSubmitted,
+} from '../utils/student-absence-permission-notify.util';
 
 const router = express.Router();
 
@@ -477,6 +490,133 @@ router.put('/absences/:id/justify', async (req: AuthRequest, res) => {
       error: error.message || 'Erreur serveur',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// ——— Demandes de permission d'absence (anticipées) ———
+
+router.get('/absence-permission-requests', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+
+    const requests = await prisma.studentAbsencePermissionRequest.findMany({
+      where: { studentId: student.id },
+      include: permissionRequestInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(await enrichPermissionRequestsWithReviewers(requests));
+  } catch (error: unknown) {
+    console.error('GET /student/absence-permission-requests:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post(
+  '/absence-permission-requests',
+  [
+    body('startDate').isISO8601(),
+    body('endDate').isISO8601(),
+    body('motif').isIn([...STUDENT_ABSENCE_PERMISSION_MOTIFS]),
+    body('reasonDetail').isString().trim().isLength({ min: 10, max: 2000 }),
+    body('justificationDocuments').optional().isArray(),
+    body('justificationDocuments.*').optional().isString(),
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const student = await prisma.student.findFirst({
+        where: { userId: req.user!.id },
+        select: { id: true },
+      });
+      if (!student) {
+        return res.status(404).json({ error: 'Élève non trouvé' });
+      }
+
+      const { startDate, endDate, motif, reasonDetail, justificationDocuments } = req.body;
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const periodError = validatePermissionPeriod(start, end);
+      if (periodError) {
+        return res.status(400).json({ error: periodError });
+      }
+
+      const docs = Array.isArray(justificationDocuments)
+        ? justificationDocuments.filter((u: unknown): u is string => typeof u === 'string' && u.length > 0)
+        : [];
+
+      const request = await prisma.studentAbsencePermissionRequest.create({
+        data: {
+          studentId: student.id,
+          requestedByUserId: req.user!.id,
+          requestedByRole: 'STUDENT',
+          motif,
+          startDate: start,
+          endDate: end,
+          reasonDetail: reasonDetail.trim(),
+          justificationDocuments: docs,
+        },
+        include: permissionRequestInclude,
+      });
+
+      void notifyAdminsOfNewAbsencePermissionRequest(request.id).catch((notifyError) => {
+        console.error('notifyAdminsOfNewAbsencePermissionRequest:', notifyError);
+      });
+      void notifyFamilyAbsencePermissionSubmitted(request.id, 'STUDENT').catch((notifyError) => {
+        console.error('notifyFamilyAbsencePermissionSubmitted:', notifyError);
+      });
+
+      res.status(201).json(await enrichPermissionRequestWithReviewer(request));
+    } catch (error: unknown) {
+      console.error('POST /student/absence-permission-requests:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  }
+);
+
+router.patch('/absence-permission-requests/:id/cancel', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+
+    const existing = await prisma.studentAbsencePermissionRequest.findFirst({
+      where: { id: req.params.id, studentId: student.id },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Demande introuvable' });
+    }
+    if (existing.status === 'APPROVED') {
+      return res.status(403).json({ error: ABSENCE_PERMISSION_DELETE_FORBIDDEN_MESSAGE });
+    }
+    if (existing.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Seules les demandes en attente peuvent être annulées' });
+    }
+
+    const updated = await prisma.studentAbsencePermissionRequest.update({
+      where: { id: existing.id },
+      data: { status: 'CANCELLED' },
+      include: permissionRequestInclude,
+    });
+
+    res.json(await enrichPermissionRequestWithReviewer(updated));
+  } catch (error: unknown) {
+    console.error('PATCH /student/absence-permission-requests/:id/cancel:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 
@@ -1551,17 +1691,27 @@ router.post('/payments', async (req: AuthRequest, res) => {
       );
     }
 
-    let onlinePayment = payment;
+    let onlinePayment: typeof payment & {
+      checkoutUrl?: string | null;
+      paymentProvider?: string | null;
+    } = payment;
     if (paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') {
       const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0]?.trim();
-      onlinePayment = await attachOnlineCheckout(prisma, payment.id, {
+      const checkoutPayment = await attachOnlineCheckout(prisma, payment.id, {
         method: paymentMethod,
         phoneNumber,
         operator,
         customerEmail: req.user?.email,
-        customerName: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' '),
+        customerName: req.user?.email ?? '',
         returnUrl: `${frontend}/student?tab=payments`,
       });
+      onlinePayment = {
+        ...payment,
+        checkoutUrl: checkoutPayment.checkoutUrl,
+        paymentProvider: checkoutPayment.paymentProvider,
+        transactionId: checkoutPayment.transactionId,
+        notes: checkoutPayment.notes,
+      };
       if (phoneNumber) {
         void notifyParentWhatsApp(
           phoneNumber,
@@ -1770,7 +1920,7 @@ router.post('/mock-exams/:id/submit', async (req: AuthRequest, res) => {
         data: {
           mockExamId: exam.id,
           studentId: student.id,
-          answers,
+          answers: answers as Prisma.InputJsonValue,
           score: graded.score,
           maxScore: graded.maxScore,
           scoreOn20: graded.scoreOn20,

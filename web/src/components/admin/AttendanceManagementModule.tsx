@@ -1,42 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
-import Card from '../ui/Card';
 import CompleteManagement from './CompleteManagement';
 import PointageEleves from './PointageEleves';
 import AttendanceReportsPanel from './AttendanceReportsPanel';
+import AttendanceStatisticsPanel from './AttendanceStatisticsPanel';
 import ParentAttendanceNotifyPanel from './ParentAttendanceNotifyPanel';
+import StudentAbsencePermissionsPanel from './StudentAbsencePermissionsPanel';
 import {
   FiGrid,
   FiUserCheck,
   FiCalendar,
   FiBarChart2,
   FiBell,
+  FiClipboard,
 } from 'react-icons/fi';
 import { ADM } from './adminModuleLayout';
 
-type AttendanceTab = 'overview' | 'rollcall' | 'absences' | 'reports' | 'parents';
+type AttendanceTab = 'overview' | 'rollcall' | 'absences' | 'permissions' | 'reports' | 'parents';
 
 const AttendanceManagementModule: React.FC = () => {
-  const [tab, setTab] = useState<AttendanceTab>('overview');
-
-  const { data: absences } = useQuery({
-    queryKey: ['admin-absences-overview'],
-    queryFn: () => adminApi.getAllAbsences(),
+  const searchParams = useSearchParams();
+  const initialSubTab = searchParams?.get('attendanceTab');
+  const [tab, setTab] = useState<AttendanceTab>(() => {
+    if (
+      initialSubTab === 'overview' ||
+      initialSubTab === 'rollcall' ||
+      initialSubTab === 'absences' ||
+      initialSubTab === 'permissions' ||
+      initialSubTab === 'reports' ||
+      initialSubTab === 'parents'
+    ) {
+      return initialSubTab;
+    }
+    return 'overview';
   });
 
-  const { data: courses } = useQuery({
-    queryKey: ['admin-courses-overview'],
-    queryFn: () => adminApi.getAllCourses(),
+  useEffect(() => {
+    if (
+      initialSubTab === 'overview' ||
+      initialSubTab === 'rollcall' ||
+      initialSubTab === 'absences' ||
+      initialSubTab === 'permissions' ||
+      initialSubTab === 'reports' ||
+      initialSubTab === 'parents'
+    ) {
+      setTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
+  const { data: permissionStats } = useQuery({
+    queryKey: ['admin-absence-permission-request-stats'],
+    queryFn: () => adminApi.getAbsencePermissionRequestStats(),
+    staleTime: 30_000,
   });
 
-  const absenceCount = absences?.length ?? 0;
-  const courseCount = courses?.length ?? 0;
+  const pendingPermissionCount = permissionStats?.pending ?? 0;
 
   const subTabs: { id: AttendanceTab; label: string; icon: typeof FiGrid }[] = [
-    { id: 'overview', label: 'Vue d’ensemble', icon: FiGrid },
+    { id: 'overview', label: 'Tableau de bord classe & période', icon: FiGrid },
     { id: 'rollcall', label: 'Pointage (NFC / bio / manuel)', icon: FiUserCheck },
     { id: 'absences', label: 'Suivi des absences', icon: FiCalendar },
+    { id: 'permissions', label: 'Permissions d\'absence', icon: FiClipboard },
     { id: 'reports', label: 'Rapports d’assiduité', icon: FiBarChart2 },
     { id: 'parents', label: 'Notifications parents', icon: FiBell },
   ];
@@ -65,41 +91,25 @@ const AttendanceManagementModule: React.FC = () => {
             >
               <Icon className={ADM.tabIcon} />
               {t.label}
+              {t.id === 'permissions' && pendingPermissionCount > 0 ? (
+                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {pendingPermissionCount}
+                </span>
+              ) : null}
             </button>
           );
         })}
       </div>
 
       {tab === 'overview' && (
-        <div className={ADM.section}>
-          <div className={ADM.grid3}>
-            <Card className={`${ADM.statCard} border border-gray-200`}>
-              <p className={ADM.statLabel}>Enregistrements présence</p>
-              <p className={ADM.statVal}>{absenceCount}</p>
-              <p className={ADM.statHint}>Lignes en base (toutes dates, filtres globaux)</p>
-            </Card>
-            <Card className={`${ADM.statCard} border border-gray-200`}>
-              <p className={ADM.statLabel}>Cours</p>
-              <p className={ADM.statVal}>{courseCount}</p>
-              <p className={ADM.statHint}>Pour l’appel par matière et classe</p>
-            </Card>
-            <Card className={`${ADM.statCard} border border-teal-100 bg-teal-50/50`}>
-              <p className="text-[10px] font-medium text-teal-800 uppercase tracking-wide leading-tight">
-                Parcours type
-              </p>
-              <ol className={ADM.olSm}>
-                <li>Faire l’appel du jour (carte, empreinte ou saisie manuelle)</li>
-                <li>Vérifier et justifier les absences</li>
-                <li>Consulter les rapports et prévenir les parents si besoin</li>
-              </ol>
-            </Card>
-          </div>
-        </div>
+        <AttendanceStatisticsPanel onOpenAbsences={() => setTab('absences')} />
       )}
 
       {tab === 'rollcall' && <PointageEleves embedded />}
 
       {tab === 'absences' && <CompleteManagement attendanceModule compact />}
+
+      {tab === 'permissions' && <StudentAbsencePermissionsPanel />}
 
       {tab === 'reports' && <AttendanceReportsPanel />}
 

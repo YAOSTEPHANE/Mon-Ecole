@@ -67,7 +67,7 @@ const NFCTeacherScanner: React.FC = () => {
       // Enregistrer automatiquement
       recordAttendanceMutation.mutate({
         teacherId: teacher.id,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString(),
         status,
       });
     }

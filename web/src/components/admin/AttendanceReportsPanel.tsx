@@ -5,9 +5,10 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import FilterDropdown from '../ui/FilterDropdown';
 import { FiBarChart, FiDownload } from 'react-icons/fi';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { formatAttendanceRate } from '@/lib/attendanceStats';
 
 const AttendanceReportsPanel: React.FC = () => {
   const [classId, setClassId] = useState<string>('all');
@@ -41,35 +42,36 @@ const AttendanceReportsPanel: React.FC = () => {
       }),
   });
 
+  const stats = apiStats ?? {
+    total: 0,
+    present: 0,
+    absentUnexcused: 0,
+    late: 0,
+    excusedAbsent: 0,
+    punctualityRate: 0,
+    medicalCertificates: 0,
+    sanctionsRecorded: 0,
+    avgLateMinutes: null,
+    bySource: { manual: 0, nfc: 0, biometric: 0, other: 0 },
+    byDay: [],
+    bySession: [],
+    byClass: [],
+    byStudent: [],
+    topLateStudents: [],
+  };
+
   const filtered = useMemo(() => {
     if (!absences?.length) return [];
-    const start = startOfDay(parseISO(fromDate));
-    const end = endOfDay(parseISO(toDate));
-    return absences.filter((a: any) => {
+    const start = new Date(fromDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(toDate);
+    end.setHours(23, 59, 59, 999);
+    return absences.filter((a: { date?: string }) => {
+      if (!a.date) return false;
       const d = parseISO(a.date);
-      return isWithinInterval(d, { start, end });
+      return d >= start && d <= end;
     });
   }, [absences, fromDate, toDate]);
-
-  const stats = useMemo(() => {
-    let present = 0;
-    let absent = 0;
-    let late = 0;
-    let excused = 0;
-    for (const a of filtered) {
-      if (a.status === 'PRESENT') present++;
-      else if (a.status === 'LATE') late++;
-      else if (a.status === 'EXCUSED') excused++;
-      else if (a.status === 'ABSENT') {
-        if (a.excused) excused++;
-        else absent++;
-      }
-    }
-    const total = filtered.length;
-    const rate =
-      total > 0 ? Math.round(((present + late) / total) * 1000) / 10 : 0;
-    return { present, absent, late, excused, total, rate };
-  }, [filtered]);
 
   const exportCsv = () => {
     const headers = [
@@ -187,14 +189,14 @@ const AttendanceReportsPanel: React.FC = () => {
         </Card>
         <Card className="p-4 border border-red-100 bg-red-50/40">
           <p className="text-xs font-medium text-gray-500 uppercase">Absences non justifiées</p>
-          <p className="text-2xl font-bold text-red-700 mt-1">{stats.absent}</p>
-          <p className="text-xs text-gray-500 mt-1">Justifiées : {stats.excused}</p>
+          <p className="text-2xl font-bold text-red-700 mt-1">{stats.absentUnexcused}</p>
+          <p className="text-xs text-gray-500 mt-1">Justifiées : {stats.excusedAbsent}</p>
         </Card>
         <Card className="p-4 border border-cyan-100 bg-cyan-50/40">
           <p className="text-xs font-medium text-gray-500 uppercase flex items-center gap-1">
             <FiBarChart className="w-3.5 h-3.5" /> Taux présence
           </p>
-          <p className="text-2xl font-bold text-cyan-800 mt-1">{stats.rate}%</p>
+          <p className="text-2xl font-bold text-cyan-800 mt-1">{formatAttendanceRate(stats.punctualityRate)}</p>
           <p className="text-xs text-gray-500 mt-1">(présents + retards) / total lignes</p>
         </Card>
       </div>

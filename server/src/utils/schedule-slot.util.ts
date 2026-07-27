@@ -100,6 +100,25 @@ export function computeTeacherTeachingMinutes(checkInAt: Date, checkOutAt: Date)
   return Math.max(0, Math.round((checkOutAt.getTime() - checkInAt.getTime()) / 60_000));
 }
 
+/** Fenêtre de sortie après la fin EDT (minutes). */
+export function checkoutGraceMinutes(): number {
+  const n = parseInt(process.env.ATTENDANCE_CHECKOUT_GRACE_MINUTES || '30', 10);
+  return Number.isFinite(n) ? Math.max(0, n) : 30;
+}
+
+export function isWithinCheckoutWindow(
+  at: Date,
+  startTime: string,
+  endTime: string,
+  earlyCheckInMinutes: number,
+): boolean {
+  const start = parseTimeOnDate(startTime, at);
+  const end = parseTimeOnDate(endTime, at);
+  const windowStart = new Date(start.getTime() - earlyCheckInMinutes * 60_000);
+  const windowEnd = new Date(end.getTime() + checkoutGraceMinutes() * 60_000);
+  return at.getTime() >= windowStart.getTime() && at.getTime() <= windowEnd.getTime();
+}
+
 export function resolveLateStatus(
   at: Date,
   startTime: string,

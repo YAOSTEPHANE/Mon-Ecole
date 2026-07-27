@@ -132,6 +132,13 @@ enum TuitionBillingPeriod {
   ANNUAL
 }
 
+/// Cycle de facturation d'une ligne de frais (inscription / écolage)
+enum TuitionBillingStatus {
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+}
+
 /// Portée d’un poste du catalogue de frais
 enum TuitionFeeCatalogScope {
   ALL_STUDENTS
@@ -195,6 +202,24 @@ enum TeacherLeaveStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum StudentAbsencePermissionMotif {
+  MEDICAL
+  FAMILIAL
+  OTHER
+}
+
+enum StudentAbsencePermissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum StudentAbsencePermissionRequestedBy {
+  STUDENT
+  PARENT
 }
 
 /// Statut d'engagement pédagogique de l'enseignant
@@ -347,6 +372,7 @@ model User {
   twoFactorSettings               UserTwoFactorSettings?
   adminWorkspaceMemberships         AdminWorkspaceMember[]
   schoolMemberships               SchoolMember[]
+  absencePermissionReviewsReviewed StudentAbsencePermissionRequest[] @relation("AbsencePermissionReviews")
   /// SSO : google | microsoft (null = compte classique e-mail/mot de passe)
   oauthProvider                   String?
   /// Identifiant stable chez le fournisseur OAuth
@@ -1000,6 +1026,7 @@ model Student {
   conducts        Conduct[]
   tuitionFees     TuitionFee[]
   payments        Payment[]
+  scholarships    StudentScholarship[]
   identityDocuments IdentityDocument[]
   schoolHistory   StudentSchoolHistory[]
   transfers       StudentTransfer[]
@@ -1025,6 +1052,7 @@ model Student {
   promotionDecisions          StudentPromotionDecision[]
   gamificationPoints          StudentGamificationEvent[]
   mockExamAttempts            MockExamAttempt[]
+  absencePermissionRequests   StudentAbsencePermissionRequest[]
 
   @@index([nfcId])
   @@index([biometricId])
@@ -1674,6 +1702,31 @@ model Absence {
   @@map("absences")
 }
 
+model StudentAbsencePermissionRequest {
+  id                     String                            @id @default(auto()) @map("_id") @db.ObjectId
+  studentId              String                            @db.ObjectId
+  requestedByUserId      String                            @db.ObjectId
+  requestedByRole        StudentAbsencePermissionRequestedBy
+  motif                  StudentAbsencePermissionMotif
+  startDate              DateTime
+  endDate                DateTime
+  reasonDetail           String
+  justificationDocuments String[]
+  status                 StudentAbsencePermissionStatus    @default(PENDING)
+  adminComment           String?
+  reviewedByUserId       String?                           @db.ObjectId
+  reviewedBy             User?                             @relation("AbsencePermissionReviews", fields: [reviewedByUserId], references: [id])
+  reviewedAt             DateTime?
+  createdAt              DateTime                          @default(now())
+  updatedAt              DateTime                          @updatedAt
+
+  student                Student                           @relation(fields: [studentId], references: [id])
+
+  @@index([studentId, startDate])
+  @@index([status])
+  @@map("student_absence_permission_requests")
+}
+
 model Assignment {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   courseId    String   @db.ObjectId
@@ -2266,11 +2319,25 @@ model TeacherAttendance {
   source           String        @default("NFC")
   recordedByUserId String?       @db.ObjectId
   checkInAt        DateTime?
-  /// Départ prévu (fin de créneau emploi du temps) ou effectif
+  /// Fin prévue du créneau (emploi du temps)
   checkOutAt       DateTime?
+  /// Départ réel (2e pointage)
+  actualCheckOutAt DateTime?
+  /// Début prévu du créneau (résolu pour la date de session)
+  scheduledStartAt DateTime?
+  /// Fin prévue du créneau (alias de checkOutAt, dénormalisé pour rapports)
+  scheduledEndAt   DateTime?
+  /// Minutes de retard à l'arrivée (après début EDT + grâce)
+  minutesLateStart   Int?
+  /// Minutes d'avance à l'arrivée (avant début EDT)
+  minutesEarlyStart  Int?
+  /// Minutes de départ anticipé (avant fin EDT)
+  minutesEarlyEnd    Int?
+  /// Minutes au-delà de la fin EDT (départ tardif)
+  minutesOvertimeEnd Int?
   /// Durée théorique du créneau (minutes)
   plannedMinutes   Int?
-  /// Heures de cours décomptées (minutes, en général = créneau horaire)
+  /// Heures de cours décomptées (minutes effectives)
   teachingMinutes  Int?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -2302,6 +2369,9 @@ model TuitionFeeCatalog {
   periodLabelHint  String?
   sortOrder        Int                    @default(0)
   isActive         Boolean                @default(true)
+  /// Gabarit d'échéancier lié (tranches ≤ montant de la structure)
+  scheduleTemplateId String?              @db.ObjectId
+  scheduleTemplate   TuitionPaymentScheduleTemplate? @relation(fields: [scheduleTemplateId], references: [id], onDelete: SetNull)
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
 
@@ -2324,6 +2394,7 @@ model TuitionPaymentScheduleTemplate {
   updatedAt    DateTime @updatedAt
 
   tuitionFees TuitionFee[]
+  catalogs     TuitionFeeCatalog[]
 
   @@map("tuition_payment_schedule_templates")
 }
@@ -2338,6 +2409,10 @@ model TuitionFee {
   description   String?  // Description des frais
   isPaid        Boolean  @default(false)
   paidAt        DateTime?
+  /// Émise / partiellement payée / payée
+  billingStatus    TuitionBillingStatus @default(ISSUED)
+  /// Libellé bourse ou aide (ex. « Bourse excellence »)
+  scholarshipLabel String?
   feeType          SchoolFeeType         @default(OTHER)
   billingPeriod    TuitionBillingPeriod?
   /// Montant brut avant remise (optionnel ; sinon = amount + discount)
@@ -2382,6 +2457,10 @@ model Payment {
   /// URL de redirection checkout (carte / agrégateur)
   checkoutUrl     String?
   receiptUrl      String?       // URL du reçu de paiement
+  /// Numéro séquentiel officiel (ex. REC-2026-0001)
+  receiptNumber     String?
+  /// Code de vérification anti-falsification (page comptabilité)
+  verificationCode  String?
   notes           String?       // Notes additionnelles
   paidAt          DateTime?     // Date de paiement effectif
   createdAt       DateTime      @default(now())
@@ -2392,7 +2471,31 @@ model Payment {
   payer           User          @relation(fields: [payerId], references: [id])
 
   @@index([paymentProvider, status])
+  @@index([receiptNumber])
+  @@index([verificationCode])
   @@map("payments")
+}
+
+/// Bourse ou aide financière accordée à un élève pour une année scolaire
+model StudentScholarship {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  studentId    String         @db.ObjectId
+  student      Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear String
+  label        String
+  /// Remise fixe en FCFA (prioritaire sur percentOff si les deux sont renseignés)
+  fixedAmount  Float?
+  /// Remise en pourcentage (0–100)
+  percentOff   Float?
+  /// Limite au type de frais concerné (null = tous)
+  feeType      SchoolFeeType?
+  notes        String?
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([studentId, academicYear, isActive])
+  @@map("student_scholarships")
 }
 
 /// Catégories de dépenses (charges) pour le suivi budgétaire
@@ -2411,6 +2514,32 @@ enum SchoolExpenseCategory {
 enum PettyCashMovementType {
   IN
   OUT
+}
+
+enum CashRegisterType {
+  PETTY
+  COUNTER
+  AUXILIARY
+}
+
+model CashRegister {
+  id           String            @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String?           @db.ObjectId
+  code         String
+  name         String
+  type         CashRegisterType  @default(PETTY)
+  isActive     Boolean           @default(true)
+  description  String?
+  /// Fonds de caisse initial (référence pour le solde théorique)
+  openingFloat Float             @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  movements PettyCashMovement[]
+
+  @@index([schoolId])
+  @@index([schoolId, isActive])
+  @@map("cash_registers")
 }
 
 model Supplier {
@@ -2463,6 +2592,8 @@ model SchoolExpense {
 model PettyCashMovement {
   id               String                @id @default(auto()) @map("_id") @db.ObjectId
   schoolId         String?               @db.ObjectId
+  cashRegisterId   String?               @db.ObjectId
+  cashRegister     CashRegister?         @relation(fields: [cashRegisterId], references: [id])
   movementDate     DateTime
   type             PettyCashMovementType
   /// Montant toujours positif ; sens selon `type` (IN entrée, OUT sortie)
@@ -2475,6 +2606,7 @@ model PettyCashMovement {
   updatedAt        DateTime              @updatedAt
 
   @@index([schoolId])
+  @@index([cashRegisterId])
   @@index([movementDate])
   @@map("petty_cash_movements")
 }
@@ -3278,5 +3410,85 @@ model MockExamAttempt {
   @@index([mockExamId, studentId])
   @@index([studentId])
   @@map("mock_exam_attempts")
+}
+
+/// Cycle de paie mensuel (enseignants, éducateurs, personnel)
+enum PayrollRunStatus {
+  DRAFT
+  VALIDATED
+  PAID
+  CANCELLED
+}
+
+enum PayrollPersonKind {
+  TEACHER
+  EDUCATOR
+  STAFF
+}
+
+model PayrollRun {
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String           @db.ObjectId
+  /// Année civile (ex. 2026)
+  year             Int
+  /// Mois 1–12
+  month            Int
+  status           PayrollRunStatus @default(DRAFT)
+  /// Somme des salaires de base (brut de référence)
+  totalBase        Float            @default(0)
+  totalBonuses     Float            @default(0)
+  totalDeductions  Float            @default(0)
+  /// Somme des nets à payer
+  totalNet         Float            @default(0)
+  lineCount        Int              @default(0)
+  notes            String?
+  createdByUserId  String           @db.ObjectId
+  validatedByUserId String?         @db.ObjectId
+  validatedAt      DateTime?
+  paidByUserId     String?          @db.ObjectId
+  paidAt           DateTime?
+  /// Dépense comptable créée au marquage « payé » (PAYROLL_AUX)
+  schoolExpenseId  String?          @db.ObjectId
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  lines PayrollLine[]
+
+  @@unique([schoolId, year, month])
+  @@index([schoolId, status])
+  @@index([year, month])
+  @@map("payroll_runs")
+}
+
+model PayrollLine {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  payrollRunId     String            @db.ObjectId
+  personKind       PayrollPersonKind
+  personId         String            @db.ObjectId
+  userId           String            @db.ObjectId
+  employeeId       String
+  displayName      String
+  contractType     String?
+  engagementKind   String?
+  /// Salaire de référence (mensuel) ou base calculée pour vacataire
+  baseSalary       Float             @default(0)
+  /// Heures pointées sur le mois (vacataires / suivi)
+  hoursWorked      Float?
+  /// Taux horaire dérivé (si applicable)
+  hourlyRate       Float?
+  bonuses          Float             @default(0)
+  deductions       Float             @default(0)
+  netAmount        Float             @default(0)
+  /// Exclure de la paie sans supprimer la ligne
+  included         Boolean           @default(true)
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+
+  @@index([payrollRunId])
+  @@index([personKind, personId])
+  @@map("payroll_lines")
 }
 

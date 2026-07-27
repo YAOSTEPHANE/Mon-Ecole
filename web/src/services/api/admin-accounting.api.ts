@@ -35,4 +35,12 @@ export const adminAccountingApi = {
     (await api.get('/admin/accounting/journal', { params })).data,
   getAccountingLedger: async (params?: { academicYear?: string; from?: string; to?: string }) =>
     (await api.get('/admin/accounting/ledger', { params })).data,
+
+  getCashRegisters: async () => (await api.get('/admin/cash-registers')).data,
+  createCashRegister: async (data: Record<string, unknown>) => (await api.post('/admin/cash-registers', data)).data,
+  updateCashRegister: async (id: string, data: Record<string, unknown>) =>
+    (await api.put(`/admin/cash-registers/${id}`, data)).data,
+  deleteCashRegister: async (id: string) => (await api.delete(`/admin/cash-registers/${id}`)).data,
+  getCashOverview: async (params?: { from?: string; to?: string; registerId?: string }) =>
+    (await api.get('/admin/accounting/cash/overview', { params })).data,
 };

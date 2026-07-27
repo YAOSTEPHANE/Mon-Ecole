@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import PortalSchoolFeed from '../portal/PortalSchoolFeed';
 import StudentGamificationCard from './StudentGamificationCard';
-import { PremiumOverviewHero, PremiumStatGrid, PremiumGlassCard } from '../dashboard/premium';
+import { PremiumOverviewHero, PremiumStatGrid, PremiumSectionTitle } from '../dashboard/premium';
 import type { PremiumStatItem } from '../dashboard/premium/PremiumStatGrid';
 
 const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQuery?: string; searchCategory?: string }) => {
@@ -138,39 +138,26 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {!searchQuery && (
         <>
-          <div className="rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 p-[1px] shadow-lg shadow-fuchsia-500/15">
-            <div className="rounded-[15px] bg-white/97 backdrop-blur-xl px-5 py-4 sm:px-6 sm:py-5">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.14em]">
-                Synthèse personnelle
-              </p>
-              <p className="font-display text-lg sm:text-xl font-bold text-slate-900 mt-1">
-                {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
-              </p>
-              <p className="text-sm text-slate-600 mt-2 max-w-3xl leading-relaxed">
-                Indicateurs consolidés à partir de vos notes, absences et devoirs. Les données reflètent l’état au moment de
-                votre connexion — consultez chaque section pour le détail et les justificatifs.
-              </p>
-              {(overdueAssignments > 0 || unexcusedAbsences > 0) && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {overdueAssignments > 0 && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-800 border border-red-200/80">
-                      {overdueAssignments} devoir(s) en retard
-                    </span>
-                  )}
-                  {unexcusedAbsences > 0 && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200/80">
-                      {unexcusedAbsences} absence(s) non justifiée(s)
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          <StudentGamificationCard />
-          <PortalSchoolFeed role="student" compact />
+          <PremiumOverviewHero
+            eyebrow="Synthèse personnelle"
+            title={format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
+            gradient="from-violet-600 via-fuchsia-600 to-pink-600"
+            description="Indicateurs consolidés à partir de vos notes, absences et devoirs. Consultez chaque section pour le détail."
+            badge={
+              overdueAssignments > 0 || unexcusedAbsences > 0
+                ? `${overdueAssignments > 0 ? `${overdueAssignments} devoir(s) en retard` : ''}${overdueAssignments > 0 && unexcusedAbsences > 0 ? ' · ' : ''}${unexcusedAbsences > 0 ? `${unexcusedAbsences} absence(s) non justifiée(s)` : ''}`
+                : undefined
+            }
+          />
+          <section className="dash-section-panel">
+            <StudentGamificationCard />
+          </section>
+          <section className="dash-section-panel">
+            <PortalSchoolFeed role="student" compact />
+          </section>
         </>
       )}
 
@@ -205,50 +192,32 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
         </Card>
       ) : (
         <>
-          <PremiumStatGrid items={stats} columns={4} />
+          <section className="dash-section-panel">
+            <PremiumSectionTitle title="Indicateurs clés" subtitle="Votre progression scolaire" icon={FiAward} />
+            <PremiumStatGrid items={stats} columns={4} />
+          </section>
 
-      {/* Alertes importantes */}
       {(overdueAssignments > 0 || unexcusedAbsences > 0) && (
-        <Card className="border-l-4 border-orange-500">
-          <div className="flex items-start space-x-4">
-            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-              <FiAlertCircle className="w-6 h-6 text-orange-600" />
+        <section className="dash-section-panel border-l-4 border-l-orange-500">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+              <FiAlertCircle className="h-6 w-6 text-orange-600" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-2">Attention requise</h3>
+              <h3 className="mb-2 font-semibold text-gray-900">Attention requise</h3>
               <div className="space-y-2 text-sm text-gray-700">
-                {overdueAssignments > 0 && (
-                  <p>• {overdueAssignments} devoir(s) en retard</p>
-                )}
-                {unexcusedAbsences > 0 && (
-                  <p>• {unexcusedAbsences} absence(s) non justifiée(s)</p>
-                )}
+                {overdueAssignments > 0 && <p>• {overdueAssignments} devoir(s) en retard</p>}
+                {unexcusedAbsences > 0 && <p>• {unexcusedAbsences} absence(s) non justifiée(s)</p>}
               </div>
             </div>
           </div>
-        </Card>
+        </section>
       )}
 
-      {/* Graphique de progression */}
       {allGrades.length > 0 && (
-        <Card className="relative overflow-hidden group perspective-3d transform-gpu transition-all duration-300 hover:shadow-2xl"
-          style={{
-            transform: 'translateZ(0)',
-            transformStyle: 'preserve-3d',
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div className="relative z-10">
-            <h3 
-              className="text-xl font-bold text-gray-900 mb-4 relative"
-              style={{
-                textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                transform: 'perspective(300px) translateZ(10px)',
-              }}
-            >
-              Évolution de la moyenne
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section className="dash-section-panel">
+          <PremiumSectionTitle title="Évolution de la moyenne" subtitle="Par matière" icon={FiBook} />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {Object.entries(
                 allGrades.reduce((acc: any, grade: any) => {
                   const courseName = grade.course?.name || 'Autre';
@@ -264,12 +233,9 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
                 ) / courseGrades.reduce((sum: number, g: any) => sum + g.coefficient, 0);
                 
                 return (
-                  <div 
+                  <div
                     key={courseName}
-                    className="p-4 bg-gradient-to-br from-white to-gray-50 rounded-lg border-2 border-gray-200 transform-gpu transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                    style={{
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                    }}
+                    className="rounded-xl border border-stone-200/80 bg-white/95 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <p className="text-sm font-medium text-gray-600 mb-2">{courseName}</p>
                     <div className="flex items-baseline space-x-2">
@@ -290,43 +256,25 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
                   </div>
                 );
               })}
-            </div>
           </div>
-        </Card>
+        </section>
       )}
 
-      {/* Prochaines évaluations */}
-      <Card className="relative overflow-hidden group perspective-3d transform-gpu transition-all duration-300 hover:shadow-2xl"
-        style={{
-          transform: 'translateZ(0)',
-          transformStyle: 'preserve-3d',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        <div className="relative z-10">
-          <h3 
-            className="text-xl font-bold text-gray-900 mb-4 relative"
-            style={{
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-              transform: 'perspective(300px) translateZ(10px)',
-            }}
-          >
-            Prochaines évaluations
-          </h3>
-          <div className="space-y-3">
-            {allGrades.length > 0 ? (
-              <div className="text-sm text-gray-600">
-                <p>Vos prochaines évaluations apparaîtront ici</p>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <FiCalendar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>Aucune évaluation prévue</p>
-              </div>
-            )}
-          </div>
+      <section className="dash-section-panel">
+        <PremiumSectionTitle title="Prochaines évaluations" subtitle="Planning à venir" icon={FiCalendar} />
+        <div className="space-y-3">
+          {allGrades.length > 0 ? (
+            <div className="text-sm text-gray-600">
+              <p>Vos prochaines évaluations apparaîtront ici</p>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-gray-500">
+              <FiCalendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+              <p>Aucune évaluation prévue</p>
+            </div>
+          )}
         </div>
-      </Card>
+      </section>
         </>
       )}
     </div>

@@ -100,6 +100,24 @@ export const studentApi = {
     });
     return response.data;
   },
+  getAbsencePermissionRequests: async () => {
+    const response = await api.get('/student/absence-permission-requests');
+    return response.data;
+  },
+  createAbsencePermissionRequest: async (data: {
+    startDate: string;
+    endDate: string;
+    motif: 'MEDICAL' | 'FAMILIAL' | 'OTHER';
+    reasonDetail: string;
+    justificationDocuments?: string[];
+  }) => {
+    const response = await api.post('/student/absence-permission-requests', data);
+    return response.data;
+  },
+  cancelAbsencePermissionRequest: async (id: string) => {
+    const response = await api.patch(`/student/absence-permission-requests/${id}/cancel`);
+    return response.data;
+  },
   getTuitionFees: async () => {
     const response = await api.get('/student/tuition-fees');
     return response.data;

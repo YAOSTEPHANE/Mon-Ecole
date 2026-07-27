@@ -42,24 +42,22 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        {/* Backdrop avec blur */}
+      <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 transition-opacity bg-stone-950/55 backdrop-blur-md z-[9998]"
+          className="fixed inset-0 z-[9998] bg-stone-950/60 backdrop-blur-md transition-opacity"
           onClick={onClose}
-        ></div>
+        />
 
-        {/* Modal Content */}
         <div
-          className={`relative z-[9999] bg-gradient-to-b from-stone-50 to-white text-left overflow-hidden shadow-lux ring-1 ring-amber-900/10 rounded-3xl transform transition-all sm:my-8 sm:align-middle ${sizes[size]} w-full border border-stone-200/80 ${
+          className={`relative z-[9999] w-full transform overflow-hidden rounded-3xl border border-stone-200/70 bg-gradient-to-b from-stone-50 to-white text-left shadow-lux ring-1 ring-amber-900/10 transition-all sm:my-8 sm:align-middle ${sizes[size]} ${
             compact
-              ? 'inline-flex flex-col max-h-[min(88vh,820px)]'
+              ? 'inline-flex max-h-[min(88vh,820px)] flex-col'
               : 'inline-block align-bottom'
           }`}
         >
           {title && (
             <div
-              className={`flex shrink-0 justify-between items-center border-b border-amber-500/25 bg-gradient-to-r from-stone-950 via-zinc-900 to-stone-950 ${
+              className={`flex shrink-0 items-center justify-between border-b border-cptb-gold/25 bg-gradient-to-r from-[#0a0f2e] via-[#001270] to-stone-950 ${
                 compact ? 'px-4 py-2.5' : 'px-6 py-4'
               }`}
             >
@@ -80,7 +78,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
                 }`}
               >
                 <svg
-                  className={compact ? 'w-5 h-5' : 'w-6 h-6'}
+                  className={compact ? 'h-5 w-5' : 'h-6 w-6'}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -91,7 +89,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             </div>
           )}
           <div
-            className={`bg-gradient-to-b from-white to-stone-50/40 ${
+            className={`bg-gradient-to-b from-white to-stone-50/50 ${
               compact
                 ? 'min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3'
                 : 'px-6 py-6'

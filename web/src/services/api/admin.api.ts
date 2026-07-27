@@ -280,6 +280,30 @@ export const adminApi = {
     const response = await api.get('/admin/absences', { params });
     return response.data;
   },
+  getAbsencePermissionRequests: async (params?: { status?: string; studentId?: string }) => {
+    const response = await api.get('/admin/absence-permission-requests', { params });
+    return response.data;
+  },
+  getAbsencePermissionRequestStats: async (params?: { studentId?: string }) => {
+    const response = await api.get('/admin/absence-permission-requests/stats', { params });
+    return response.data as {
+      total: number;
+      pending: number;
+      approved: number;
+      rejected: number;
+    };
+  },
+  updateAbsencePermissionRequest: async (
+    id: string,
+    data: { status: 'APPROVED' | 'REJECTED'; adminComment?: string }
+  ) => {
+    const response = await api.patch(`/admin/absence-permission-requests/${id}`, data);
+    return response.data;
+  },
+  deleteAbsencePermissionRequest: async (id: string) => {
+    const response = await api.delete(`/admin/absence-permission-requests/${id}`);
+    return response.data;
+  },
   getAllAssignments: async (params?: { courseId?: string; classId?: string }) => {
     const response = await api.get('/admin/assignments', { params });
     return response.data;
@@ -586,7 +610,7 @@ export const adminApi = {
   },
   getAbsenceStats: async (params?: { classId?: string; from?: string; to?: string }) => {
     const response = await api.get('/admin/absences/stats', { params });
-    return response.data;
+    return response.data as import('@/lib/attendanceStats').AttendanceStats;
   },
   notifyAbsenceParents: async (absenceId: string) => {
     const response = await api.post(`/admin/absences/${absenceId}/notify-parents`);
@@ -1427,6 +1451,33 @@ export const adminApi = {
   getPayments: async () => {
     const response = await api.get('/admin/payments');
     return response.data;
+  },
+  verifyPaymentReceipt: async (code: string) => {
+    const response = await api.get('/admin/payments/verify-receipt', { params: { code } });
+    return response.data as {
+      valid: boolean;
+      message?: string;
+      payment?: {
+        id: string;
+        receiptNumber: string | null;
+        verificationCode: string | null;
+        amount: number;
+        paidAt: string | null;
+        paymentMethod: string;
+        paymentReference: string | null;
+        student: {
+          firstName: string;
+          lastName: string;
+          studentId: string | null;
+          className: string | null;
+        };
+        tuitionFee: {
+          period: string;
+          academicYear: string;
+          billingStatus: string;
+        };
+      };
+    };
   },
   listPendingCashPayments: async () => {
     const response = await api.get('/admin/payments/pending-cash');

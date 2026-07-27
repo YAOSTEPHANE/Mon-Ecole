@@ -1,7 +1,7 @@
 import type { Payment, Prisma, PrismaClient, Role } from '@prisma/client';
 import prisma from './prisma';
 import { autoReceiptUrl } from './tuition-financial-automation.util';
-import { syncTuitionFeePaidStatusForFeeId } from './tuition-fee-paid-sync.util';
+import { finalizeCompletedTuitionPayment } from './tuition-fee-paid-sync.util';
 import {
   notifyParentCashPaymentRejected,
   notifyParentCashPaymentValidated,
@@ -77,7 +77,7 @@ export async function validateCashPayment(
     include: PENDING_CASH_INCLUDE,
   });
 
-  await syncTuitionFeePaidStatusForFeeId(client, payment.tuitionFeeId);
+  await finalizeCompletedTuitionPayment(client, paymentId, new Date());
   void notifyParentCashPaymentValidated(paymentId).catch((err) =>
     console.error('notifyParentCashPaymentValidated:', err),
   );

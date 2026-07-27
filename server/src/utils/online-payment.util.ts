@@ -1,7 +1,7 @@
 import type { Payment, Prisma, PrismaClient, Role } from '@prisma/client';
 import prisma from './prisma';
 import { autoReceiptUrl } from './tuition-financial-automation.util';
-import { syncTuitionFeePaidStatusForFeeId } from './tuition-fee-paid-sync.util';
+import { finalizeCompletedTuitionPayment } from './tuition-fee-paid-sync.util';
 import { notifyParentsForStudent } from './parent-notify.util';
 import { assertPaymentInSchool } from './school-access-guard.util';
 import {
@@ -99,7 +99,9 @@ export async function completeOnlinePayment(
     include: PAYMENT_INCLUDE,
   });
 
-  await syncTuitionFeePaidStatusForFeeId(client, payment.tuitionFeeId);
+  if (updated) {
+    await finalizeCompletedTuitionPayment(client, paymentId, updated.paidAt ?? new Date());
+  }
 
   try {
     await notifyParentsForStudent(payment.studentId, {

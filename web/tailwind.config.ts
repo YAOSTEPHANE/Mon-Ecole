@@ -97,28 +97,41 @@ const config = {
         },
       },
       boxShadow: {
-        glass: "0 8px 32px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04)",
+        glass:
+          "0 8px 32px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04), inset 0 1px 0 0 rgba(255,255,255,0.7)",
         premium:
-          "0 25px 50px -12px rgba(15, 23, 42, 0.15), 0 12px 24px -8px rgba(15, 23, 42, 0.1)",
+          "0 28px 56px -16px rgba(12, 10, 9, 0.16), 0 12px 24px -10px rgba(0, 24, 168, 0.08), inset 0 1px 0 0 rgba(255,255,255,0.65)",
         glow: "0 0 40px -8px rgba(0, 24, 168, 0.45)",
         innerGlow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.6)",
         lux:
           '0 32px 64px -16px rgba(0, 18, 80, 0.35), 0 0 0 1px rgba(235, 176, 45, 0.15), inset 0 1px 0 0 rgba(255,255,255,0.06)',
         'lux-soft':
-          '0 20px 40px -12px rgba(0, 24, 168, 0.12), 0 0 0 1px rgba(235, 176, 45, 0.1)',
+          '0 20px 44px -14px rgba(0, 24, 168, 0.1), 0 8px 16px -10px rgba(12, 10, 9, 0.08), 0 0 0 1px rgba(235, 176, 45, 0.08)',
         'lux-glow': '0 0 48px -8px rgba(235, 176, 45, 0.28)',
+        'dash-card':
+          '0 16px 40px -18px rgba(12, 10, 9, 0.12), 0 0 0 1px rgba(201, 162, 39, 0.07), inset 0 1px 0 0 rgba(255,255,255,0.88)',
+        'dash-card-hover':
+          '0 28px 56px -20px rgba(12, 10, 9, 0.16), 0 0 0 1px rgba(201, 162, 39, 0.14), inset 0 1px 0 0 rgba(255,255,255,0.95)',
+        'nav-elevated':
+          '0 1px 0 0 rgba(255,255,255,0.9) inset, 0 18px 40px -20px rgba(12, 10, 9, 0.12), 0 0 0 1px rgba(201, 162, 39, 0.08)',
       },
       backgroundImage: {
         "gradient-premium":
           "linear-gradient(135deg, #f8fafc 0%, #eef0ff 40%, #fffbeb 100%)",
         "gradient-nav":
-          "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,250,252,0.88) 100%)",
+          "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,249,247,0.92) 100%)",
         "mesh-premium":
           "radial-gradient(at 40% 20%, rgba(0, 24, 168, 0.1) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(235, 176, 45, 0.12) 0px, transparent 45%), radial-gradient(at 0% 50%, rgba(45, 106, 79, 0.08) 0px, transparent 50%)",
+        "mesh-dashboard":
+          "radial-gradient(ellipse 90% 60% at 10% -10%, rgba(0, 24, 168, 0.07), transparent 55%), radial-gradient(ellipse 70% 50% at 95% 5%, rgba(235, 176, 45, 0.1), transparent 50%), radial-gradient(ellipse 50% 40% at 50% 100%, rgba(30, 31, 56, 0.04), transparent 55%)",
+        "sheen-gold":
+          "linear-gradient(115deg, transparent 0%, rgba(235, 176, 45, 0.12) 45%, transparent 70%)",
       },
       animation: {
         shimmer: "shimmer 2.5s ease-in-out infinite",
         "fade-up": "fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "dash-enter": "dashEnter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "soft-pulse": "softPulse 3.2s ease-in-out infinite",
       },
       keyframes: {
         shimmer: {
@@ -129,9 +142,20 @@ const config = {
           from: { opacity: "0", transform: "translateY(12px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        dashEnter: {
+          from: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        softPulse: {
+          "0%, 100%": { opacity: "0.55" },
+          "50%": { opacity: "0.9" },
+        },
       },
       borderRadius: {
         "4xl": "2rem",
+      },
+      transitionTimingFunction: {
+        premium: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
   },

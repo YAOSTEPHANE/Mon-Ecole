@@ -106,12 +106,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setOfflineCacheScope(u.id, schoolId);
         await saveUserSnapshot(u);
       }
-    } catch (error: any) {
-      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { status?: number };
+        code?: string;
+        message?: string;
+      };
+      const status = err.response?.status;
       const network =
-        error.code === 'ERR_NETWORK' ||
-        error.code === 'ECONNREFUSED' ||
-        error.message === 'Network Error';
+        err.code === 'ERR_NETWORK' ||
+        err.code === 'ECONNREFUSED' ||
+        err.message === 'Network Error';
+
+      if (status === 401) {
+        // Session absente ou expirée — comportement attendu au démarrage sans connexion.
+        localStorage.removeItem('token');
+        setMemoryAccessToken(null);
+        setToken(null);
+        setUser(null);
+        return;
+      }
+
       if (network) {
         const offlineUser = await loadUserSnapshot<User>();
         if (offlineUser?.id) {
@@ -119,6 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
       }
+
+      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
       localStorage.removeItem('token');
       setMemoryAccessToken(null);
       setToken(null);

@@ -148,6 +148,7 @@ router.get('/teachers/attendance', async (req, res) => {
     });
 
     const courseIds = [...new Set(rows.map((r) => r.courseId).filter(Boolean))] as string[];
+    const scheduleIds = [...new Set(rows.map((r) => r.scheduleId).filter(Boolean))] as string[];
     const courses =
       courseIds.length > 0
         ? await prisma.course.findMany({
@@ -155,12 +156,21 @@ router.get('/teachers/attendance', async (req, res) => {
             select: { id: true, name: true, code: true },
           })
         : [];
+    const schedules =
+      scheduleIds.length > 0
+        ? await prisma.schedule.findMany({
+            where: { id: { in: scheduleIds } },
+            select: { id: true, startTime: true, endTime: true, room: true },
+          })
+        : [];
     const courseMap = new Map(courses.map((c) => [c.id, c]));
+    const scheduleMap = new Map(schedules.map((s) => [s.id, s]));
 
     res.json(
       rows.map((r) => ({
         ...r,
         course: r.courseId ? courseMap.get(r.courseId) ?? null : null,
+        schedule: r.scheduleId ? scheduleMap.get(r.scheduleId) ?? null : null,
       })),
     );
   } catch (error: unknown) {
@@ -202,6 +212,10 @@ router.get('/teachers/attendance/summary', async (req, res) => {
       maxWeeklyHours: number | null;
       teachingMinutes: number;
       plannedMinutes: number;
+      minutesLateStart: number;
+      minutesEarlyStart: number;
+      minutesEarlyEnd: number;
+      minutesOvertimeEnd: number;
       sessions: number;
       hours: number;
       byPeriod: ReturnType<typeof sortedPeriodBuckets>;
@@ -219,6 +233,10 @@ router.get('/teachers/attendance/summary', async (req, res) => {
         maxWeeklyHours: t.maxWeeklyHours,
         teachingMinutes: 0,
         plannedMinutes: 0,
+        minutesLateStart: 0,
+        minutesEarlyStart: 0,
+        minutesEarlyEnd: 0,
+        minutesOvertimeEnd: 0,
         sessions: 0,
         hours: 0,
         byPeriod: [],
@@ -241,18 +259,34 @@ router.get('/teachers/attendance/summary', async (req, res) => {
     const byPeriod = new Map<string, PeriodBucket>();
     let teachingMinutesTotal = 0;
     let plannedMinutesTotal = 0;
+    let minutesLateStartTotal = 0;
+    let minutesEarlyStartTotal = 0;
+    let minutesEarlyEndTotal = 0;
+    let minutesOvertimeEndTotal = 0;
 
     for (const row of rows) {
       const mins = row.teachingMinutes ?? 0;
       const planned = row.plannedMinutes ?? 0;
+      const lateStart = row.minutesLateStart ?? 0;
+      const earlyStart = row.minutesEarlyStart ?? 0;
+      const earlyEnd = row.minutesEarlyEnd ?? 0;
+      const overtimeEnd = row.minutesOvertimeEnd ?? 0;
       teachingMinutesTotal += mins;
       plannedMinutesTotal += planned;
+      minutesLateStartTotal += lateStart;
+      minutesEarlyStartTotal += earlyStart;
+      minutesEarlyEndTotal += earlyEnd;
+      minutesOvertimeEndTotal += overtimeEnd;
       accumulatePeriod(byPeriod, row.attendanceDate, groupBy, mins, planned);
 
       const cur = byTeacher.get(row.teacherId);
       if (!cur) continue;
       cur.teachingMinutes += mins;
       cur.plannedMinutes += planned;
+      cur.minutesLateStart += lateStart;
+      cur.minutesEarlyStart += earlyStart;
+      cur.minutesEarlyEnd += earlyEnd;
+      cur.minutesOvertimeEnd += overtimeEnd;
       cur.sessions += 1;
       cur.hours = minutesToHours(cur.teachingMinutes);
       accumulatePeriod(cur._period, row.attendanceDate, groupBy, mins, planned);
@@ -275,6 +309,10 @@ router.get('/teachers/attendance/summary', async (req, res) => {
         plannedMinutes: plannedMinutesTotal,
         hours: minutesToHours(teachingMinutesTotal),
         plannedHours: minutesToHours(plannedMinutesTotal),
+        minutesLateStart: minutesLateStartTotal,
+        minutesEarlyStart: minutesEarlyStartTotal,
+        minutesEarlyEnd: minutesEarlyEndTotal,
+        minutesOvertimeEnd: minutesOvertimeEndTotal,
         teachersCount: byTeacherList.filter((t) => t.sessions > 0).length,
         teachersListed: byTeacherList.length,
       },

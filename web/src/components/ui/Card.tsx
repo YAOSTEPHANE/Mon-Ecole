@@ -31,15 +31,15 @@ const Card: React.FC<CardProps> = ({
       ? 'premium-card-surface p-6 sm:p-8'
       : variant === 'luxe'
         ? `lux-card-surface ${luxePad}`.trim()
-        : 'bg-white rounded-xl shadow-lg p-6';
+        : 'bg-white/95 rounded-2xl shadow-dash-card p-6 ring-1 ring-stone-200/60';
 
   const motion =
     hover && variant === 'premium'
-      ? 'transition-all duration-300 hover:shadow-premium hover:-translate-y-0.5 hover:border-white'
+      ? 'transition-all duration-300 ease-premium hover:shadow-premium hover:-translate-y-0.5'
       : hover && variant === 'luxe'
-        ? 'transition-all duration-500 hover:shadow-lux-soft hover:-translate-y-0.5'
+        ? 'transition-all duration-500 ease-premium hover:shadow-dash-card-hover hover:-translate-y-0.5'
         : hover
-          ? 'transition-all duration-300 hover:shadow-xl hover:-translate-y-1'
+          ? 'transition-all duration-300 ease-premium hover:shadow-dash-card-hover hover:-translate-y-0.5'
           : '';
 
   return (
@@ -55,9 +55,3 @@ const Card: React.FC<CardProps> = ({
 };
 
 export default Card;
-
-
-
-
-
-

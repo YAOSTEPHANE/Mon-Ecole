@@ -22,7 +22,9 @@ import {
   FiUser,
   FiBook,
   FiCalendar,
-  FiAward
+  FiAward,
+  FiChevronDown,
+  FiChevronUp,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -33,6 +35,7 @@ import {
   normalizeEvaluationType,
   type EvaluationTypeValue,
 } from '@/lib/evaluationTypes';
+import { groupGradesByStudent } from '@/lib/gradeEvaluationGroups';
 import { getCurrentTrimester } from '@/lib/academicCalendar';
 
 const REPORTING_PERIOD_OPTIONS = [
@@ -52,6 +55,7 @@ const GradesManager = ({ searchQuery = '' }: GradesManagerProps) => {
   const [editingGrade, setEditingGrade] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
+  const [openStudentKeys, setOpenStudentKeys] = useState<Set<string>>(new Set());
 
   // Fetch courses
   const { data: courses, isLoading: coursesLoading } = useQuery({
@@ -96,6 +100,24 @@ const GradesManager = ({ searchQuery = '' }: GradesManagerProps) => {
     
     return filtered;
   }, [grades, searchQuery, filterType]);
+
+  const gradesByStudent = useMemo(
+    () => groupGradesByStudent(filteredGrades),
+    [filteredGrades],
+  );
+
+  useEffect(() => {
+    setOpenStudentKeys(new Set());
+  }, [selectedCourse, filterType, searchQuery]);
+
+  const toggleStudentGroup = (key: string) => {
+    setOpenStudentKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -230,94 +252,129 @@ const GradesManager = ({ searchQuery = '' }: GradesManagerProps) => {
               </div>
             </Card>
           ) : (
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Élève</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Titre</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Note</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredGrades.map((grade: any) => {
-                      const score = (grade.score / grade.maxScore) * 20;
-                      return (
-                        <tr key={grade.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <FiUser className="w-4 h-4 text-gray-400" />
-                              <span className="font-medium text-gray-900">
-                                {grade.student?.user?.firstName} {grade.student?.user?.lastName}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge
-                              variant={getEvaluationBadgeVariant(grade.evaluationType)}
-                              size="sm"
-                            >
-                              {getEvaluationTypeLabel(grade.evaluationType)}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="text-gray-900">{grade.title}</span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <span className={`font-bold ${
-                                score >= 16 ? 'text-green-600' :
-                                score >= 12 ? 'text-blue-600' :
-                                score >= 10 ? 'text-yellow-600' :
-                                'text-red-600'
-                              }`}>
-                                {score.toFixed(2)}/20
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                ({grade.score}/{grade.maxScore})
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2 text-gray-600">
-                              <FiCalendar className="w-4 h-4" />
-                              <span className="text-sm">
-                                {format(new Date(grade.date), 'dd MMM yyyy', { locale: fr })}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingGrade(grade);
-                                  setShowAddModal(true);
-                                }}
-                              >
-                                <FiEdit2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => setShowDeleteConfirm(grade.id)}
-                              >
-                                <FiTrash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 px-1">
+                Toutes les évaluations d&apos;un élève sont regroupées au même endroit.
+              </p>
+              {gradesByStudent.map((student) => {
+                const open = openStudentKeys.has(student.key);
+                return (
+                  <Card key={student.key} className="overflow-hidden !p-0 border border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => toggleStudentGroup(student.key)}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-violet-50/60 transition-colors"
+                      aria-expanded={open}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <FiUser className="h-4 w-4 text-violet-600 shrink-0" />
+                          <span className="font-semibold text-gray-900 truncate">{student.fullName}</span>
+                          {student.className ? (
+                            <span className="text-xs text-gray-500">{student.className}</span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {student.grades.length} évaluation{student.grades.length > 1 ? 's' : ''}
+                          {student.averageOn20 != null
+                            ? ` · moyenne ${student.averageOn20.toFixed(2)}/20`
+                            : ''}
+                        </p>
+                      </div>
+                      {open ? (
+                        <FiChevronUp className="h-5 w-5 shrink-0 text-gray-500" />
+                      ) : (
+                        <FiChevronDown className="h-5 w-5 shrink-0 text-gray-500" />
+                      )}
+                    </button>
+                    {open && (
+                      <div className="overflow-x-auto border-t border-gray-100">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-gray-200 bg-gray-50/80">
+                              <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-sm">Type</th>
+                              <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-sm">Évaluation</th>
+                              <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-sm">Note</th>
+                              <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-sm">Date</th>
+                              <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-sm">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {student.grades.map((grade: any) => {
+                              const score = (grade.score / grade.maxScore) * 20;
+                              return (
+                                <tr key={grade.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                  <td className="py-2.5 px-4">
+                                    <Badge
+                                      variant={getEvaluationBadgeVariant(grade.evaluationType)}
+                                      size="sm"
+                                    >
+                                      {getEvaluationTypeLabel(grade.evaluationType)}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-2.5 px-4">
+                                    <span className="text-gray-900">{grade.title}</span>
+                                  </td>
+                                  <td className="py-2.5 px-4">
+                                    <div className="flex items-center space-x-2">
+                                      <span
+                                        className={`font-bold ${
+                                          score >= 16
+                                            ? 'text-green-600'
+                                            : score >= 12
+                                              ? 'text-blue-600'
+                                              : score >= 10
+                                                ? 'text-yellow-600'
+                                                : 'text-red-600'
+                                        }`}
+                                      >
+                                        {score.toFixed(2)}/20
+                                      </span>
+                                      <span className="text-sm text-gray-500">
+                                        ({grade.score}/{grade.maxScore})
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-4">
+                                    <div className="flex items-center space-x-2 text-gray-600">
+                                      <FiCalendar className="w-4 h-4" />
+                                      <span className="text-sm">
+                                        {format(new Date(grade.date), 'dd MMM yyyy', { locale: fr })}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-4">
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditingGrade(grade);
+                                          setShowAddModal(true);
+                                        }}
+                                      >
+                                        <FiEdit2 className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() => setShowDeleteConfirm(grade.id)}
+                                      >
+                                        <FiTrash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
           )}
         </>
       )}

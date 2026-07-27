@@ -149,13 +149,13 @@ const TeacherDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="TEACHER">
       <PremiumPortalShell variant="teacher">
-      <div className="min-h-screen flex">
-        <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky top-16 h-[calc(100vh-4rem)] bg-white/92 backdrop-blur-xl border-r border-stone-200/90 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)]">
-          <div className="p-2.5 flex flex-col flex-1 min-h-0">
-            <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider px-2 py-1.5 shrink-0">
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-stretch">
+        <aside className="relative z-50 hidden shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl lg:sticky lg:top-16 lg:flex lg:h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-4rem)] lg:w-64 lg:self-start">
+          <div className="flex min-h-0 flex-1 flex-col p-2.5">
+            <p className="shrink-0 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500">
               Enseignant
             </p>
-            <nav className="space-y-1 flex-1 overflow-y-auto min-h-0 pr-0.5 text-xs leading-snug">
+            <nav className="dash-sidebar-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-0.5 text-xs leading-snug">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -183,9 +183,9 @@ const TeacherDashboard = () => {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-16 z-20 glass-nav shadow-[0_8px_30px_-12px_rgba(12,10,9,0.08)] shrink-0">
-            <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-2 sm:py-2.5">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="dash-command-bar sticky top-16 z-20 shrink-0">
+            <div className="mx-auto max-w-[1240px] px-3 sm:px-6 py-2.5 sm:py-3">
               <div className="flex flex-col gap-2 sm:gap-3">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
                   <div className="min-w-0">
@@ -240,7 +240,7 @@ const TeacherDashboard = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Rechercher cours, élèves, devoirs…"
-                    className="w-full pl-10 pr-3 py-2 sm:py-2.5 bg-white/95 border border-stone-200/90 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-amber-500/35 focus:border-amber-400/50 hover:border-stone-300"
+                    className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
                     aria-label="Recherche dans l’espace enseignant"
                   />
                 </div>
@@ -248,8 +248,8 @@ const TeacherDashboard = () => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
-            <div className="max-w-[1200px] mx-auto space-y-4 sm:space-y-5">
+          <main className="dash-workspace flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-5 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
+            <div className="mx-auto max-w-[1240px] space-y-5 sm:space-y-6">
               <TeacherSelfAttendance />
                             <PremiumModuleHeader
                 title={activeMeta.label}

@@ -55,7 +55,6 @@ import { useSchool } from '../../contexts/SchoolContext';
 import { useSchoolReady, schoolQueryKey } from '../../hooks/useSchoolReady';
 import {
   PremiumDashboardHero,
-  PremiumDashboardShell,
   PremiumKpiCard,
   PremiumSectionTitle,
 } from '../dashboard/premium';
@@ -206,8 +205,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
     dataUpdatedAt > 0 ? format(new Date(dataUpdatedAt), "HH:mm:ss", { locale: fr }) : null;
 
   return (
-    <PremiumDashboardShell>
-    <div className="space-y-5">
+    <div className="space-y-5 sm:space-y-6">
       <PremiumDashboardHero
         eyebrow="Pilotage établissement"
         title="Vue d'ensemble opérationnelle"
@@ -228,13 +226,13 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
         isFetching={isFetching}
       />
 
-      <section>
+      <section className="dash-section-panel">
         <PremiumSectionTitle
           title="Indicateurs clés — effectifs"
           subtitle="Population scolaire et personnel"
           icon={FiUsers}
         />
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {indicators.map((ind) => (
             <PremiumKpiCard
               key={ind.title}
@@ -249,7 +247,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
       </section>
 
       {kpis?.cards && (
-        <section>
+        <section className="dash-section-panel">
           <PremiumSectionTitle title="KPI — inscriptions, finances & pédagogie" subtitle="Suivi opérationnel et trésorerie" icon={FiDollarSign} />
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <PremiumKpiCard label="Dossiers admission" value={(kpis.cards.admissionsPending ?? 0) + (kpis.cards.admissionsUnderReview ?? 0)} subtitle={`${kpis.cards.admissionsPending} attente · ${kpis.cards.admissionsUnderReview} examen`} icon={FiInbox} accent="indigo" />
@@ -260,7 +258,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
         </section>
       )}
 
-      <section>
+      <section className="dash-section-panel">
         <PremiumSectionTitle title="Actions rapides" subtitle="Raccourcis vers les tâches fréquentes" icon={FiZap} />
         <QuickActions
           onAddStudent={onAddStudent}
@@ -273,14 +271,14 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
         />
       </section>
 
-      <section>
+      <section className="dash-section-panel">
         <PremiumSectionTitle title="Notifications" subtitle="Alertes et messages récents" icon={FiBell} />
         <NotificationsWidget />
       </section>
 
       {/* Graphiques + activité */}
-      <div className="space-y-4">
-          <section>
+      <div className="space-y-5 sm:space-y-6">
+          <section className="dash-section-panel">
             <PremiumSectionTitle
               title="Répartition des effectifs"
               subtitle="Visualisation par classe"
@@ -559,13 +557,12 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
             )}
           </section>
 
-          <section>
+          <section className="dash-section-panel">
             <PremiumSectionTitle title="Activité récente" subtitle="Dernières actions sur la plateforme" icon={FiActivity} />
             <RecentActivity />
           </section>
       </div>
     </div>
-    </PremiumDashboardShell>
   );
 };
 

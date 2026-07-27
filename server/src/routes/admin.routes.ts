@@ -73,6 +73,7 @@ import {
   assertPaymentInSchool,
   assertStudentInSchool,
   assertTuitionFeeInSchool,
+  isObjectId,
   mergeWhereWithSchoolScope,
   scopedPaymentWhere,
   scopedTuitionFeeWhere,
@@ -84,6 +85,21 @@ import {
   assignmentWhereRelationsExist,
   gradeWhereRelationsExist,
 } from '../utils/prisma-relation-exists.util';
+import {
+  applyApprovedPermissionToAbsences,
+  assertAbsencePermissionDeletable,
+  autoExcuseAbsenceRecords,
+  enrichPermissionRequestWithReviewer,
+  enrichPermissionRequestsWithReviewers,
+  permissionRequestInclude,
+  validatePermissionPeriod,
+  ABSENCE_PERMISSION_DELETE_FORBIDDEN_MESSAGE,
+} from '../utils/student-absence-permission.util';
+import { notifyFamilyOfAbsencePermissionDecision } from '../utils/student-absence-permission-notify.util';
+import {
+  computeAttendanceStats,
+  defaultAttendanceStatsPeriod,
+} from '../utils/attendance-stats.util';
 import {
   studentScopeWhere,
   classScopeWhere,
@@ -107,6 +123,9 @@ import {
   notifyTuitionFeeChanged,
   runAutomaticTuitionReminders,
 } from '../utils/tuition-financial-automation.util';
+import { assertPaymentWithinRemaining } from '../utils/payment-overpay.util';
+import { verifyPaymentReceipt } from '../utils/payment-receipt.util';
+import { finalizeCompletedTuitionPayment } from '../utils/tuition-fee-paid-sync.util';
 import {
   isMongoBackupFilesystemWritable,
   listMongoBackups,
@@ -320,24 +339,174 @@ router.get('/absences', async (req, res) => {
   }
 });
 
+// Demandes de permission d'absence (élèves)
+router.get('/absence-permission-requests', async (req, res) => {
+  try {
+    const { status, studentId } = req.query as { status?: string; studentId?: string };
+
+    const requests = await prisma.studentAbsencePermissionRequest.findMany({
+      where: {
+        ...(status ? { status: status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' } : {}),
+        ...(studentId ? { studentId } : {}),
+      },
+      include: permissionRequestInclude,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    res.json(await enrichPermissionRequestsWithReviewers(requests));
+  } catch (error: unknown) {
+    console.error('GET /admin/absence-permission-requests:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/absence-permission-requests/stats', async (req, res) => {
+  try {
+    const { studentId } = req.query as { studentId?: string };
+    const where = studentId ? { studentId } : {};
+
+    const [total, pending, approved, rejected] = await Promise.all([
+      prisma.studentAbsencePermissionRequest.count({ where }),
+      prisma.studentAbsencePermissionRequest.count({ where: { ...where, status: 'PENDING' } }),
+      prisma.studentAbsencePermissionRequest.count({ where: { ...where, status: 'APPROVED' } }),
+      prisma.studentAbsencePermissionRequest.count({ where: { ...where, status: 'REJECTED' } }),
+    ]);
+
+    res.json({ total, pending, approved, rejected });
+  } catch (error: unknown) {
+    console.error('GET /admin/absence-permission-requests/stats:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.patch(
+  '/absence-permission-requests/:id',
+  [
+    body('status').isIn(['APPROVED', 'REJECTED']),
+    body('adminComment').optional().isString().isLength({ max: 2000 }),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { id } = req.params;
+      const { status, adminComment } = req.body as {
+        status: 'APPROVED' | 'REJECTED';
+        adminComment?: string;
+      };
+
+      const existing = await prisma.studentAbsencePermissionRequest.findUnique({
+        where: { id },
+      });
+      if (!existing) {
+        return res.status(404).json({ error: 'Demande introuvable' });
+      }
+      if (existing.status !== 'PENDING') {
+        return res.status(400).json({ error: 'Cette demande a déjà été traitée' });
+      }
+      if (status === 'REJECTED' && !(adminComment?.trim())) {
+        return res.status(400).json({ error: 'Le motif de refus est obligatoire' });
+      }
+
+      const authReq = req as import('../middleware/auth.middleware').AuthRequest;
+      const reviewerId = authReq.user?.id;
+
+      const updated = await prisma.studentAbsencePermissionRequest.update({
+        where: { id },
+        data: {
+          status,
+          adminComment: adminComment?.trim() || null,
+          reviewedByUserId: reviewerId ?? null,
+          reviewedAt: new Date(),
+        },
+        include: permissionRequestInclude,
+      });
+
+      let absencesUpdated = 0;
+      if (status === 'APPROVED') {
+        absencesUpdated = await applyApprovedPermissionToAbsences(
+          existing.studentId,
+          existing.startDate,
+          existing.endDate,
+          existing.motif,
+          existing.reasonDetail,
+          existing.justificationDocuments
+        );
+      }
+
+      void notifyFamilyOfAbsencePermissionDecision(
+        id,
+        status,
+        adminComment?.trim() || null,
+        absencesUpdated
+      ).catch((notifyError) => {
+        console.error('notifyFamilyOfAbsencePermissionDecision:', notifyError);
+      });
+
+      res.json({
+        ...(await enrichPermissionRequestWithReviewer(updated)),
+        absencesUpdated,
+      });
+    } catch (error: unknown) {
+      console.error('PATCH /admin/absence-permission-requests/:id:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  }
+);
+
+router.delete('/absence-permission-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.studentAbsencePermissionRequest.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Demande introuvable' });
+    }
+
+    try {
+      assertAbsencePermissionDeletable(existing.status);
+    } catch (error: unknown) {
+      return res.status(403).json({
+        error: error instanceof Error ? error.message : ABSENCE_PERMISSION_DELETE_FORBIDDEN_MESSAGE,
+      });
+    }
+
+    await prisma.studentAbsencePermissionRequest.delete({ where: { id } });
+    res.json({ message: 'Demande supprimée' });
+  } catch (error: unknown) {
+    console.error('DELETE /admin/absence-permission-requests/:id:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // Statistiques d’assiduité (agrégats sur une période)
 router.get('/absences/stats', async (req, res) => {
   try {
     const { classId, from, to } = req.query as { classId?: string; from?: string; to?: string };
-    const where: Record<string, unknown> = {};
-    if (classId) {
-      where.student = { classId };
+    const defaults = defaultAttendanceStatsPeriod();
+    const fromDate = from ? new Date(from) : defaults.from;
+    const toDate = to ? new Date(to) : defaults.to;
+    if (!Number.isNaN(toDate.getTime())) {
+      toDate.setHours(23, 59, 59, 999);
     }
-    if (from || to) {
-      const d: { gte?: Date; lte?: Date } = {};
-      if (from) d.gte = new Date(from);
-      if (to) {
-        const t = new Date(to);
-        t.setHours(23, 59, 59, 999);
-        d.lte = t;
-      }
-      where.date = d;
-    }
+
+    const where: Prisma.AbsenceWhereInput = {
+      AND: [
+        absenceWhereRelationsExist,
+        ...(classId ? [{ student: { classId } }] : []),
+        {
+          date: {
+            gte: fromDate,
+            lte: toDate,
+          },
+        },
+      ],
+    };
 
     const rows = await prisma.absence.findMany({
       where,
@@ -348,62 +517,29 @@ router.get('/absences/stats', async (req, res) => {
         hasMedicalCertificate: true,
         sanctionNote: true,
         studentId: true,
+        courseId: true,
+        attendanceSource: true,
+        date: true,
+        course: {
+          select: {
+            name: true,
+            class: { select: { id: true, name: true } },
+          },
+        },
+        student: {
+          select: {
+            classId: true,
+            class: { select: { name: true } },
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
       },
     });
 
-    let present = 0;
-    let absentUnexcused = 0;
-    let late = 0;
-    let excusedAbsent = 0;
-    let medicalCerts = 0;
-    let withSanction = 0;
-    let lateMinutesSum = 0;
-    let lateMinutesCount = 0;
-    const lateByStudent = new Map<string, number>();
-
-    for (const r of rows) {
-      if (r.status === 'PRESENT') present++;
-      else if (r.status === 'LATE') {
-        late++;
-        if (r.minutesLate != null && r.minutesLate > 0) {
-          lateMinutesSum += r.minutesLate;
-          lateMinutesCount++;
-          lateByStudent.set(r.studentId, (lateByStudent.get(r.studentId) || 0) + 1);
-        }
-      } else if (r.status === 'ABSENT') {
-        if (r.excused) excusedAbsent++;
-        else absentUnexcused++;
-      } else if (r.status === 'EXCUSED') {
-        excusedAbsent++;
-      }
-      if (r.hasMedicalCertificate) medicalCerts++;
-      if (r.sanctionNote && String(r.sanctionNote).trim()) withSanction++;
-    }
-
-    const topLateStudents = [...lateByStudent.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([studentId, count]) => ({ studentId, lateSessions: count }));
-
-    const total = rows.length;
-    const punctualityRate =
-      total > 0 ? Math.round(((present + late) / total) * 1000) / 10 : 0;
-
-    res.json({
-      total,
-      present,
-      absentUnexcused,
-      late,
-      excusedAbsent,
-      medicalCertificates: medicalCerts,
-      sanctionsRecorded: withSanction,
-      avgLateMinutes:
-        lateMinutesCount > 0 ? Math.round((lateMinutesSum / lateMinutesCount) * 10) / 10 : null,
-      punctualityRate,
-      topLateStudents,
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    res.json(computeAttendanceStats(rows));
+  } catch (error: unknown) {
+    console.error('GET /admin/absences/stats:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 
@@ -975,9 +1111,14 @@ router.post(
         })
       );
 
+      await autoExcuseAbsenceRecords(absences);
+      const refreshedAbsences = await prisma.absence.findMany({
+        where: { id: { in: absences.map((a) => a.id) } },
+      });
+
       if (notifyParentsOnSave !== false) {
         await Promise.allSettled(
-          absences.map(async (a) => {
+          refreshedAbsences.map(async (a) => {
             if (!shouldNotifyParentsOnAttendanceChange(a.status, a.excused)) return;
             await notifyParentsOfAttendanceChange({
               studentId: a.studentId,
@@ -995,7 +1136,7 @@ router.post(
         );
       }
 
-      res.status(201).json(absences);
+      res.status(201).json(refreshedAbsences);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1409,9 +1550,50 @@ router.post(
         },
       });
 
+      await autoExcuseAbsenceRecords([absence]);
+      const savedAbsence = await prisma.absence.findUnique({
+        where: { id: absence.id },
+        include: {
+          student: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+              class: {
+                select: {
+                  name: true,
+                  level: true,
+                },
+              },
+            },
+          },
+          course: {
+            select: {
+              name: true,
+              code: true,
+            },
+          },
+          teacher: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
       if (
         notifyParentsBody !== false &&
-        shouldNotifyParentsOnAttendanceChange(absence.status, absence.excused)
+        savedAbsence &&
+        shouldNotifyParentsOnAttendanceChange(savedAbsence.status, savedAbsence.excused)
       ) {
         const c = await prisma.course.findUnique({
           where: { id: courseId },
@@ -1419,22 +1601,22 @@ router.post(
         });
         if (c) {
           void notifyParentsOfAttendanceChange({
-            studentId: absence.studentId,
-            status: absence.status,
-            date: absence.date,
+            studentId: savedAbsence.studentId,
+            status: savedAbsence.status,
+            date: savedAbsence.date,
             courseName: c.name,
             courseCode: c.code,
-            minutesLate: absence.minutesLate,
+            minutesLate: savedAbsence.minutesLate,
           }).then(() =>
             prisma.absence.update({
-              where: { id: absence.id },
+              where: { id: savedAbsence.id },
               data: { parentNotifiedAt: new Date() },
             })
           );
         }
       }
 
-      res.status(201).json(absence);
+      res.status(201).json(savedAbsence ?? absence);
     } catch (error: any) {
       console.error('Erreur lors de la création de l\'absence:', error);
       res.status(500).json({ 
@@ -1761,9 +1943,167 @@ router.delete('/assignments/:id', async (req, res) => {
   }
 });
 
+// Historique résultats + progression élève
+// (déclaré avant /grades/:id pour éviter que "history" soit traité comme un id)
+router.get('/grades/history/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, classId: true },
+    });
+    if (!student) return res.status(404).json({ error: 'Élève introuvable' });
+
+    const grades = await prisma.grade.findMany({
+      where: { studentId },
+      include: {
+        course: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    const monthlyMap = new Map<string, { total: number; coeff: number }>();
+    for (const g of grades) {
+      const key = `${g.date.getFullYear()}-${String(g.date.getMonth() + 1).padStart(2, '0')}`;
+      const value = monthlyMap.get(key) || { total: 0, coeff: 0 };
+      const on20 = (g.score / g.maxScore) * 20;
+      value.total += on20 * g.coefficient;
+      value.coeff += g.coefficient;
+      monthlyMap.set(key, value);
+    }
+
+    const progression = [...monthlyMap.entries()].map(([month, v]) => ({
+      month,
+      average: v.coeff > 0 ? v.total / v.coeff : 0,
+    }));
+
+    const reportCards = await prisma.reportCard.findMany({
+      where: { studentId },
+      orderBy: [{ academicYear: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    res.json({
+      studentId,
+      history: grades,
+      progression,
+      reportCards,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erreur serveur' });
+  }
+});
+
+// Classements et rangs par classe / période
+router.get('/grades/rankings', async (req, res) => {
+  try {
+    const { classId, period = 'trim1', academicYear } = req.query as {
+      classId?: string;
+      period?: string;
+      academicYear?: string;
+    };
+    if (!classId || !academicYear) {
+      return res.status(400).json({ error: 'classId et academicYear sont requis' });
+    }
+
+    const { rows, periodLabel, periodDates } = await computeClassBulletinRanks(
+      classId,
+      period,
+      academicYear
+    );
+
+    const students = await prisma.student.findMany({
+      where: { classId },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+    const byId = new Map(students.map((s) => [s.id, s]));
+
+    res.json({
+      classId,
+      period,
+      periodLabel,
+      periodDates,
+      rows: rows.map((r) => ({
+        ...r,
+        student: byId.get(r.studentId) || null,
+      })),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erreur serveur' });
+  }
+});
+
+/**
+ * Aperçu Admis / Doublant après moyennes T3 (seuil 10/20 par défaut), triés par classe.
+ * GET /admin/grades/promotion-decisions?academicYear=&period=trim3&classId=&threshold=10
+ */
+router.get('/grades/promotion-decisions', async (req: SchoolContextRequest, res) => {
+  try {
+    const academicYear =
+      (typeof req.query.academicYear === 'string' && req.query.academicYear) ||
+      getCurrentAcademicYear();
+    const period = typeof req.query.period === 'string' ? req.query.period : 'trim3';
+    const classId = typeof req.query.classId === 'string' ? req.query.classId : undefined;
+    const thresholdRaw = typeof req.query.threshold === 'string' ? Number(req.query.threshold) : 10;
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 10;
+
+    const result = await previewPromotionDecisions({
+      academicYear,
+      period,
+      classId,
+      schoolId: req.schoolId,
+      threshold,
+    });
+    res.json(result);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+/**
+ * Déclare officiellement Admis (≥ seuil) / Doublant (< seuil) et met à jour isRepeating.
+ * POST /admin/grades/promotion-decisions/declare
+ */
+router.post('/grades/promotion-decisions/declare', async (req: AuthRequest & SchoolContextRequest, res) => {
+  try {
+    const academicYear =
+      (typeof req.body?.academicYear === 'string' && req.body.academicYear) ||
+      getCurrentAcademicYear();
+    const period = typeof req.body?.period === 'string' ? req.body.period : 'trim3';
+    const classId = typeof req.body?.classId === 'string' ? req.body.classId : undefined;
+    const thresholdRaw = Number(req.body?.threshold);
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 10;
+    const notifyParents = Boolean(req.body?.notifyParents);
+    const includeSansNotesAsDoublant = Boolean(req.body?.includeSansNotesAsDoublant);
+
+    const result = await declarePromotionDecisions({
+      academicYear,
+      period,
+      classId,
+      schoolId: req.schoolId,
+      threshold,
+      declaredById: req.user?.id,
+      notifyParents,
+      includeSansNotesAsDoublant,
+    });
+
+    res.json({
+      ...result,
+      message: `${result.admis} admis, ${result.doublants} doublant(s) déclarés (${result.declared} au total).`,
+    });
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // Obtenir une note par ID (Admin)
 router.get('/grades/:id', async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) {
+      return res.status(404).json({ error: 'Note non trouvée' });
+    }
+
     const grade = await prisma.grade.findUnique({
       where: { id: req.params.id },
       include: {
@@ -5243,159 +5583,6 @@ router.put('/report-cards/template/default', async (req, res) => {
   }
 });
 
-// Historique résultats + progression élève
-router.get('/grades/history/:studentId', async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: { id: true, classId: true },
-    });
-    if (!student) return res.status(404).json({ error: 'Élève introuvable' });
-
-    const grades = await prisma.grade.findMany({
-      where: { studentId },
-      include: {
-        course: { select: { id: true, name: true, code: true } },
-      },
-      orderBy: { date: 'asc' },
-    });
-
-    const monthlyMap = new Map<string, { total: number; coeff: number }>();
-    for (const g of grades) {
-      const key = `${g.date.getFullYear()}-${String(g.date.getMonth() + 1).padStart(2, '0')}`;
-      const value = monthlyMap.get(key) || { total: 0, coeff: 0 };
-      const on20 = (g.score / g.maxScore) * 20;
-      value.total += on20 * g.coefficient;
-      value.coeff += g.coefficient;
-      monthlyMap.set(key, value);
-    }
-
-    const progression = [...monthlyMap.entries()].map(([month, v]) => ({
-      month,
-      average: v.coeff > 0 ? v.total / v.coeff : 0,
-    }));
-
-    const reportCards = await prisma.reportCard.findMany({
-      where: { studentId },
-      orderBy: [{ academicYear: 'asc' }, { createdAt: 'asc' }],
-    });
-
-    res.json({
-      studentId,
-      history: grades,
-      progression,
-      reportCards,
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
-  }
-});
-
-// Classements et rangs par classe / période
-router.get('/grades/rankings', async (req, res) => {
-  try {
-    const { classId, period = 'trim1', academicYear } = req.query as {
-      classId?: string;
-      period?: string;
-      academicYear?: string;
-    };
-    if (!classId || !academicYear) {
-      return res.status(400).json({ error: 'classId et academicYear sont requis' });
-    }
-
-    const { rows, periodLabel, periodDates } = await computeClassBulletinRanks(
-      classId,
-      period,
-      academicYear
-    );
-
-    const students = await prisma.student.findMany({
-      where: { classId },
-      include: {
-        user: { select: { firstName: true, lastName: true, email: true } },
-      },
-    });
-    const byId = new Map(students.map((s) => [s.id, s]));
-
-    res.json({
-      classId,
-      period,
-      periodLabel,
-      periodDates,
-      rows: rows.map((r) => ({
-        ...r,
-        student: byId.get(r.studentId) || null,
-      })),
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
-  }
-});
-
-/**
- * Aperçu Admis / Doublant après moyennes T3 (seuil 10/20 par défaut), triés par classe.
- * GET /admin/grades/promotion-decisions?academicYear=&period=trim3&classId=&threshold=10
- */
-router.get('/grades/promotion-decisions', async (req: SchoolContextRequest, res) => {
-  try {
-    const academicYear =
-      (typeof req.query.academicYear === 'string' && req.query.academicYear) ||
-      getCurrentAcademicYear();
-    const period = typeof req.query.period === 'string' ? req.query.period : 'trim3';
-    const classId = typeof req.query.classId === 'string' ? req.query.classId : undefined;
-    const thresholdRaw = typeof req.query.threshold === 'string' ? Number(req.query.threshold) : 10;
-    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 10;
-
-    const result = await previewPromotionDecisions({
-      academicYear,
-      period,
-      classId,
-      schoolId: req.schoolId,
-      threshold,
-    });
-    res.json(result);
-  } catch (error: unknown) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
-  }
-});
-
-/**
- * Déclare officiellement Admis (≥ seuil) / Doublant (< seuil) et met à jour isRepeating.
- * POST /admin/grades/promotion-decisions/declare
- */
-router.post('/grades/promotion-decisions/declare', async (req: AuthRequest & SchoolContextRequest, res) => {
-  try {
-    const academicYear =
-      (typeof req.body?.academicYear === 'string' && req.body.academicYear) ||
-      getCurrentAcademicYear();
-    const period = typeof req.body?.period === 'string' ? req.body.period : 'trim3';
-    const classId = typeof req.body?.classId === 'string' ? req.body.classId : undefined;
-    const thresholdRaw = Number(req.body?.threshold);
-    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 10;
-    const notifyParents = Boolean(req.body?.notifyParents);
-    const includeSansNotesAsDoublant = Boolean(req.body?.includeSansNotesAsDoublant);
-
-    const result = await declarePromotionDecisions({
-      academicYear,
-      period,
-      classId,
-      schoolId: req.schoolId,
-      threshold,
-      declaredById: req.user?.id,
-      notifyParents,
-      includeSansNotesAsDoublant,
-    });
-
-    res.json({
-      ...result,
-      message: `${result.admis} admis, ${result.doublants} doublant(s) déclarés (${result.declared} au total).`,
-    });
-  } catch (error: unknown) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
-  }
-});
-
 // Conseils de classe
 router.get('/class-councils', async (req, res) => {
   try {
@@ -6555,6 +6742,7 @@ router.get('/payments', async (req: SchoolContextRequest, res) => {
             amount: true,
             dueDate: true,
             description: true,
+            billingStatus: true,
           },
         },
       },
@@ -6570,6 +6758,30 @@ router.get('/payments', async (req: SchoolContextRequest, res) => {
       error: error.message || 'Erreur serveur',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+/** Vérification anti-falsification d'un reçu (comptabilité / économat). */
+router.get('/payments/verify-receipt', async (req: SchoolContextRequest, res) => {
+  try {
+    const code = String(req.query.code ?? '').trim();
+    const result = await verifyPaymentReceipt(prisma, code);
+    if (!result.valid || !result.payment) {
+      return res.status(404).json(result);
+    }
+    const inSchool = await prisma.payment.findFirst({
+      where: {
+        id: result.payment.id,
+        ...scopedPaymentWhere(req.schoolId!),
+      },
+      select: { id: true },
+    });
+    if (!inSchool) {
+      return res.status(404).json({ valid: false, message: 'Reçu introuvable pour cet établissement' });
+    }
+    res.json(result);
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });
 
@@ -6723,16 +6935,11 @@ router.post('/tuition-fees/counter-payment', async (req: SchoolContextRequest, r
     });
     if (!fee) return res.status(404).json({ error: 'Ligne de frais introuvable' });
 
-    const completed = await prisma.payment.findMany({
-      where: { tuitionFeeId: fee.id, status: 'COMPLETED' },
-    });
-    const totalPaid = completed.reduce((s, p) => s + p.amount, 0);
-    const remaining = Math.max(0, Math.round(fee.amount) - totalPaid);
-    if (remaining <= 0) {
-      return res.status(400).json({ error: 'Cette ligne est déjà soldée' });
-    }
-    if (payAmount > remaining) {
-      return res.status(400).json({ error: `Montant max : ${remaining} FCFA` });
+    try {
+      await assertPaymentWithinRemaining(prisma, fee.id, payAmount);
+    } catch (e: unknown) {
+      const err = e as Error & { status?: number };
+      return res.status(err.status ?? 400).json({ error: err.message });
     }
 
     const paymentReference = `GUI-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
@@ -6755,17 +6962,11 @@ router.post('/tuition-fees/counter-payment', async (req: SchoolContextRequest, r
       },
     });
 
-    const newTotal = totalPaid + payAmount;
-    const isFullyPaid = newTotal >= fee.amount;
-    await prisma.tuitionFee.update({
-      where: { id: fee.id },
-      data: {
-        isPaid: isFullyPaid,
-        paidAt: isFullyPaid ? new Date() : fee.paidAt,
-      },
-    });
+    await finalizeCompletedTuitionPayment(prisma, payment.id, payment.paidAt ?? new Date());
 
-    res.status(201).json({ payment, message: 'Paiement guichet enregistré' });
+    const refreshed = await prisma.payment.findUnique({ where: { id: payment.id } });
+
+    res.status(201).json({ payment: refreshed ?? payment, message: 'Paiement guichet enregistré' });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }

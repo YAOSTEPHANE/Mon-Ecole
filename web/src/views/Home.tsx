@@ -402,26 +402,26 @@ export default function Home() {
           <div className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
             <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-14">
               <div className="home-section-fade lg:col-span-6">
-                <p className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-400">
-                  <span className="inline-flex items-center gap-2 font-medium text-tran-mustard-100/90">
+                <div className="home-hero-kicker mb-6">
+                  <span className="inline-flex items-center gap-2 font-semibold text-tran-mustard-100/95">
                     <FiCalendar className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {year}
                   </span>
-                  <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:inline-block" aria-hidden />
+                  <span className="home-hero-kicker__dot" aria-hidden />
                   <span>{schoolLocationLabel}</span>
                   {schoolCode ? (
                     <>
-                      <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:inline-block" aria-hidden />
+                      <span className="home-hero-kicker__dot hidden sm:inline-block" aria-hidden />
                       <span className="tabular-nums">Code {schoolCode}</span>
                     </>
                   ) : null}
-                </p>
+                </div>
 
                 <h1 className="home-hero-h1 home-hero-title-line font-display text-[2.35rem] font-black leading-[1.05] tracking-tight text-white sm:text-5xl sm:leading-[1.02] lg:text-[3.5rem]">
                   <span className="home-hero-brand-mark mb-3 block text-xl font-bold uppercase sm:text-2xl">
                     {schoolShortName}
                   </span>
-                  {schoolDisplayName}
+                  <span className="home-hero-h1__line">{schoolDisplayName}</span>
                 </h1>
                 <p className="home-hero-sub-line mt-6 max-w-lg text-lg leading-relaxed text-stone-300 sm:text-xl">
                   {SCHOOL_DEFAULTS.tagline}. Une formation de qualité, dans un cadre structuré et moderne.
@@ -462,11 +462,13 @@ export default function Home() {
                   </div>
                 )}
 
-                <ul className="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-sm text-stone-400">
+                <ul className="mt-10 flex flex-wrap gap-3">
                   {TRUST_PILLS.map(({ icon: Icon, text }) => (
-                    <li key={text} className="inline-flex items-center gap-2">
-                      <Icon className="h-4 w-4 shrink-0 text-tran-mustard-300" aria-hidden />
-                      {text}
+                    <li key={text}>
+                      <span className="home-trust-pill inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm text-stone-300">
+                        <Icon className="h-4 w-4 shrink-0 text-tran-mustard-300" aria-hidden />
+                        {text}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -488,6 +490,18 @@ export default function Home() {
                       sizes="(max-width: 1024px) 100vw, 50vw"
                       priority
                     />
+                    <div className="home-floating-badge left-4 top-4 sm:left-5 sm:top-5">
+                      <span className="home-floating-badge__icon">
+                        <FiAward className="h-3.5 w-3.5" aria-hidden />
+                      </span>
+                      Excellence académique
+                    </div>
+                    <div className="home-floating-badge home-floating-badge--delay right-4 top-[38%] sm:right-5">
+                      <span className="home-floating-badge__icon">
+                        <FiCpu className="h-3.5 w-3.5" aria-hidden />
+                      </span>
+                      Portail digital
+                    </div>
                     <div className="absolute inset-x-0 bottom-0 z-10 p-5 sm:p-6">
                       <p className="font-display text-lg font-semibold text-white drop-shadow-md sm:text-xl">
                         Excellence · Discipline · Réussite
@@ -502,10 +516,15 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="home-scroll-hint pointer-events-none absolute bottom-[7.5rem] left-1/2 z-20 hidden -translate-x-1/2 lg:flex" aria-hidden>
+            <span>Découvrir</span>
+            <span className="home-scroll-hint__line" />
+          </div>
+
           <div className="home-stats-rail relative z-10">
-            <div className="mx-auto grid max-w-7xl grid-cols-3 gap-2 px-4 py-6 sm:gap-6 sm:px-6 sm:py-7">
+            <div className="home-stats-rail__grid mx-auto grid max-w-7xl grid-cols-3 gap-3 px-4 py-6 sm:gap-5 sm:px-6 sm:py-7">
               {SCHOOL_STATS.map((s) => (
-                <div key={s.l} className="text-center sm:text-left">
+                <div key={s.l} className="home-stat-tile text-center sm:text-left">
                   <p className="home-stat-num font-display text-2xl font-semibold tabular-nums sm:text-3xl">{s.n}</p>
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-stone-400">{s.l}</p>
                   <p className="hidden text-xs text-stone-500 sm:block">{s.d}</p>
@@ -557,7 +576,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(201,162,39,0.18),transparent_34%),radial-gradient(circle_at_90%_20%,rgba(90,91,154,0.14),transparent_38%)]" aria-hidden />
                 <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.35fr] lg:items-end">
                   <div>
-                    <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-200/90 bg-tran-mustard-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-950 shadow-sm">
+                    <span className="home-eyebrow">
                       Expérience scolaire premium
                     </span>
                     <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
@@ -601,7 +620,7 @@ export default function Home() {
           <div className="home-bento-outer relative mx-auto max-w-7xl rounded-[2rem] border border-stone-200/90 bg-white/65 p-1.5 shadow-[0_32px_64px_-28px_rgba(12,10,9,0.22)] backdrop-blur-2xl sm:p-2">
             <div className="home-bento-inner relative rounded-[1.65rem] bg-gradient-to-b from-white via-white to-stone-50/95 px-5 py-12 ring-1 ring-stone-900/[0.04] sm:px-8 sm:py-14 lg:px-12 lg:py-16">
               <div className="mb-12 flex flex-col gap-4 text-center lg:mb-14">
-                <span className="mx-auto inline-flex w-fit items-center rounded-full border border-tran-mustard-200/90 bg-gradient-to-r from-tran-mustard-50 to-tran-mustard-100/80 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-950 shadow-sm ring-1 ring-tran-mustard-900/10">
+                <span className="home-eyebrow mx-auto">
                   Notre projet éducatif
                 </span>
                 <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl lg:tracking-tight">
@@ -912,7 +931,7 @@ export default function Home() {
         <section id="actualites" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 scroll-mt-20">
           <HomeReveal>
             <div className="text-center mb-12">
-              <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-200/80 bg-tran-mustard-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-950">
+              <span className="home-eyebrow mx-auto">
                 Vie de l&apos;établissement
               </span>
               <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
@@ -923,7 +942,7 @@ export default function Home() {
             <div className="grid gap-5 md:grid-cols-2">
               {SCHOOL_NEWS.map((item, idx) => (
                 <HomeReveal key={item.title} delayMs={idx * 60}>
-                  <article className="h-full rounded-3xl border border-stone-200/90 bg-white p-6 shadow-lg shadow-stone-900/[0.04] transition-all hover:-translate-y-1 hover:border-tran-mustard-200 hover:shadow-xl">
+                  <article className="home-news-card h-full rounded-3xl border border-stone-200/90 bg-white p-6 shadow-lg shadow-stone-900/[0.04]">
                     <p className="text-xs font-bold uppercase tracking-wider text-tran-mustard-800">{item.date}</p>
                     <h3 className="mt-2 font-display text-xl font-semibold text-stone-900">{item.title}</h3>
                     <p className="mt-3 text-sm leading-relaxed text-stone-600">{item.excerpt}</p>

@@ -14,44 +14,52 @@ type PremiumKpiCardProps = {
 
 const ACCENTS = {
   blue: {
-    ring: 'from-blue-500/80 via-indigo-500/60 to-violet-500/40',
-    icon: 'from-blue-600 to-indigo-700',
-    glow: 'shadow-blue-500/15',
+    ring: 'from-cptb-blue/90 via-brand-600/60 to-brand-400/40',
+    icon: 'from-cptb-blue to-cptb-blue-dark',
+    glow: 'shadow-cptb-blue/22',
+    value: 'text-cptb-blue',
   },
   emerald: {
-    ring: 'from-emerald-500/80 via-teal-500/60 to-cyan-500/40',
-    icon: 'from-emerald-600 to-teal-700',
-    glow: 'shadow-emerald-500/15',
+    ring: 'from-emerald-500/85 via-teal-500/65 to-cyan-500/45',
+    icon: 'from-emerald-600 to-teal-800',
+    glow: 'shadow-emerald-500/18',
+    value: 'text-emerald-800',
   },
   violet: {
-    ring: 'from-violet-500/80 via-purple-500/60 to-fuchsia-500/40',
-    icon: 'from-violet-600 to-purple-700',
-    glow: 'shadow-violet-500/15',
+    ring: 'from-violet-500/80 via-indigo-500/58 to-cptb-blue/38',
+    icon: 'from-violet-600 to-indigo-800',
+    glow: 'shadow-violet-500/18',
+    value: 'text-violet-800',
   },
   amber: {
-    ring: 'from-amber-500/80 via-orange-500/60 to-yellow-500/40',
-    icon: 'from-amber-600 to-orange-700',
-    glow: 'shadow-amber-500/15',
+    ring: 'from-cptb-gold/95 via-amber-500/70 to-orange-500/45',
+    icon: 'from-amber-500 to-cptb-gold-dark',
+    glow: 'shadow-amber-500/22',
+    value: 'text-amber-900',
   },
   rose: {
-    ring: 'from-rose-500/80 via-pink-500/60 to-red-500/40',
-    icon: 'from-rose-600 to-pink-700',
-    glow: 'shadow-rose-500/15',
+    ring: 'from-rose-500/85 via-pink-500/62 to-red-500/42',
+    icon: 'from-rose-600 to-pink-800',
+    glow: 'shadow-rose-500/18',
+    value: 'text-rose-800',
   },
   indigo: {
-    ring: 'from-indigo-500/80 via-blue-500/60 to-sky-500/40',
-    icon: 'from-indigo-600 to-blue-700',
-    glow: 'shadow-indigo-500/15',
+    ring: 'from-indigo-500/85 via-cptb-blue/58 to-sky-500/38',
+    icon: 'from-indigo-600 to-cptb-blue-dark',
+    glow: 'shadow-indigo-500/18',
+    value: 'text-indigo-900',
   },
   gold: {
-    ring: 'from-amber-400/90 via-yellow-500/70 to-amber-600/50',
-    icon: 'from-amber-500 to-yellow-600',
-    glow: 'shadow-amber-500/20',
+    ring: 'from-cptb-gold/98 via-amber-400/75 to-amber-600/48',
+    icon: 'from-cptb-gold to-cptb-gold-dark',
+    glow: 'shadow-cptb-gold/28',
+    value: 'text-amber-950',
   },
   slate: {
-    ring: 'from-slate-400/70 via-stone-400/50 to-slate-500/40',
-    icon: 'from-slate-700 to-stone-800',
-    glow: 'shadow-slate-500/10',
+    ring: 'from-slate-400/75 via-stone-400/55 to-slate-600/42',
+    icon: 'from-slate-800 to-stone-950',
+    glow: 'shadow-slate-500/12',
+    value: 'text-stone-900',
   },
 } as const;
 
@@ -68,28 +76,35 @@ export default function PremiumKpiCard({
 
   return (
     <div
-      className={`group relative rounded-2xl bg-gradient-to-br ${a.ring} p-px shadow-lg ${a.glow} transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 ${className}`}
+      className={`group relative rounded-2xl bg-gradient-to-br ${a.ring} p-px shadow-lg ${a.glow} transition-all duration-300 ease-premium hover:-translate-y-1 hover:shadow-xl ${className}`}
     >
-      <div className="relative h-full overflow-hidden rounded-[15px] bg-white/95 backdrop-blur-xl">
-        <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br from-white/80 to-transparent opacity-60" aria-hidden />
-        <div className="relative p-4 sm:p-5">
+      <div className="relative h-full overflow-hidden rounded-[15px] bg-white/[0.98] backdrop-blur-xl">
+        <div
+          className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-white to-transparent opacity-80"
+          aria-hidden
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/35 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="relative p-4 sm:p-[1.15rem]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-stone-500">{label}</p>
-              <p className="mt-2 font-display text-2xl sm:text-3xl font-bold tabular-nums tracking-tight text-stone-900">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">{label}</p>
+              <p
+                className={`mt-2 font-display text-2xl font-bold tabular-nums tracking-tight sm:text-[1.65rem] ${a.value}`}
+              >
                 {value}
               </p>
               {subtitle && (
-                <p className="mt-1.5 text-xs font-medium text-stone-500 leading-snug">{subtitle}</p>
+                <p className="mt-1.5 text-[11px] font-medium leading-snug text-stone-500">{subtitle}</p>
               )}
               {trend && (
-                <p className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-200/80">
+                <p className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-200/80">
                   {trend}
                 </p>
               )}
             </div>
             <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${a.icon} text-white shadow-md ring-1 ring-white/30 transition-transform duration-300 group-hover:scale-105`}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${a.icon} text-white shadow-md ring-1 ring-white/35 transition-transform duration-300 ease-premium group-hover:scale-105 group-hover:rotate-2`}
             >
               <Icon className="h-5 w-5" aria-hidden />
             </div>

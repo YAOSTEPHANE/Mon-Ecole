@@ -23,30 +23,30 @@ function parseDate(raw: unknown): Date | null {
 
 function parseQuestions(raw: unknown): MockQuestionInput[] {
   if (!Array.isArray(raw)) return [];
-  return raw
-    .map((q, i) => {
-      if (!q || typeof q !== 'object') return null;
-      const row = q as Record<string, unknown>;
-      const prompt = typeof row.prompt === 'string' ? row.prompt.trim() : '';
-      const correctAnswer =
-        row.correctAnswer != null ? String(row.correctAnswer).trim() : '';
-      if (!prompt || !correctAnswer) return null;
-      const kind =
-        row.kind === 'TRUE_FALSE' || row.kind === 'SHORT_TEXT' || row.kind === 'MCQ'
-          ? row.kind
-          : 'MCQ';
-      return {
-        kind,
-        prompt,
-        options: Array.isArray(row.options)
-          ? row.options.map((o) => String(o))
-          : null,
-        correctAnswer,
-        points: Number.isFinite(Number(row.points)) ? Math.max(1, Number(row.points)) : 1,
-        sortOrder: Number.isFinite(Number(row.sortOrder)) ? Number(row.sortOrder) : i,
-      } satisfies MockQuestionInput;
-    })
-    .filter((q): q is MockQuestionInput => q != null);
+  const questions: MockQuestionInput[] = [];
+  raw.forEach((q, i) => {
+    if (!q || typeof q !== 'object') return;
+    const row = q as Record<string, unknown>;
+    const prompt = typeof row.prompt === 'string' ? row.prompt.trim() : '';
+    const correctAnswer =
+      row.correctAnswer != null ? String(row.correctAnswer).trim() : '';
+    if (!prompt || !correctAnswer) return;
+    const kind =
+      row.kind === 'TRUE_FALSE' || row.kind === 'SHORT_TEXT' || row.kind === 'MCQ'
+        ? row.kind
+        : 'MCQ';
+    questions.push({
+      kind,
+      prompt,
+      options: Array.isArray(row.options)
+        ? row.options.map((o) => String(o))
+        : null,
+      correctAnswer,
+      points: Number.isFinite(Number(row.points)) ? Math.max(1, Number(row.points)) : 1,
+      sortOrder: Number.isFinite(Number(row.sortOrder)) ? Number(row.sortOrder) : i,
+    });
+  });
+  return questions;
 }
 
 /** Classes d’examen (3ème / Terminale) pour le sélecteur admin. */

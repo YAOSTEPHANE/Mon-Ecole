@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import AbsencePermissionRequestsPanel from '../attendance/AbsencePermissionRequestsPanel';
 
 interface ChildAbsencesProps {
   studentId: string;
@@ -76,6 +77,14 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
 
   return (
     <div className="space-y-6">
+      <AbsencePermissionRequestsPanel
+        mode="parent"
+        studentId={studentId}
+        queryKey={['parent-child-absence-permission-requests', studentId]}
+        fetchRequests={() => parentApi.getChildAbsencePermissionRequests(studentId)}
+        createRequest={(data) => parentApi.createChildAbsencePermissionRequest(studentId, data)}
+      />
+
       {/* Indicateur de recherche */}
       {searchQuery && (
         <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200">

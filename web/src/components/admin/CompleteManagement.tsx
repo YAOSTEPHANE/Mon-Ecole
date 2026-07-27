@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getEvaluationTypeLabel } from '@/lib/evaluationTypes';
+import { getEvaluationBadgeVariant, getEvaluationTypeLabel } from '@/lib/evaluationTypes';
+import { groupGradesByStudent } from '@/lib/gradeEvaluationGroups';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Card from '../ui/Card';
@@ -32,6 +33,8 @@ import {
   FiAlertCircle,
   FiBarChart,
   FiRefreshCw,
+  FiChevronDown,
+  FiChevronUp,
 } from 'react-icons/fi';
 import AddGradeModal from './AddGradeModal';
 import GradeDetailsModal from './GradeDetailsModal';
@@ -105,6 +108,7 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
   const [bulletinSyncClass, setBulletinSyncClass] = useState('');
   const [bulletinSyncPeriod, setBulletinSyncPeriod] = useState('trim1');
   const [bulletinSyncYear, setBulletinSyncYear] = useState('2025-2026');
+  const [openStudentKeys, setOpenStudentKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (
@@ -1029,10 +1033,22 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
       }
       groups.get(classId)!.grades.push(grade);
     }
-    return Array.from(groups.values()).sort((a, b) =>
-      a.className.localeCompare(b.className, 'fr', { sensitivity: 'base' })
-    );
+    return Array.from(groups.values())
+      .sort((a, b) => a.className.localeCompare(b.className, 'fr', { sensitivity: 'base' }))
+      .map((group) => ({
+        ...group,
+        students: groupGradesByStudent(group.grades),
+      }));
   }, [filteredGrades]);
+
+  const toggleStudentGroup = useCallback((key: string) => {
+    setOpenStudentKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const filteredAbsences = absences?.filter((absence: any) => {
     const searchLower = searchQuery.toLowerCase();
@@ -1089,17 +1105,17 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
     (grade: any) => (
       <tr key={grade.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
         <td className={gradeTd}>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <FiUser className={gradeIcon} />
-            <span className={`font-medium truncate ${tightTable ? '' : 'text-sm'}`}>
-              {grade.student.user.firstName} {grade.student.user.lastName}
-            </span>
-          </div>
+          <Badge
+            variant={getEvaluationBadgeVariant(grade.evaluationType || grade.type)}
+            className={tightTable ? 'text-[10px]' : ''}
+          >
+            {getEvaluationTypeLabel(grade.evaluationType || grade.type)}
+          </Badge>
         </td>
         <td className={gradeTd}>
           <div className="flex items-center gap-1.5 min-w-0">
             <FiBook className={gradeIcon} />
-            <span className="truncate">{grade.course.name}</span>
+            <span className="truncate">{grade.course?.name ?? '—'}</span>
           </div>
         </td>
         <td className={gradeTd}>
@@ -1159,7 +1175,7 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
   const gradesTableHead = (
     <thead>
       <tr className="border-b border-gray-200">
-        <th className={gradeTh}>Élève</th>
+        <th className={gradeTh}>Type</th>
         <th className={gradeTh}>Matière</th>
         <th className={gradeTh}>Évaluation</th>
         <th className={gradeTh}>Note</th>
@@ -1403,6 +1419,9 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
               </div>
             ) : (
               <div className="space-y-5 min-w-0">
+                <p className="text-sm text-gray-600">
+                  Toutes les évaluations d&apos;un élève sont regroupées dans un seul menu déroulant.
+                </p>
                 {gradesByClass.map((group) => (
                   <div
                     key={group.classId}
@@ -1417,14 +1436,59 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
                         ) : null}
                       </div>
                       <Badge className="bg-indigo-100 text-indigo-800 shrink-0">
+                        {group.students.length} élève{group.students.length > 1 ? 's' : ''} ·{' '}
                         {group.grades.length} note{group.grades.length > 1 ? 's' : ''}
                       </Badge>
                     </div>
-                    <div className="overflow-x-auto -mx-px">
-                      <table className={`min-w-full w-full ${gradeTableText}`}>
-                        {gradesTableHead}
-                        <tbody>{group.grades.map((grade) => renderGradeRow(grade))}</tbody>
-                      </table>
+                    <div className="divide-y divide-gray-100">
+                      {group.students.map((student) => {
+                        const studentKey = `${group.classId}:${student.key}`;
+                        const open = openStudentKeys.has(studentKey);
+                        return (
+                          <div key={studentKey}>
+                            <button
+                              type="button"
+                              onClick={() => toggleStudentGroup(studentKey)}
+                              className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-violet-50/50 transition-colors"
+                              aria-expanded={open}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <FiUser className="w-4 h-4 text-violet-600 shrink-0" />
+                                  <span className="font-medium text-gray-900 truncate text-sm">
+                                    {student.fullName}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 text-[11px] text-gray-500">
+                                  {student.grades.length} évaluation
+                                  {student.grades.length > 1 ? 's' : ''}
+                                  {student.averageOn20 != null
+                                    ? ` · moy. ${student.averageOn20.toFixed(2)}/20`
+                                    : ''}
+                                  {student.byCourse.length > 1
+                                    ? ` · ${student.byCourse.length} matières`
+                                    : ''}
+                                </p>
+                              </div>
+                              {open ? (
+                                <FiChevronUp className="h-4 w-4 shrink-0 text-gray-500" />
+                              ) : (
+                                <FiChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
+                              )}
+                            </button>
+                            {open && (
+                              <div className="overflow-x-auto border-t border-gray-100 bg-white">
+                                <table className={`min-w-full w-full ${gradeTableText}`}>
+                                  {gradesTableHead}
+                                  <tbody>
+                                    {student.grades.map((grade) => renderGradeRow(grade))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

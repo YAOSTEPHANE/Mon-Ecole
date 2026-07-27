@@ -57,3 +57,15 @@ export async function assertBudgetLineInSchool(
   });
   return Boolean(row);
 }
+
+export async function assertCashRegisterInSchool(
+  id: string,
+  req: SchoolContextRequest,
+): Promise<boolean> {
+  const { where } = resolveAccountingScope(req);
+  const row = await prisma.cashRegister.findFirst({
+    where: { id, ...where },
+    select: { id: true },
+  });
+  return Boolean(row);
+}

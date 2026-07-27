@@ -75,12 +75,13 @@ const Footer = () => {
     (branding.appTagline && branding.appTagline.trim()) || DEFAULT_TAGLINE;
 
   return (
-    <footer className="relative overflow-hidden bg-gradient-to-b from-stone-950 via-stone-900 to-zinc-950 text-stone-400 ring-1 ring-amber-500/10">
+    <footer className="relative overflow-hidden bg-gradient-to-b from-[#0a0f2e] via-stone-950 to-zinc-950 text-stone-400 ring-1 ring-cptb-gold/15">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cptb-gold/40 to-transparent" aria-hidden />
       <div
-        className="pointer-events-none absolute inset-0 opacity-40"
+        className="pointer-events-none absolute inset-0 opacity-45"
         style={{
           background:
-            'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(201, 162, 39, 0.12), transparent 55%)',
+            'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(235, 176, 45, 0.14), transparent 55%), radial-gradient(ellipse 40% 30% at 90% 80%, rgba(0, 24, 168, 0.18), transparent 50%)',
         }}
         aria-hidden
       />
