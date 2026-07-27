@@ -48,6 +48,17 @@ import {
   notifyAdminsOfNewAbsencePermissionRequest,
   notifyFamilyAbsencePermissionSubmitted,
 } from '../utils/student-absence-permission-notify.util';
+import {
+  assertNoPendingReenrollment,
+  enrichReenrollmentRequestWithReviewer,
+  enrichReenrollmentRequestsWithReviewers,
+  listClassesForReenrollment,
+  reenrollmentRequestInclude,
+} from '../utils/student-reenrollment.util';
+import {
+  notifyAdminsOfNewReenrollmentRequest,
+  notifyFamilyReenrollmentSubmitted,
+} from '../utils/student-reenrollment-notify.util';
 
 const router = express.Router();
 
@@ -616,6 +627,161 @@ router.patch('/absence-permission-requests/:id/cancel', async (req: AuthRequest,
     res.json(await enrichPermissionRequestWithReviewer(updated));
   } catch (error: unknown) {
     console.error('PATCH /student/absence-permission-requests/:id/cancel:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+// ——— Demandes de réinscription ———
+
+router.get('/reenrollment-options', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true, schoolId: true, enrollmentStatus: true, classId: true },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+    const classes = await listClassesForReenrollment(student.schoolId);
+    res.json({
+      studentId: student.id,
+      enrollmentStatus: student.enrollmentStatus,
+      currentClassId: student.classId,
+      classes,
+    });
+  } catch (error: unknown) {
+    console.error('GET /student/reenrollment-options:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/reenrollment-requests', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+
+    const requests = await prisma.studentReenrollmentRequest.findMany({
+      where: { studentId: student.id },
+      include: reenrollmentRequestInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(await enrichReenrollmentRequestsWithReviewers(requests));
+  } catch (error: unknown) {
+    console.error('GET /student/reenrollment-requests:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post(
+  '/reenrollment-requests',
+  [
+    body('targetAcademicYear').isString().trim().isLength({ min: 4, max: 20 }),
+    body('preferredClassId').optional({ values: 'falsy' }).isString(),
+    body('message').optional({ values: 'falsy' }).isString().trim().isLength({ max: 2000 }),
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const student = await prisma.student.findFirst({
+        where: { userId: req.user!.id },
+        select: { id: true, schoolId: true },
+      });
+      if (!student) {
+        return res.status(404).json({ error: 'Élève non trouvé' });
+      }
+
+      const pendingError = await assertNoPendingReenrollment(student.id);
+      if (pendingError) {
+        return res.status(409).json({ error: pendingError });
+      }
+
+      const { targetAcademicYear, preferredClassId, message } = req.body as {
+        targetAcademicYear: string;
+        preferredClassId?: string;
+        message?: string;
+      };
+
+      let preferred: string | null = null;
+      if (preferredClassId) {
+        const cls = await prisma.class.findFirst({
+          where: {
+            id: preferredClassId,
+            ...(student.schoolId ? { schoolId: student.schoolId } : {}),
+          },
+          select: { id: true },
+        });
+        if (!cls) {
+          return res.status(400).json({ error: 'Classe souhaitée introuvable' });
+        }
+        preferred = cls.id;
+      }
+
+      const request = await prisma.studentReenrollmentRequest.create({
+        data: {
+          studentId: student.id,
+          requestedByUserId: req.user!.id,
+          requestedByRole: 'STUDENT',
+          targetAcademicYear: targetAcademicYear.trim(),
+          preferredClassId: preferred,
+          message: message?.trim() || null,
+        },
+        include: reenrollmentRequestInclude,
+      });
+
+      void notifyAdminsOfNewReenrollmentRequest(request.id).catch((notifyError) => {
+        console.error('notifyAdminsOfNewReenrollmentRequest:', notifyError);
+      });
+      void notifyFamilyReenrollmentSubmitted(request.id, 'STUDENT').catch((notifyError) => {
+        console.error('notifyFamilyReenrollmentSubmitted:', notifyError);
+      });
+
+      res.status(201).json(await enrichReenrollmentRequestWithReviewer(request));
+    } catch (error: unknown) {
+      console.error('POST /student/reenrollment-requests:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  },
+);
+
+router.patch('/reenrollment-requests/:id/cancel', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+
+    const existing = await prisma.studentReenrollmentRequest.findFirst({
+      where: { id: req.params.id, studentId: student.id },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Demande introuvable' });
+    }
+    if (existing.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Seules les demandes en attente peuvent être annulées' });
+    }
+
+    const updated = await prisma.studentReenrollmentRequest.update({
+      where: { id: existing.id },
+      data: { status: 'CANCELLED' },
+      include: reenrollmentRequestInclude,
+    });
+
+    res.json(await enrichReenrollmentRequestWithReviewer(updated));
+  } catch (error: unknown) {
+    console.error('PATCH /student/reenrollment-requests/:id/cancel:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });

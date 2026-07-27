@@ -118,6 +118,26 @@ export const studentApi = {
     const response = await api.patch(`/student/absence-permission-requests/${id}/cancel`);
     return response.data;
   },
+  getReenrollmentOptions: async () => {
+    const response = await api.get('/student/reenrollment-options');
+    return response.data;
+  },
+  getReenrollmentRequests: async () => {
+    const response = await api.get('/student/reenrollment-requests');
+    return response.data;
+  },
+  createReenrollmentRequest: async (data: {
+    targetAcademicYear: string;
+    preferredClassId?: string;
+    message?: string;
+  }) => {
+    const response = await api.post('/student/reenrollment-requests', data);
+    return response.data;
+  },
+  cancelReenrollmentRequest: async (id: string) => {
+    const response = await api.patch(`/student/reenrollment-requests/${id}/cancel`);
+    return response.data;
+  },
   getTuitionFees: async () => {
     const response = await api.get('/student/tuition-fees');
     return response.data;

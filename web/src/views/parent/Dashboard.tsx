@@ -10,6 +10,7 @@ import ParentOverview from '../../components/parent/ParentOverview';
 import ChildrenList from '../../components/parent/ChildrenList';
 import ChildGrades from '../../components/parent/ChildGrades';
 import ChildAbsences from '../../components/parent/ChildAbsences';
+import ChildReenrollment from '../../components/parent/ChildReenrollment';
 import ChildSchedule from '../../components/parent/ChildSchedule';
 import ChildAssignments from '../../components/parent/ChildAssignments';
 import ChildPayments from '../../components/parent/ChildPayments';
@@ -45,6 +46,7 @@ import {
   FiNavigation,
   FiBell,
   FiCoffee,
+  FiUserPlus,
 } from 'react-icons/fi';
 
 const VALID_PARENT_TABS = [
@@ -56,6 +58,7 @@ const VALID_PARENT_TABS = [
   'children',
   'grades',
   'absences',
+  'reenrollment',
   'assignments',
   'schedule',
   'report-cards',
@@ -93,6 +96,7 @@ const ParentDashboard = () => {
       { id: 'children', label: 'Mes enfants', icon: FiUsers, requiresChild: false, color: 'from-orange-600 to-rose-500' },
       { id: 'grades', label: 'Notes', icon: FiAward, requiresChild: true, color: 'from-amber-600 to-orange-600' },
       { id: 'absences', label: 'Absences', icon: FiAlertCircle, requiresChild: true, color: 'from-orange-500 to-red-500' },
+      { id: 'reenrollment', label: 'Réinscription', icon: FiUserPlus, requiresChild: true, color: 'from-violet-500 to-purple-600' },
       { id: 'assignments', label: 'Devoirs', icon: FiFileText, requiresChild: true, color: 'from-yellow-500 to-amber-600' },
       { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, requiresChild: true, color: 'from-amber-500 to-orange-500' },
       { id: 'report-cards', label: 'Bulletins', icon: FiBook, requiresChild: true, color: 'from-orange-700 to-amber-700' },
@@ -133,6 +137,7 @@ const ParentDashboard = () => {
       children: 'Liste de vos enfants et sélection du profil actif',
       grades: 'Notes et résultats de l’enfant sélectionné',
       absences: 'Assiduité et justifications',
+      reenrollment: 'Demande de réinscription pour la prochaine année',
       assignments: 'Devoirs et travaux à rendre',
       schedule: 'Emploi du temps hebdomadaire',
       'report-cards': 'Bulletins et bilans',
@@ -297,6 +302,19 @@ const ParentDashboard = () => {
                       <div className="text-center py-12 text-stone-600">
                         <p className="text-lg mb-2 font-semibold text-stone-900">Sélectionnez un enfant</p>
                         <p className="text-sm leading-relaxed">Choisissez un enfant dans « Mes enfants » pour voir ses absences.</p>
+                      </div>
+                    </Card>
+                  ))}
+                {activeTab === 'reenrollment' &&
+                  (selectedChild ? (
+                    <ChildReenrollment studentId={selectedChild} />
+                  ) : (
+                    <Card>
+                      <div className="text-center py-12 text-stone-600">
+                        <p className="text-lg mb-2 font-semibold text-stone-900">Sélectionnez un enfant</p>
+                        <p className="text-sm leading-relaxed">
+                          Choisissez un enfant dans « Mes enfants » pour demander sa réinscription.
+                        </p>
                       </div>
                     </Card>
                   ))}

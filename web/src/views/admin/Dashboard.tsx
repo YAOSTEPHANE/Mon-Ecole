@@ -23,7 +23,7 @@ import AcademicManagement from '../../components/admin/AcademicManagement';
 import GradingEvaluationManagement from '../../components/admin/GradingEvaluationManagement';
 import FeesManagementModule from '../../components/admin/FeesManagementModule';
 import AdministrativeManagement from '../../components/admin/AdministrativeManagement';
-import AdmissionsManagement from '../../components/admin/AdmissionsManagement';
+import AdmissionsManagementModule from '../../components/admin/AdmissionsManagementModule';
 import SecurityPrivacyManagement from '../../components/admin/SecurityPrivacyManagement';
 import PerformanceManagement from '../../components/admin/PerformanceManagement';
 import TuitionFeesManagement from '../../components/admin/TuitionFeesManagement';
@@ -571,7 +571,7 @@ const AdminDashboard = () => {
               {activeTab === 'attendance' && <AttendanceManagementModule />}
               {activeTab === 'hr' && <HRManagementModule />}
               {activeTab === 'administrative' && <AdministrativeManagement />}
-              {activeTab === 'admissions' && <AdmissionsManagement />}
+              {activeTab === 'admissions' && <AdmissionsManagementModule />}
               {activeTab === 'fees' && <FeesManagementModule />}
               {activeTab === 'tuition-fees' && <TuitionFeesManagement />}
               {activeTab === 'payments' && <PaymentsManagement />}

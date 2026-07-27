@@ -355,6 +355,31 @@ export const adminApi = {
     const response = await api.delete(`/admin/absence-permission-requests/${id}`);
     return response.data;
   },
+  getReenrollmentRequests: async (params?: { status?: string; studentId?: string }) => {
+    const response = await api.get('/admin/reenrollment-requests', { params });
+    return response.data;
+  },
+  getReenrollmentRequestStats: async (params?: { studentId?: string }) => {
+    const response = await api.get('/admin/reenrollment-requests/stats', { params });
+    return response.data as {
+      total: number;
+      pending: number;
+      approved: number;
+      rejected: number;
+    };
+  },
+  updateReenrollmentRequest: async (
+    id: string,
+    data: {
+      status: 'APPROVED' | 'REJECTED';
+      approvedClassId?: string;
+      adminComment?: string;
+      effectiveDate?: string;
+    }
+  ) => {
+    const response = await api.patch(`/admin/reenrollment-requests/${id}`, data);
+    return response.data;
+  },
   getAllAssignments: async (params?: { courseId?: string; classId?: string }) => {
     const response = await api.get('/admin/assignments', { params });
     return response.data;

@@ -37,6 +37,7 @@ import {
   stateAssignmentBadgeVariant,
 } from '../../lib/stateAssignment';
 import GdprUserRightsPanel from '../gdpr/GdprUserRightsPanel';
+import ReenrollmentRequestsPanel from '../enrollment/ReenrollmentRequestsPanel';
 
 function genderLabel(g?: string) {
   switch (g) {
@@ -540,6 +541,25 @@ const StudentProfile = ({ searchQuery = '' }: { searchQuery?: string }) => {
           </div>
         </Card>
       )}
+
+      <Card className="border border-violet-200/80 shadow-sm">
+        <div className="border-b border-violet-100 bg-violet-50/60 px-5 py-4 sm:px-6">
+          <h2 className="text-lg font-bold text-stone-900">Réinscription</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            Demandez votre réinscription pour une nouvelle année scolaire. La direction validera le dossier.
+          </p>
+        </div>
+        <div className="p-5 sm:p-6">
+          <ReenrollmentRequestsPanel
+            mode="student"
+            queryKey={['student-reenrollment-requests']}
+            fetchRequests={studentApi.getReenrollmentRequests}
+            fetchOptions={studentApi.getReenrollmentOptions}
+            createRequest={studentApi.createReenrollmentRequest}
+            cancelRequest={studentApi.cancelReenrollmentRequest}
+          />
+        </div>
+      </Card>
 
       <GdprUserRightsPanel />
     </div>

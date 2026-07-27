@@ -222,6 +222,18 @@ enum StudentAbsencePermissionRequestedBy {
   PARENT
 }
 
+enum StudentReenrollmentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum StudentReenrollmentRequestedBy {
+  STUDENT
+  PARENT
+}
+
 /// Statut d'engagement pédagogique de l'enseignant
 enum TeacherEngagementKind {
   PERMANENT
@@ -373,6 +385,7 @@ model User {
   adminWorkspaceMemberships         AdminWorkspaceMember[]
   schoolMemberships               SchoolMember[]
   absencePermissionReviewsReviewed StudentAbsencePermissionRequest[] @relation("AbsencePermissionReviews")
+  reenrollmentReviewsReviewed      StudentReenrollmentRequest[]      @relation("ReenrollmentReviews")
   /// SSO : google | microsoft (null = compte classique e-mail/mot de passe)
   oauthProvider                   String?
   /// Identifiant stable chez le fournisseur OAuth
@@ -1053,6 +1066,7 @@ model Student {
   gamificationPoints          StudentGamificationEvent[]
   mockExamAttempts            MockExamAttempt[]
   absencePermissionRequests   StudentAbsencePermissionRequest[]
+  reenrollmentRequests        StudentReenrollmentRequest[]
 
   @@index([nfcId])
   @@index([biometricId])
@@ -1725,6 +1739,30 @@ model StudentAbsencePermissionRequest {
   @@index([studentId, startDate])
   @@index([status])
   @@map("student_absence_permission_requests")
+}
+
+model StudentReenrollmentRequest {
+  id                String                          @id @default(auto()) @map("_id") @db.ObjectId
+  studentId         String                          @db.ObjectId
+  requestedByUserId String                          @db.ObjectId
+  requestedByRole   StudentReenrollmentRequestedBy
+  targetAcademicYear String
+  preferredClassId  String?                         @db.ObjectId
+  message           String?
+  status            StudentReenrollmentRequestStatus @default(PENDING)
+  adminComment      String?
+  reviewedByUserId  String?                         @db.ObjectId
+  reviewedBy        User?                           @relation("ReenrollmentReviews", fields: [reviewedByUserId], references: [id])
+  reviewedAt        DateTime?
+  approvedClassId   String?                         @db.ObjectId
+  createdAt         DateTime                        @default(now())
+  updatedAt         DateTime                        @updatedAt
+
+  student           Student                         @relation(fields: [studentId], references: [id])
+
+  @@index([studentId])
+  @@index([status])
+  @@map("student_reenrollment_requests")
 }
 
 model Assignment {

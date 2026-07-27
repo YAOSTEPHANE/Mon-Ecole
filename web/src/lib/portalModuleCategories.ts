@@ -46,7 +46,7 @@ export const PARENT_MODULE_CATEGORIES: PortalModuleCategory[] = [
   {
     title: 'Suivi de l’enfant',
     hint: 'Sélectionnez un enfant si nécessaire',
-    moduleIds: ['grades', 'absences', 'assignments', 'schedule', 'report-cards', 'conduct'],
+    moduleIds: ['grades', 'absences', 'reenrollment', 'assignments', 'schedule', 'report-cards', 'conduct'],
   },
   {
     title: 'Parcours & finances',

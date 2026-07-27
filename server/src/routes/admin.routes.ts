@@ -98,6 +98,13 @@ import {
 } from '../utils/student-absence-permission.util';
 import { notifyFamilyOfAbsencePermissionDecision } from '../utils/student-absence-permission-notify.util';
 import {
+  applyReenrollmentApproval,
+  enrichReenrollmentRequestWithReviewer,
+  enrichReenrollmentRequestsWithReviewers,
+  reenrollmentRequestInclude,
+} from '../utils/student-reenrollment.util';
+import { notifyFamilyOfReenrollmentDecision } from '../utils/student-reenrollment-notify.util';
+import {
   computeAttendanceStats,
   defaultAttendanceStatsPeriod,
 } from '../utils/attendance-stats.util';
@@ -485,6 +492,137 @@ router.delete('/absence-permission-requests/:id', async (req, res) => {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
+
+// ——— Demandes de réinscription ———
+
+router.get('/reenrollment-requests', async (req, res) => {
+  try {
+    const { status, studentId } = req.query as { status?: string; studentId?: string };
+
+    const requests = await prisma.studentReenrollmentRequest.findMany({
+      where: {
+        ...(status
+          ? { status: status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' }
+          : {}),
+        ...(studentId ? { studentId } : {}),
+      },
+      include: reenrollmentRequestInclude,
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      take: 200,
+    });
+
+    res.json(await enrichReenrollmentRequestsWithReviewers(requests));
+  } catch (error: unknown) {
+    console.error('GET /admin/reenrollment-requests:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/reenrollment-requests/stats', async (req, res) => {
+  try {
+    const { studentId } = req.query as { studentId?: string };
+    const where = studentId ? { studentId } : {};
+
+    const [total, pending, approved, rejected] = await Promise.all([
+      prisma.studentReenrollmentRequest.count({ where }),
+      prisma.studentReenrollmentRequest.count({ where: { ...where, status: 'PENDING' } }),
+      prisma.studentReenrollmentRequest.count({ where: { ...where, status: 'APPROVED' } }),
+      prisma.studentReenrollmentRequest.count({ where: { ...where, status: 'REJECTED' } }),
+    ]);
+
+    res.json({ total, pending, approved, rejected });
+  } catch (error: unknown) {
+    console.error('GET /admin/reenrollment-requests/stats:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.patch(
+  '/reenrollment-requests/:id',
+  [
+    body('status').isIn(['APPROVED', 'REJECTED']),
+    body('approvedClassId').optional({ values: 'falsy' }).isString(),
+    body('adminComment').optional().isString().isLength({ max: 2000 }),
+    body('effectiveDate').optional({ values: 'falsy' }).isISO8601(),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { id } = req.params;
+      const { status, approvedClassId, adminComment, effectiveDate } = req.body as {
+        status: 'APPROVED' | 'REJECTED';
+        approvedClassId?: string;
+        adminComment?: string;
+        effectiveDate?: string;
+      };
+
+      const existing = await prisma.studentReenrollmentRequest.findUnique({
+        where: { id },
+      });
+      if (!existing) {
+        return res.status(404).json({ error: 'Demande introuvable' });
+      }
+      if (existing.status !== 'PENDING') {
+        return res.status(400).json({ error: 'Cette demande a déjà été traitée' });
+      }
+      if (status === 'REJECTED' && !(adminComment?.trim())) {
+        return res.status(400).json({ error: 'Le motif de refus est obligatoire' });
+      }
+      if (status === 'APPROVED' && !(approvedClassId?.trim())) {
+        return res.status(400).json({ error: 'La classe de destination est obligatoire pour approuver' });
+      }
+
+      const authReq = req as import('../middleware/auth.middleware').AuthRequest;
+      const reviewerId = authReq.user?.id;
+
+      let className: string | null = null;
+      if (status === 'APPROVED' && approvedClassId) {
+        try {
+          const updatedStudent = await applyReenrollmentApproval({
+            studentId: existing.studentId,
+            toClassId: approvedClassId,
+            effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
+            reason: `Réinscription ${existing.targetAcademicYear}`,
+            notes: existing.message,
+            createdById: reviewerId,
+          });
+          className = updatedStudent.class?.name ?? null;
+        } catch (applyError: unknown) {
+          const statusCode =
+            (applyError as { statusCode?: number })?.statusCode ?? 500;
+          return res.status(statusCode).json({
+            error: applyError instanceof Error ? applyError.message : 'Erreur lors de la réinscription',
+          });
+        }
+      }
+
+      const updated = await prisma.studentReenrollmentRequest.update({
+        where: { id },
+        data: {
+          status,
+          adminComment: adminComment?.trim() || null,
+          reviewedByUserId: reviewerId,
+          reviewedAt: new Date(),
+          approvedClassId: status === 'APPROVED' ? approvedClassId : null,
+        },
+        include: reenrollmentRequestInclude,
+      });
+
+      void notifyFamilyOfReenrollmentDecision(id, status, className).catch((notifyError) => {
+        console.error('notifyFamilyOfReenrollmentDecision:', notifyError);
+      });
+
+      res.json(await enrichReenrollmentRequestWithReviewer(updated));
+    } catch (error: unknown) {
+      console.error('PATCH /admin/reenrollment-requests/:id:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  },
+);
 
 // Statistiques d’assiduité (agrégats sur une période)
 router.get('/absences/stats', async (req, res) => {

@@ -53,6 +53,31 @@ export const parentApi = {
     const response = await api.post(`/parent/children/${studentId}/absence-permission-requests`, data);
     return response.data;
   },
+  getChildReenrollmentOptions: async (studentId: string) => {
+    const response = await api.get(`/parent/children/${studentId}/reenrollment-options`);
+    return response.data;
+  },
+  getChildReenrollmentRequests: async (studentId: string) => {
+    const response = await api.get(`/parent/children/${studentId}/reenrollment-requests`);
+    return response.data;
+  },
+  createChildReenrollmentRequest: async (
+    studentId: string,
+    data: {
+      targetAcademicYear: string;
+      preferredClassId?: string;
+      message?: string;
+    }
+  ) => {
+    const response = await api.post(`/parent/children/${studentId}/reenrollment-requests`, data);
+    return response.data;
+  },
+  cancelChildReenrollmentRequest: async (studentId: string, id: string) => {
+    const response = await api.patch(
+      `/parent/children/${studentId}/reenrollment-requests/${id}/cancel`
+    );
+    return response.data;
+  },
   getChildSchedule: async (studentId: string) => {
     const response = await api.get(`/parent/children/${studentId}/schedule`);
     return response.data;
