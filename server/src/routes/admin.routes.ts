@@ -65,6 +65,7 @@ import adminClassesRoutes from './admin-classes.routes';
 import adminTeachersRoutes from './admin-teachers.routes';
 import adminEducatorsRoutes from './admin-educators.routes';
 import adminAdmissionsRoutes from './admin-admissions.routes';
+import adminPayrollRoutes from './admin-payroll.routes';
 import { attachSchoolContext } from '../middleware/school-context.middleware';
 import { guardAdminStudentRoute } from '../middleware/school-resource-guard.middleware';
 import type { SchoolContextRequest } from '../utils/school-context.util';
@@ -202,6 +203,7 @@ router.use(adminClassesRoutes);
 router.use(adminTeachersRoutes);
 router.use(adminEducatorsRoutes);
 router.use(adminAdmissionsRoutes);
+router.use(adminPayrollRoutes);
 
 
 // ========== GESTION ACADÉMIQUE ==========

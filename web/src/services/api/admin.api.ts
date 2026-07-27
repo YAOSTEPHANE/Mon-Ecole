@@ -260,6 +260,57 @@ export const adminApi = {
     const response = await api.get('/admin/hr/teacher-performance-reviews');
     return response.data;
   },
+  /** Paie mensuelle — aperçu sans enregistrement */
+  getPayrollPreview: async (params: { year: number; month: number }) => {
+    const response = await api.get('/admin/hr/payroll/preview', { params });
+    return response.data;
+  },
+  getPayrollRuns: async (params?: { year?: number }) => {
+    const response = await api.get('/admin/hr/payroll/runs', { params });
+    return response.data;
+  },
+  getPayrollRun: async (id: string) => {
+    const response = await api.get(`/admin/hr/payroll/runs/${id}`);
+    return response.data;
+  },
+  createPayrollRun: async (data: {
+    year: number;
+    month: number;
+    notes?: string;
+    force?: boolean;
+  }) => {
+    const response = await api.post('/admin/hr/payroll/runs', data);
+    return response.data;
+  },
+  updatePayrollLine: async (
+    runId: string,
+    lineId: string,
+    data: {
+      baseSalary?: number;
+      bonuses?: number;
+      deductions?: number;
+      included?: boolean;
+      notes?: string | null;
+    }
+  ) => {
+    const response = await api.patch(`/admin/hr/payroll/runs/${runId}/lines/${lineId}`, data);
+    return response.data;
+  },
+  validatePayrollRun: async (id: string) => {
+    const response = await api.post(`/admin/hr/payroll/runs/${id}/validate`);
+    return response.data;
+  },
+  markPayrollRunPaid: async (
+    id: string,
+    data?: { createExpense?: boolean; paymentMethod?: string; academicYear?: string }
+  ) => {
+    const response = await api.post(`/admin/hr/payroll/runs/${id}/mark-paid`, data ?? {});
+    return response.data;
+  },
+  cancelPayrollRun: async (id: string) => {
+    const response = await api.post(`/admin/hr/payroll/runs/${id}/cancel`);
+    return response.data;
+  },
   getDashboard: async () => {
     const response = await api.get('/admin/dashboard');
     return response.data;

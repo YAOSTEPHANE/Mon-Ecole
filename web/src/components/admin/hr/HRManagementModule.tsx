@@ -83,7 +83,8 @@ const HRManagementModule: React.FC = () => {
       <div>
         <h2 className={ADM.h2}>Ressources humaines</h2>
         <p className={ADM.intro}>
-          Contrats, masse salariale indicative, politique sociale, évaluations et validation des congés.
+          Contrats, paie mensuelle (génération / validation / paiement), politique sociale, évaluations et
+          validation des congés.
         </p>
       </div>
 

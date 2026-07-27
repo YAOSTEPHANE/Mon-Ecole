@@ -9,6 +9,8 @@ async function main() {
 
   // Nettoyer la base de données
   console.log('🧹 Nettoyage de la base de données...');
+  await prisma.payrollLine.deleteMany();
+  await prisma.payrollRun.deleteMany();
   await prisma.studentAssignment.deleteMany();
   await prisma.assignment.deleteMany();
   await prisma.absence.deleteMany();
@@ -155,7 +157,7 @@ async function main() {
           specialization: 'Mathématiques',
           hireDate: new Date('2020-09-01'),
           contractType: 'CDI',
-          salary: 3500,
+          salary: 350000,
         },
       },
     },
@@ -176,7 +178,7 @@ async function main() {
           specialization: 'Français',
           hireDate: new Date('2019-09-01'),
           contractType: 'CDI',
-          salary: 3400,
+          salary: 340000,
         },
       },
     },
@@ -197,7 +199,7 @@ async function main() {
           specialization: 'Histoire-Géographie',
           hireDate: new Date('2021-09-01'),
           contractType: 'CDD',
-          salary: 3300,
+          salary: 330000,
         },
       },
     },
@@ -623,7 +625,7 @@ async function main() {
           specialization: 'Soutien scolaire et orientation',
           hireDate: new Date('2020-09-01'),
           contractType: 'CDI',
-          salary: 3200,
+          salary: 320000,
         },
       },
     },
@@ -644,7 +646,7 @@ async function main() {
           specialization: 'Accompagnement éducatif',
           hireDate: new Date('2021-09-01'),
           contractType: 'CDI',
-          salary: 3100,
+          salary: 310000,
         },
       },
     },
@@ -694,6 +696,7 @@ async function main() {
           department: 'Administration',
           hireDate: new Date('2019-09-01'),
           contractType: 'CDI',
+          salary: 280000,
         },
       },
     },
@@ -716,6 +719,7 @@ async function main() {
           department: 'Finances',
           hireDate: new Date('2018-09-01'),
           contractType: 'CDI',
+          salary: 320000,
         },
       },
     },
@@ -738,6 +742,7 @@ async function main() {
           department: 'Pédagogie',
           hireDate: new Date('2017-09-01'),
           contractType: 'CDI',
+          salary: 400000,
         },
       },
     },
@@ -760,6 +765,7 @@ async function main() {
           department: 'Santé',
           hireDate: new Date('2020-09-01'),
           contractType: 'CDI',
+          salary: 260000,
         },
       },
     },
@@ -782,6 +788,7 @@ async function main() {
           department: 'Documentation',
           hireDate: new Date('2021-09-01'),
           contractType: 'CDI',
+          salary: 240000,
         },
       },
     },
@@ -804,6 +811,7 @@ async function main() {
           department: 'Finances',
           hireDate: new Date('2019-09-01'),
           contractType: 'CDI',
+          salary: 300000,
         },
       },
     },
