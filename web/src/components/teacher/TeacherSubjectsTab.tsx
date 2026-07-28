@@ -9,7 +9,7 @@ import { FiBook, FiUsers, FiClipboard, FiUserCheck } from 'react-icons/fi';
 const TeacherSubjectsTab = () => {
   const { data: courses, isLoading } = useQuery({
     queryKey: ['teacher-courses'],
-    queryFn: teacherApi.getCourses,
+    queryFn: () => teacherApi.getCourses(),
   });
 
   if (isLoading) {

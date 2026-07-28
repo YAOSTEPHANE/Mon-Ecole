@@ -13,6 +13,11 @@ import {
   isStudentInEducatorScope,
   studentClassFilter,
 } from '../utils/educator-class-assignment.util';
+import { autoExcuseAbsenceRecords } from '../utils/student-absence-permission.util';
+import {
+  resolveEducatorRollcallAccess,
+  rollcallCourseListInclude,
+} from '../utils/attendance-rollcall-access.util';
 
 const router = express.Router();
 
@@ -1241,5 +1246,229 @@ router.put('/messaging/:id/read', async (req: AuthRequest, res) => {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
+
+// ========== APPEL NUMÉRIQUE (remplacement sur classes assignées) ==========
+
+router.get('/attendance/courses', async (req: AuthRequest, res) => {
+  try {
+    const classIds = await resolveEducatorClassScope(req.user!.id);
+    if (classIds === null) {
+      return res.status(404).json({ error: 'Profil éducateur non trouvé' });
+    }
+    if (classIds.length === 0) {
+      return res.json([]);
+    }
+
+    const courses = await prisma.course.findMany({
+      where: { classId: { in: classIds } },
+      include: rollcallCourseListInclude,
+      orderBy: { name: 'asc' },
+    });
+
+    res.json(
+      courses.map((course) => ({
+        ...course,
+        isSubstitute: true,
+      }))
+    );
+  } catch (error: unknown) {
+    console.error('GET /educator/attendance/courses:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/courses/:courseId/absences', async (req: AuthRequest, res) => {
+  try {
+    const { courseId } = req.params;
+    const { date } = req.query;
+
+    const accessResult = await resolveEducatorRollcallAccess(req.user!.id, courseId);
+    if (!accessResult.ok) {
+      return res.status(accessResult.status).json({ error: accessResult.error });
+    }
+
+    const absences = await prisma.absence.findMany({
+      where: {
+        courseId,
+        ...(date && {
+          date: {
+            gte: new Date(date as string),
+            lt: new Date(new Date(date as string).getTime() + 24 * 60 * 60 * 1000),
+          },
+        }),
+      },
+      include: {
+        student: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        course: true,
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    res.json(absences);
+  } catch (error: unknown) {
+    console.error('GET /educator/courses/:courseId/absences:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post(
+  '/absences/init-attendance',
+  [body('courseId').notEmpty(), body('date').isISO8601()],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { courseId, date } = req.body;
+      const accessResult = await resolveEducatorRollcallAccess(req.user!.id, courseId);
+      if (!accessResult.ok) {
+        return res.status(accessResult.status).json({ error: accessResult.error });
+      }
+
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        include: {
+          class: {
+            include: {
+              students: { where: { isActive: true } },
+            },
+          },
+        },
+      });
+      if (!course) {
+        return res.status(404).json({ error: 'Cours non trouvé' });
+      }
+
+      const students = course.class?.students || [];
+      const attendanceDate = new Date(date);
+      const startOfDay = new Date(attendanceDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+
+      await prisma.absence.deleteMany({
+        where: {
+          courseId,
+          date: { gte: startOfDay, lt: endOfDay },
+        },
+      });
+
+      const absences = await Promise.all(
+        students.map((student) =>
+          prisma.absence.create({
+            data: {
+              studentId: student.id,
+              courseId,
+              teacherId: accessResult.access.officialTeacherId,
+              date: attendanceDate,
+              status: 'ABSENT',
+              excused: false,
+              attendanceSource: 'MANUAL',
+            },
+            include: {
+              student: {
+                include: {
+                  user: { select: { firstName: true, lastName: true } },
+                },
+              },
+            },
+          })
+        )
+      );
+
+      await autoExcuseAbsenceRecords(absences);
+      const refreshedAbsences = await prisma.absence.findMany({
+        where: { id: { in: absences.map((a) => a.id) } },
+        include: {
+          student: {
+            include: {
+              user: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      });
+
+      res.status(201).json({
+        message: `Appel initialisé: ${refreshedAbsences.length} élèves marqués comme absents`,
+        absences: refreshedAbsences,
+        total: refreshedAbsences.length,
+      });
+    } catch (error: unknown) {
+      console.error('POST /educator/absences/init-attendance:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  }
+);
+
+router.post(
+  '/absences/take-attendance',
+  [body('courseId').notEmpty(), body('date').isISO8601(), body('attendance').isArray()],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { courseId, date, attendance } = req.body;
+      const accessResult = await resolveEducatorRollcallAccess(req.user!.id, courseId);
+      if (!accessResult.ok) {
+        return res.status(accessResult.status).json({ error: accessResult.error });
+      }
+
+      const attendanceDate = new Date(date);
+      const startOfDay = new Date(attendanceDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+
+      await prisma.absence.deleteMany({
+        where: {
+          courseId,
+          date: { gte: startOfDay, lt: endOfDay },
+        },
+      });
+
+      const absences = await Promise.all(
+        (attendance as Array<{ studentId: string; status?: string; reason?: string; excused?: boolean }>).map(
+          (att) =>
+            prisma.absence.create({
+              data: {
+                studentId: att.studentId,
+                courseId,
+                teacherId: accessResult.access.officialTeacherId,
+                date: attendanceDate,
+                status: (att.status as 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED') || 'ABSENT',
+                reason: att.reason ?? undefined,
+                excused: att.excused || false,
+                attendanceSource: 'MANUAL',
+              },
+            })
+        )
+      );
+
+      await autoExcuseAbsenceRecords(absences);
+      const refreshedAbsences = await prisma.absence.findMany({
+        where: { id: { in: absences.map((a) => a.id) } },
+      });
+
+      res.status(201).json(refreshedAbsences);
+    } catch (error: unknown) {
+      console.error('POST /educator/absences/take-attendance:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  }
+);
 
 export default router;

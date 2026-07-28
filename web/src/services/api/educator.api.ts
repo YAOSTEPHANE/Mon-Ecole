@@ -128,4 +128,31 @@ export const educatorApi = {
     const response = await api.put(`/educator/messaging/${messageId}/read`);
     return response.data;
   },
+  getAttendanceCourses: async () => {
+    const response = await api.get('/educator/attendance/courses');
+    return response.data;
+  },
+  getCourseAbsences: async (courseId: string, date?: string) => {
+    const response = await api.get(`/educator/courses/${courseId}/absences`, {
+      params: { date },
+    });
+    return response.data;
+  },
+  initAttendance: async (data: { courseId: string; date: string }) => {
+    const response = await api.post('/educator/absences/init-attendance', data);
+    return response.data;
+  },
+  takeAttendance: async (data: {
+    courseId: string;
+    date: string;
+    attendance: Array<{
+      studentId: string;
+      status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+      excused?: boolean;
+      reason?: string;
+    }>;
+  }) => {
+    const response = await api.post('/educator/absences/take-attendance', data);
+    return response.data;
+  },
 };

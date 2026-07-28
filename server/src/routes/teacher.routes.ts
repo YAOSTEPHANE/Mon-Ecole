@@ -25,6 +25,10 @@ import {
 } from '../utils/mock-exam.util';
 import { defaultExamKindForLevel, isExamClassLevel } from '../utils/exam-class.util';
 import { autoExcuseAbsenceRecords } from '../utils/student-absence-permission.util';
+import {
+  resolveTeacherRollcallAccess,
+  rollcallCourseListInclude,
+} from '../utils/attendance-rollcall-access.util';
 
 const router = express.Router();
 
@@ -555,28 +559,15 @@ router.post(
 
       const { courseId, studentId, date, status } = req.body;
 
-      const teacherId = await getTeacherId(req.user!.id);
-
-      if (!teacherId) {
-        return res.status(404).json({ error: 'Profil enseignant non trouvé' });
-      }
-
-      // Vérifier que le professeur enseigne ce cours
-      const course = await prisma.course.findFirst({
-        where: {
-          id: courseId,
-          teacherId,
-        },
-      });
-
-      if (!course) {
-        return res.status(403).json({ error: 'Vous n\'enseignez pas ce cours' });
+      const accessResult = await resolveTeacherRollcallAccess(req.user!.id, courseId);
+      if (!accessResult.ok) {
+        return res.status(accessResult.status).json({ error: accessResult.error });
       }
 
       const punch = await punchStudentCourseAttendance({
         studentId,
         courseId,
-        teacherId,
+        teacherId: accessResult.access.officialTeacherId,
         at: new Date(date),
         source: 'NFC',
         forceStatus: status,
@@ -617,18 +608,13 @@ router.post(
 
       const { courseId, date } = req.body;
 
-      const teacherId = await getTeacherId(req.user!.id);
-
-      if (!teacherId) {
-        return res.status(404).json({ error: 'Profil enseignant non trouvé' });
+      const accessResult = await resolveTeacherRollcallAccess(req.user!.id, courseId);
+      if (!accessResult.ok) {
+        return res.status(accessResult.status).json({ error: accessResult.error });
       }
 
-      // Vérifier que le professeur enseigne ce cours
-      const course = await prisma.course.findFirst({
-        where: {
-          id: courseId,
-          teacherId,
-        },
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
         include: {
           class: {
             include: {
@@ -643,7 +629,7 @@ router.post(
       });
 
       if (!course) {
-        return res.status(403).json({ error: 'Vous n\'enseignez pas ce cours' });
+        return res.status(404).json({ error: 'Cours non trouvé' });
       }
 
       const students = course.class?.students || [];
@@ -661,17 +647,18 @@ router.post(
         },
       });
 
-      // Créer une absence ABSENT pour tous les élèves
+      // Créer une absence ABSENT pour tous les élèves (appel manuel / remplacement)
       const absences = await Promise.all(
         students.map((student: any) =>
           prisma.absence.create({
             data: {
               studentId: student.id,
               courseId,
-              teacherId,
+              teacherId: accessResult.access.officialTeacherId,
               date: attendanceDate,
               status: 'ABSENT',
               excused: false,
+              attendanceSource: 'MANUAL',
             },
             include: {
               student: {
@@ -735,22 +722,9 @@ router.post(
 
       const { courseId, date, attendance } = req.body;
 
-      const teacherId = await getTeacherId(req.user!.id);
-
-      if (!teacherId) {
-        return res.status(404).json({ error: 'Profil enseignant non trouvé' });
-      }
-
-      // Vérifier que le professeur enseigne ce cours
-      const course = await prisma.course.findFirst({
-        where: {
-          id: courseId,
-          teacherId,
-        },
-      });
-
-      if (!course) {
-        return res.status(403).json({ error: 'Vous n\'enseignez pas ce cours' });
+      const accessResult = await resolveTeacherRollcallAccess(req.user!.id, courseId);
+      if (!accessResult.ok) {
+        return res.status(accessResult.status).json({ error: accessResult.error });
       }
 
       const attendanceDate = new Date(date);
@@ -767,18 +741,19 @@ router.post(
         },
       });
 
-      // Créer les pointages (présent / absent / retard)
+      // Créer les pointages manuels (présent / absent / retard) — remplace l'état du cours/jour
       const absences = await Promise.all(
         attendance.map((att: any) =>
           prisma.absence.create({
             data: {
               studentId: att.studentId,
               courseId,
-              teacherId,
+              teacherId: accessResult.access.officialTeacherId,
               date: attendanceDate,
               status: att.status || 'ABSENT',
               reason: att.reason ?? undefined,
               excused: att.excused || false,
+              attendanceSource: 'MANUAL',
             },
           })
         )
@@ -1065,16 +1040,14 @@ router.get('/courses/:courseId/absences', async (req: AuthRequest, res) => {
     const { courseId } = req.params;
     const { date } = req.query;
 
-    const teacherId = await getTeacherId(req.user!.id);
-
-    if (!teacherId) {
-      return res.status(404).json({ error: 'Profil enseignant non trouvé' });
+    const accessResult = await resolveTeacherRollcallAccess(req.user!.id, courseId);
+    if (!accessResult.ok) {
+      return res.status(accessResult.status).json({ error: accessResult.error });
     }
 
     const absences = await prisma.absence.findMany({
       where: {
         courseId,
-        teacherId,
         ...(date && {
           date: {
             gte: new Date(date as string),
@@ -1257,25 +1230,18 @@ router.get('/courses', async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Profil enseignant non trouvé' });
     }
 
+    const scope = String(req.query.scope || 'mine').toLowerCase();
+    const where =
+      scope === 'substitute'
+        ? { teacherId: { not: teacherId } }
+        : scope === 'all'
+          ? {}
+          : { teacherId };
+
     const courses = await prisma.course.findMany({
-      where: {
-        teacherId,
-      },
+      where,
       include: {
-        class: {
-          include: {
-            students: {
-              include: {
-                user: {
-                  select: {
-                    firstName: true,
-                    lastName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
+        ...rollcallCourseListInclude,
         _count: {
           select: {
             grades: true,
@@ -1285,7 +1251,12 @@ router.get('/courses', async (req: AuthRequest, res) => {
       },
     });
 
-    res.json(courses);
+    res.json(
+      courses.map((course) => ({
+        ...course,
+        isSubstitute: course.teacherId !== teacherId,
+      }))
+    );
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

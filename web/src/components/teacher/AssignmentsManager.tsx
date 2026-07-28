@@ -42,7 +42,7 @@ const AssignmentsManager = ({ searchQuery = '' }: AssignmentsManagerProps) => {
   // Fetch courses
   const { data: courses, isLoading: coursesLoading } = useQuery({
     queryKey: ['teacher-courses'],
-    queryFn: teacherApi.getCourses,
+    queryFn: () => teacherApi.getCourses(),
   });
 
   // Fetch assignments for selected course

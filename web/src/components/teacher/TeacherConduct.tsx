@@ -277,7 +277,7 @@ const AddConductModal = ({ isOpen, onClose, period, academicYear, conduct, onSav
   // Fetch courses to get students (only for principal teachers)
   const { data: courses } = useQuery({
     queryKey: ['teacher-courses'],
-    queryFn: teacherApi.getCourses,
+    queryFn: () => teacherApi.getCourses(),
     enabled: isOpen && !isEditMode,
   });
 

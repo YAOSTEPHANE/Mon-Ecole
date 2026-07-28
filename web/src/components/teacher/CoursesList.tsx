@@ -17,7 +17,7 @@ const CoursesList = ({ searchQuery = '' }: CoursesListProps) => {
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ['teacher-courses'],
-    queryFn: teacherApi.getCourses,
+    queryFn: () => teacherApi.getCourses(),
   });
 
   // Filter courses

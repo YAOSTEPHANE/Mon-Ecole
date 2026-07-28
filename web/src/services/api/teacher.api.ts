@@ -30,8 +30,8 @@ export const teacherApi = {
     const response = await api.patch(`/teacher/leaves/${leaveId}/cancel`);
     return response.data;
   },
-  getCourses: async () => {
-    const response = await api.get('/teacher/courses');
+  getCourses: async (params?: { scope?: 'mine' | 'substitute' | 'all' }) => {
+    const response = await api.get('/teacher/courses', { params });
     return response.data;
   },
   getDashboardKpis: async () => {
@@ -70,7 +70,16 @@ export const teacherApi = {
     const response = await api.delete(`/teacher/grades/${id}`);
     return response.data;
   },
-  takeAttendance: async (data: any) => {
+  takeAttendance: async (data: {
+    courseId: string;
+    date: string;
+    attendance: Array<{
+      studentId: string;
+      status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+      excused?: boolean;
+      reason?: string;
+    }>;
+  }) => {
     const response = await api.post('/teacher/absences/take-attendance', data);
     return response.data;
   },

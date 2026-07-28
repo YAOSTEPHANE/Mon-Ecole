@@ -10,7 +10,7 @@ import EducatorParentsList from '../../components/educator/EducatorParentsList';
 import EducatorInternalMessaging from '../../components/educator/EducatorInternalMessaging';
 import EducatorScheduleTab from '../../components/educator/EducatorScheduleTab';
 import AcademicValidationPanel from '../../components/academic/AcademicValidationPanel';
-import { FiLayout, FiUsers, FiShield, FiSearch, FiTrendingUp, FiCommand, FiCheckCircle, FiBookOpen, FiHeart, FiMessageSquare, FiCalendar } from 'react-icons/fi';
+import { FiLayout, FiUsers, FiShield, FiSearch, FiTrendingUp, FiCommand, FiCheckCircle, FiBookOpen, FiHeart, FiMessageSquare, FiCalendar, FiUserCheck } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -18,8 +18,9 @@ import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import { EDUCATOR_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+import AttendanceManager from '../../components/teacher/AttendanceManager';
 
-const VALID_TAB_IDS = ['overview', 'students', 'teachers', 'parents', 'messaging', 'schedule', 'conduct', 'validations'] as const;
+const VALID_TAB_IDS = ['overview', 'students', 'teachers', 'parents', 'messaging', 'schedule', 'attendance', 'conduct', 'validations'] as const;
 type TabId = (typeof VALID_TAB_IDS)[number];
 
 type TabDef = {
@@ -45,6 +46,7 @@ const EducatorDashboard = () => {
       { id: 'parents', label: 'Parents', icon: FiHeart, color: 'from-rose-500 to-pink-600', description: 'Familles et contacts par classe' },
       { id: 'messaging', label: 'Messagerie', icon: FiMessageSquare, color: 'from-emerald-500 to-teal-600', description: 'Communication avec enseignants, parents et élèves' },
       { id: 'schedule', label: 'Emplois du temps', icon: FiCalendar, color: 'from-amber-500 to-orange-600', description: 'Plannings par classe et par enseignant' },
+      { id: 'attendance', label: 'Appels', icon: FiUserCheck, color: 'from-cyan-500 to-teal-600', description: 'Appel de remplacement sur vos classes' },
       { id: 'conduct', label: 'Conduite', icon: FiShield, color: 'from-purple-500 to-fuchsia-600', description: 'Évaluations et historique comportemental' },
       { id: 'validations', label: 'Validations', icon: FiCheckCircle, color: 'from-blue-600 to-indigo-600', description: 'Valider les notes et moyennes (2e étape)' },
     ],
@@ -218,6 +220,9 @@ const EducatorDashboard = () => {
                 {activeTab === 'parents' && <EducatorParentsList searchQuery={searchQuery} />}
                 {activeTab === 'messaging' && <EducatorInternalMessaging />}
                 {activeTab === 'schedule' && <EducatorScheduleTab />}
+                {activeTab === 'attendance' && (
+                  <AttendanceManager searchQuery={searchQuery} variant="educator" />
+                )}
                 {activeTab === 'conduct' && <ConductManager searchQuery={searchQuery} />}
                 {activeTab === 'validations' && (
                   <AcademicValidationPanel title="Validations (éducateur)" />

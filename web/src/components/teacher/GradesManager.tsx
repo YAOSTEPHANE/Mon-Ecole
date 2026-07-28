@@ -60,7 +60,7 @@ const GradesManager = ({ searchQuery = '' }: GradesManagerProps) => {
   // Fetch courses
   const { data: courses, isLoading: coursesLoading } = useQuery({
     queryKey: ['teacher-courses'],
-    queryFn: teacherApi.getCourses,
+    queryFn: () => teacherApi.getCourses(),
   });
 
   // Fetch grades for selected course

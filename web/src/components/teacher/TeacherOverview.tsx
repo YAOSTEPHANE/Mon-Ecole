@@ -31,7 +31,7 @@ import { fr } from 'date-fns/locale';
 const TeacherOverview = () => {
   const { data: courses, isLoading: coursesLoading } = useQuery({
     queryKey: ['teacher-courses'],
-    queryFn: teacherApi.getCourses,
+    queryFn: () => teacherApi.getCourses(),
   });
 
   // Fetch assignments for upcoming tasks

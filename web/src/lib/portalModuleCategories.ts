@@ -61,7 +61,7 @@ export const EDUCATOR_MODULE_CATEGORIES: PortalModuleCategory[] = [
   },
   {
     title: 'Vie scolaire',
-    moduleIds: ['schedule', 'conduct', 'validations'],
+    moduleIds: ['schedule', 'attendance', 'conduct', 'validations'],
   },
 ];
 
