@@ -26,6 +26,10 @@ export const studentApi = {
     const response = await api.get('/student/absences');
     return response.data;
   },
+  getDailyPresence: async (params?: { limit?: number }) => {
+    const response = await api.get('/student/daily-presence', { params });
+    return response.data;
+  },
   getAssignments: async () => {
     const response = await api.get('/student/assignments');
     return response.data;

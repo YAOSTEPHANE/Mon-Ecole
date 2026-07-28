@@ -1032,6 +1032,7 @@ model Student {
   classGroupId    String?  @db.ObjectId
   stateAssignment String?
   absences        Absence[]
+  dailyPresences  StudentDailyPresence[]
   grades          Grade[]
   parents         StudentParent[]
   assignments     StudentAssignment[]
@@ -1714,6 +1715,30 @@ model Absence {
   teacher               Teacher       @relation(fields: [teacherId], references: [id])
 
   @@map("absences")
+}
+
+/// Présence journalière établissement (pointeurs MENA / logiciel tiers — 1 pointage/jour).
+model StudentDailyPresence {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  studentId   String        @db.ObjectId
+  /// Jour civil (minuit local normalisé côté import)
+  date        DateTime
+  status      AbsenceStatus @default(PRESENT)
+  checkInAt   DateTime?
+  /// MENA_CSV | MENA_API | MENA_FILE | MENA_DB
+  source      String
+  externalRef String?
+  rawPayload  Json?
+  importedAt  DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([date])
+  @@index([source])
+  @@map("student_daily_presences")
 }
 
 model StudentAbsencePermissionRequest {

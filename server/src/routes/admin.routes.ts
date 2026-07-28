@@ -57,6 +57,7 @@ import tracksAdminRoutes from './admin-tracks.routes';
 import orientationAdminRoutes from './admin-orientation.routes';
 import adminReportsRoutes from './admin-reports.routes';
 import adminMenaRoutes from './admin-mena.routes';
+import adminMenaPresenceRoutes from './admin-mena-presence.routes';
 import adminAppBrandingRoutes from './admin-app-branding.routes';
 import adminWorkspacesRoutes from './admin-workspaces.routes';
 import adminSchoolsRoutes from './admin-schools.routes';
@@ -203,6 +204,7 @@ router.use(tracksAdminRoutes);
 router.use(orientationAdminRoutes);
 router.use(adminReportsRoutes);
 router.use(adminMenaRoutes);
+router.use(adminMenaPresenceRoutes);
 router.use(adminAppBrandingRoutes);
 router.use(libraryManagementRoutes);
 router.use(adminStudentsRoutes);
@@ -663,13 +665,15 @@ router.get('/absences/stats', async (req, res) => {
         course: {
           select: {
             name: true,
-            class: { select: { id: true, name: true } },
+            class: { select: { id: true, name: true, level: true } },
           },
         },
         student: {
           select: {
             classId: true,
-            class: { select: { name: true } },
+            gender: true,
+            dateOfBirth: true,
+            class: { select: { name: true, level: true } },
             user: { select: { firstName: true, lastName: true } },
           },
         },

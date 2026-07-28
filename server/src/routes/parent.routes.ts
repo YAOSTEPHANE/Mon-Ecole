@@ -918,6 +918,21 @@ router.get('/children/:studentId/absences', async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/children/:studentId/daily-presence', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const take = Math.min(60, Math.max(1, parseInt(String(req.query.limit || '14'), 10) || 14));
+    const rows = await prisma.studentDailyPresence.findMany({
+      where: { studentId },
+      orderBy: { date: 'desc' },
+      take,
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 router.get('/children/:studentId/absence-permission-requests', async (req: AuthRequest, res) => {
   try {
     const { studentId } = req.params;

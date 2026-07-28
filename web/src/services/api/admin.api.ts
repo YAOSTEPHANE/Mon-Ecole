@@ -985,6 +985,28 @@ export const adminApi = {
     const response = await api.get('/admin/mena/status');
     return response.data;
   },
+  getMenaPresenceStatus: async () => {
+    const response = await api.get('/admin/mena-presence/status');
+    return response.data;
+  },
+  getMenaPresenceDay: async (date?: string) => {
+    const response = await api.get('/admin/mena-presence/day', { params: { date } });
+    return response.data;
+  },
+  importMenaPresenceCsv: async (data: { csv: string; date?: string }) => {
+    const response = await api.post('/admin/mena-presence/import-csv', data);
+    return response.data;
+  },
+  downloadMenaPresenceCsvTemplate: async () => {
+    const response = await api.get('/admin/mena-presence/csv-template', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+  runMenaPresenceScheduledImport: async () => {
+    const response = await api.post('/admin/mena-presence/run-scheduled');
+    return response.data;
+  },
   getMenaExportPackage: async (params?: { academicYear?: string; format?: 'json' | 'csv' }) => {
     const response = await api.get('/admin/mena/export-package', {
       params,

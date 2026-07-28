@@ -8,6 +8,7 @@ import AttendanceReportsPanel from './AttendanceReportsPanel';
 import AttendanceStatisticsPanel from './AttendanceStatisticsPanel';
 import ParentAttendanceNotifyPanel from './ParentAttendanceNotifyPanel';
 import StudentAbsencePermissionsPanel from './StudentAbsencePermissionsPanel';
+import MenaDailyPresencePanel from './MenaDailyPresencePanel';
 import {
   FiGrid,
   FiUserCheck,
@@ -15,10 +16,18 @@ import {
   FiBarChart2,
   FiBell,
   FiClipboard,
+  FiFlag,
 } from 'react-icons/fi';
 import { ADM } from './adminModuleLayout';
 
-type AttendanceTab = 'overview' | 'rollcall' | 'absences' | 'permissions' | 'reports' | 'parents';
+type AttendanceTab =
+  | 'overview'
+  | 'rollcall'
+  | 'mena'
+  | 'absences'
+  | 'permissions'
+  | 'reports'
+  | 'parents';
 
 const AttendanceManagementModule: React.FC = () => {
   const searchParams = useSearchParams();
@@ -27,6 +36,7 @@ const AttendanceManagementModule: React.FC = () => {
     if (
       initialSubTab === 'overview' ||
       initialSubTab === 'rollcall' ||
+      initialSubTab === 'mena' ||
       initialSubTab === 'absences' ||
       initialSubTab === 'permissions' ||
       initialSubTab === 'reports' ||
@@ -41,6 +51,7 @@ const AttendanceManagementModule: React.FC = () => {
     if (
       initialSubTab === 'overview' ||
       initialSubTab === 'rollcall' ||
+      initialSubTab === 'mena' ||
       initialSubTab === 'absences' ||
       initialSubTab === 'permissions' ||
       initialSubTab === 'reports' ||
@@ -61,6 +72,7 @@ const AttendanceManagementModule: React.FC = () => {
   const subTabs: { id: AttendanceTab; label: string; icon: typeof FiGrid }[] = [
     { id: 'overview', label: 'Tableau de bord classe & période', icon: FiGrid },
     { id: 'rollcall', label: 'Pointage (NFC / bio / manuel)', icon: FiUserCheck },
+    { id: 'mena', label: 'Présence MENA (jour)', icon: FiFlag },
     { id: 'absences', label: 'Suivi des absences', icon: FiCalendar },
     { id: 'permissions', label: 'Permissions d\'absence', icon: FiClipboard },
     { id: 'reports', label: 'Rapports d’assiduité', icon: FiBarChart2 },
@@ -106,6 +118,8 @@ const AttendanceManagementModule: React.FC = () => {
       )}
 
       {tab === 'rollcall' && <PointageEleves embedded />}
+
+      {tab === 'mena' && <MenaDailyPresencePanel />}
 
       {tab === 'absences' && <CompleteManagement attendanceModule compact />}
 

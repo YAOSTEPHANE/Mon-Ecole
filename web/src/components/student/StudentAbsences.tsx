@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import AbsencePermissionRequestsPanel from '../attendance/AbsencePermissionRequestsPanel';
+import DailyPresenceIndicator from '../attendance/DailyPresenceIndicator';
 
 type StudentAbsencesProps = {
   searchQuery?: string;
@@ -128,6 +129,10 @@ const StudentAbsences = ({
 
   return (
     <div className="space-y-6">
+      <DailyPresenceIndicator
+        queryKey={['student-daily-presence']}
+        queryFn={() => studentApi.getDailyPresence({ limit: 14 })}
+      />
       <AbsencePermissionRequestsPanel
         mode="student"
         queryKey={['student-absence-permission-requests']}

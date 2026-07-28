@@ -16,6 +16,19 @@ export type AttendanceClassStats = {
   punctualityRate: number;
 };
 
+export type AttendanceDimensionStats = {
+  key: string;
+  label: string;
+  present: number;
+  late: number;
+  absentUnexcused: number;
+  excusedAbsent: number;
+  absencesTotal: number;
+  total: number;
+  punctualityRate: number;
+  absenceRate: number;
+};
+
 export type AttendanceDayStats = {
   date: string;
   present: number;
@@ -75,6 +88,9 @@ export type AttendanceStats = {
   byDay: AttendanceDayStats[];
   bySession: AttendanceSessionStats[];
   byClass: AttendanceClassStats[];
+  byLevel: AttendanceDimensionStats[];
+  byGender: AttendanceDimensionStats[];
+  byAgeGroup: AttendanceDimensionStats[];
   byStudent: AttendanceStudentStats[];
   topLateStudents: AttendanceLateStudent[];
 };
@@ -90,6 +106,45 @@ export const ATTENDANCE_SOURCE_LABELS: Record<keyof AttendanceSourceStats, strin
 
 export function formatAttendanceRate(rate: number): string {
   return `${rate.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
+}
+
+export function ageFromDateOfBirth(
+  dateOfBirth: string | Date | null | undefined,
+  asOf: Date = new Date()
+): number | null {
+  if (!dateOfBirth) return null;
+  const birth = dateOfBirth instanceof Date ? dateOfBirth : new Date(dateOfBirth);
+  if (Number.isNaN(birth.getTime())) return null;
+  let age = asOf.getFullYear() - birth.getFullYear();
+  const monthDiff = asOf.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && asOf.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  if (age < 0 || age > 120) return null;
+  return age;
+}
+
+export function ageGroupKey(age: number | null): string {
+  if (age == null) return 'unknown';
+  if (age <= 10) return '0-10';
+  if (age <= 13) return '11-13';
+  if (age <= 16) return '14-16';
+  if (age <= 18) return '17-18';
+  return '19+';
+}
+
+export function genderKey(gender: string | null | undefined): string {
+  const raw = (gender || '').toUpperCase();
+  if (raw === 'MALE' || raw === 'M' || raw === 'HOMME' || raw === 'GARCON' || raw === 'GARÇON') {
+    return 'MALE';
+  }
+  if (raw === 'FEMALE' || raw === 'F' || raw === 'FEMME' || raw === 'FILLE') {
+    return 'FEMALE';
+  }
+  if (raw === 'OTHER' || raw === 'AUTRE') {
+    return 'OTHER';
+  }
+  return 'unknown';
 }
 
 export function resolveAttendancePeriod(

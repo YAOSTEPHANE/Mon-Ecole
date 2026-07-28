@@ -11,10 +11,12 @@ function row(partial: Partial<AttendanceStatRow> & Pick<AttendanceStatRow, 'stat
     sanctionNote: null,
     attendanceSource: 'MANUAL',
     date: new Date('2026-07-10T08:00:00.000Z'),
-    course: { name: 'Mathématiques', class: { id: 'class-1', name: '6ème A' } },
+    course: { name: 'Mathématiques', class: { id: 'class-1', name: '6ème A', level: '6ème' } },
     student: {
       classId: 'class-1',
-      class: { name: '6ème A' },
+      gender: 'MALE',
+      dateOfBirth: new Date('2013-03-15T00:00:00.000Z'),
+      class: { name: '6ème A', level: '6ème' },
       user: { firstName: 'Jean', lastName: 'Dupont' },
     },
     ...partial,
@@ -49,7 +51,9 @@ describe('computeAttendanceStats', () => {
         date: new Date('2026-07-11T08:00:00.000Z'),
         student: {
           classId: 'class-2',
-          class: { name: '5ème B' },
+          gender: 'FEMALE',
+          dateOfBirth: new Date('2012-01-01T00:00:00.000Z'),
+          class: { name: '5ème B', level: '5ème' },
           user: { firstName: 'Marie', lastName: 'Martin' },
         },
       }),
@@ -59,6 +63,61 @@ describe('computeAttendanceStats', () => {
     assert.equal(stats.byDay.length, 2);
     assert.equal(stats.byDay[0]?.date, '2026-07-10');
     assert.equal(stats.topLateStudents[0]?.studentName, 'Marie Martin');
+  });
+
+  it('liste les absences par niveau, sexe et tranche d’âge', () => {
+    const stats = computeAttendanceStats([
+      row({
+        status: 'ABSENT',
+        studentId: 's1',
+        excused: false,
+        student: {
+          classId: 'class-1',
+          gender: 'MALE',
+          dateOfBirth: new Date('2014-06-01T00:00:00.000Z'),
+          class: { name: '6ème A', level: '6ème' },
+          user: { firstName: 'Jean', lastName: 'Dupont' },
+        },
+      }),
+      row({
+        status: 'ABSENT',
+        studentId: 's2',
+        excused: true,
+        student: {
+          classId: 'class-2',
+          gender: 'FEMALE',
+          dateOfBirth: new Date('2011-06-01T00:00:00.000Z'),
+          class: { name: '5ème B', level: '5ème' },
+          user: { firstName: 'Marie', lastName: 'Martin' },
+        },
+      }),
+      row({
+        status: 'PRESENT',
+        studentId: 's3',
+        student: {
+          classId: 'class-1',
+          gender: 'MALE',
+          dateOfBirth: new Date('2014-01-01T00:00:00.000Z'),
+          class: { name: '6ème A', level: '6ème' },
+          user: { firstName: 'Paul', lastName: 'Bernard' },
+        },
+      }),
+    ]);
+
+    assert.equal(stats.byLevel.length, 2);
+    const sixth = stats.byLevel.find((l) => l.key === '6ème');
+    assert.equal(sixth?.absencesTotal, 1);
+    assert.equal(sixth?.total, 2);
+
+    const girls = stats.byGender.find((g) => g.key === 'FEMALE');
+    assert.equal(girls?.absencesTotal, 1);
+    assert.equal(girls?.excusedAbsent, 1);
+
+    assert.ok(stats.byAgeGroup.length >= 1);
+    assert.equal(
+      stats.byAgeGroup.reduce((sum, g) => sum + g.absencesTotal, 0),
+      2
+    );
   });
 
   it('compte les sources de pointage', () => {
@@ -84,7 +143,9 @@ describe('computeAttendanceStats', () => {
         excused: false,
         student: {
           classId: 'class-2',
-          class: { name: '5ème B' },
+          gender: 'FEMALE',
+          dateOfBirth: new Date('2012-01-01T00:00:00.000Z'),
+          class: { name: '5ème B', level: '5ème' },
           user: { firstName: 'Marie', lastName: 'Martin' },
         },
       }),

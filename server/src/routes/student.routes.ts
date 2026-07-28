@@ -434,6 +434,29 @@ router.get('/absences', async (req: AuthRequest, res) => {
   }
 });
 
+/** Présence journalière établissement (pointeurs MENA / logiciel tiers). */
+router.get('/daily-presence', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+
+    const take = Math.min(60, Math.max(1, parseInt(String(req.query.limit || '14'), 10) || 14));
+    const rows = await prisma.studentDailyPresence.findMany({
+      where: { studentId: student.id },
+      orderBy: { date: 'desc' },
+      take,
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // Justifier une absence avec un document
 router.put('/absences/:id/justify', async (req: AuthRequest, res) => {
   try {

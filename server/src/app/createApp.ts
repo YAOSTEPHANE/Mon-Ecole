@@ -9,6 +9,7 @@ import educatorRoutes from '../routes/educator.routes';
 import uploadRoutes from '../routes/upload.routes';
 import nfcRoutes from '../routes/nfc.routes';
 import faceRoutes from '../routes/face.routes';
+import menaPresenceRoutes from '../routes/mena-presence.routes';
 import pushRoutes from '../routes/push.routes';
 import admissionPublicRoutes from '../routes/admission.public.routes';
 import publicRoutes from '../routes/public.routes';
@@ -179,6 +180,7 @@ export function createApp(): express.Express {
   app.use(`${apiPrefix}/upload`, uploadRoutes);
   app.use(`${apiPrefix}/nfc`, nfcRoutes);
   app.use(`${apiPrefix}/face`, faceRoutes);
+  app.use(`${apiPrefix}/mena-presence`, menaPresenceRoutes);
   app.use(`${apiPrefix}/push`, pushRoutes);
   app.use(`${apiPrefix}/public/admissions`, admissionPublicRoutes);
   app.use(`${apiPrefix}/public`, publicRoutes);

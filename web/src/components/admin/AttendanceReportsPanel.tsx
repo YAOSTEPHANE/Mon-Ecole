@@ -8,7 +8,86 @@ import { FiBarChart, FiDownload } from 'react-icons/fi';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
-import { formatAttendanceRate } from '@/lib/attendanceStats';
+import {
+  ageFromDateOfBirth,
+  ageGroupKey,
+  formatAttendanceRate,
+  genderKey,
+  type AttendanceDimensionStats,
+} from '@/lib/attendanceStats';
+
+type DimensionFilter =
+  | { kind: 'class'; key: string; label: string }
+  | { kind: 'level'; key: string; label: string }
+  | { kind: 'gender'; key: string; label: string }
+  | { kind: 'age'; key: string; label: string }
+  | null;
+
+function isAbsenceStatus(status: string | undefined, excused: boolean | undefined): boolean {
+  if (status === 'ABSENT' || status === 'EXCUSED') return true;
+  if (status === 'LATE' || status === 'PRESENT') return false;
+  return Boolean(excused);
+}
+
+function DimensionTable({
+  title,
+  rows,
+  activeKey,
+  onSelect,
+}: {
+  title: string;
+  rows: AttendanceDimensionStats[];
+  activeKey?: string | null;
+  onSelect: (row: AttendanceDimensionStats) => void;
+}) {
+  return (
+    <Card className="p-4 border border-gray-200">
+      <h3 className="font-semibold text-gray-900 mb-3">{title}</h3>
+      {rows.length === 0 ? (
+        <p className="text-sm text-gray-500">Aucune donnée sur la période.</p>
+      ) : (
+        <div className="overflow-x-auto max-h-72">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-gray-600">
+                <th className="py-2 pr-2">Libellé</th>
+                <th className="py-2 pr-2 text-right">Absences</th>
+                <th className="py-2 pr-2 text-right">Non just.</th>
+                <th className="py-2 pr-2 text-right">Justifiées</th>
+                <th className="py-2 pr-2 text-right">Taux abs.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const selected = activeKey === row.key;
+                return (
+                  <tr
+                    key={row.key}
+                    className={`border-b border-gray-100 cursor-pointer hover:bg-slate-50 ${
+                      selected ? 'bg-cyan-50' : ''
+                    }`}
+                    onClick={() => onSelect(row)}
+                  >
+                    <td className="py-2 pr-2 font-medium text-gray-900">{row.label}</td>
+                    <td className="py-2 pr-2 text-right font-semibold text-red-700">
+                      {row.absencesTotal}
+                    </td>
+                    <td className="py-2 pr-2 text-right text-gray-700">{row.absentUnexcused}</td>
+                    <td className="py-2 pr-2 text-right text-gray-700">{row.excusedAbsent}</td>
+                    <td className="py-2 pr-2 text-right text-gray-700">
+                      {formatAttendanceRate(row.absenceRate)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-xs text-gray-500 mt-2">Cliquez une ligne pour filtrer la liste des absences.</p>
+    </Card>
+  );
+}
 
 const AttendanceReportsPanel: React.FC = () => {
   const [classId, setClassId] = useState<string>('all');
@@ -18,6 +97,8 @@ const AttendanceReportsPanel: React.FC = () => {
     return d.toISOString().split('T')[0];
   });
   const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dimensionFilter, setDimensionFilter] = useState<DimensionFilter>(null);
+  const [absencesOnly, setAbsencesOnly] = useState(true);
 
   const { data: classes } = useQuery({
     queryKey: ['classes'],
@@ -56,9 +137,32 @@ const AttendanceReportsPanel: React.FC = () => {
     byDay: [],
     bySession: [],
     byClass: [],
+    byLevel: [],
+    byGender: [],
+    byAgeGroup: [],
     byStudent: [],
     topLateStudents: [],
   };
+
+  const byClassAsDimension: AttendanceDimensionStats[] = useMemo(
+    () =>
+      (stats.byClass ?? []).map((c) => {
+        const absencesTotal = c.absentUnexcused + c.excusedAbsent;
+        return {
+          key: c.classId,
+          label: c.className,
+          present: c.present,
+          late: c.late,
+          absentUnexcused: c.absentUnexcused,
+          excusedAbsent: c.excusedAbsent,
+          absencesTotal,
+          total: c.total,
+          punctualityRate: c.punctualityRate,
+          absenceRate: c.total > 0 ? Math.round((absencesTotal / c.total) * 1000) / 10 : 0,
+        };
+      }),
+    [stats.byClass]
+  );
 
   const filtered = useMemo(() => {
     if (!absences?.length) return [];
@@ -66,17 +170,54 @@ const AttendanceReportsPanel: React.FC = () => {
     start.setHours(0, 0, 0, 0);
     const end = new Date(toDate);
     end.setHours(23, 59, 59, 999);
-    return absences.filter((a: { date?: string }) => {
+    const asOf = end;
+
+    return absences.filter((a: {
+      date?: string;
+      status?: string;
+      excused?: boolean;
+      student?: {
+        classId?: string | null;
+        gender?: string | null;
+        dateOfBirth?: string | null;
+        class?: { name?: string; level?: string | null } | null;
+      } | null;
+    }) => {
       if (!a.date) return false;
       const d = parseISO(a.date);
-      return d >= start && d <= end;
+      if (d < start || d > end) return false;
+
+      if (absencesOnly && !isAbsenceStatus(a.status, a.excused)) return false;
+
+      if (!dimensionFilter) return true;
+
+      switch (dimensionFilter.kind) {
+        case 'class':
+          return (a.student?.classId ?? 'unassigned') === dimensionFilter.key;
+        case 'level': {
+          const level = a.student?.class?.level?.trim() || 'unknown';
+          return level === dimensionFilter.key;
+        }
+        case 'gender':
+          return genderKey(a.student?.gender) === dimensionFilter.key;
+        case 'age':
+          return ageGroupKey(ageFromDateOfBirth(a.student?.dateOfBirth, asOf)) === dimensionFilter.key;
+        default: {
+          const _exhaustive: never = dimensionFilter;
+          void _exhaustive;
+          return true;
+        }
+      }
     });
-  }, [absences, fromDate, toDate]);
+  }, [absences, fromDate, toDate, absencesOnly, dimensionFilter]);
 
   const exportCsv = () => {
     const headers = [
       'Élève',
       'Classe',
+      'Niveau',
+      'Sexe',
+      'Date naissance',
       'Matière',
       'Date',
       'Statut',
@@ -89,6 +230,9 @@ const AttendanceReportsPanel: React.FC = () => {
     const rows = filtered.map((a: any) => [
       `${a.student?.user?.firstName ?? ''} ${a.student?.user?.lastName ?? ''}`.trim(),
       a.student?.class?.name ?? '',
+      a.student?.class?.level ?? '',
+      a.student?.gender ?? '',
+      a.student?.dateOfBirth ? format(parseISO(a.student.dateOfBirth), 'yyyy-MM-dd') : '',
       a.course?.name ?? '',
       a.date ? format(parseISO(a.date), 'yyyy-MM-dd') : '',
       a.status ?? '',
@@ -116,7 +260,10 @@ const AttendanceReportsPanel: React.FC = () => {
           <FilterDropdown
             label="Classe"
             value={classId}
-            onChange={setClassId}
+            onChange={(value) => {
+              setClassId(value);
+              setDimensionFilter(null);
+            }}
             options={[
               { value: 'all', label: 'Toutes les classes' },
               ...(classes || []).map((c: any) => ({
@@ -145,6 +292,15 @@ const AttendanceReportsPanel: React.FC = () => {
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 pb-2">
+            <input
+              type="checkbox"
+              checked={absencesOnly}
+              onChange={(e) => setAbsencesOnly(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Liste : absences uniquement
+          </label>
           <Button type="button" variant="outline" onClick={exportCsv} className="shrink-0">
             <FiDownload className="w-4 h-4 mr-2" />
             Exporter CSV (période)
@@ -201,8 +357,53 @@ const AttendanceReportsPanel: React.FC = () => {
         </Card>
       </div>
 
+      <div>
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <h2 className="text-lg font-semibold text-gray-900">Absences par dimension</h2>
+          {dimensionFilter && (
+            <Button
+              type="button"
+              variant="outline"
+              className="text-sm"
+              onClick={() => setDimensionFilter(null)}
+            >
+              Effacer le filtre : {dimensionFilter.label}
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <DimensionTable
+            title="Par classe"
+            rows={byClassAsDimension}
+            activeKey={dimensionFilter?.kind === 'class' ? dimensionFilter.key : null}
+            onSelect={(row) => setDimensionFilter({ kind: 'class', key: row.key, label: row.label })}
+          />
+          <DimensionTable
+            title="Par niveau"
+            rows={stats.byLevel ?? []}
+            activeKey={dimensionFilter?.kind === 'level' ? dimensionFilter.key : null}
+            onSelect={(row) => setDimensionFilter({ kind: 'level', key: row.key, label: row.label })}
+          />
+          <DimensionTable
+            title="Par sexe"
+            rows={stats.byGender ?? []}
+            activeKey={dimensionFilter?.kind === 'gender' ? dimensionFilter.key : null}
+            onSelect={(row) => setDimensionFilter({ kind: 'gender', key: row.key, label: row.label })}
+          />
+          <DimensionTable
+            title="Par âge"
+            rows={stats.byAgeGroup ?? []}
+            activeKey={dimensionFilter?.kind === 'age' ? dimensionFilter.key : null}
+            onSelect={(row) => setDimensionFilter({ kind: 'age', key: row.key, label: row.label })}
+          />
+        </div>
+      </div>
+
       <Card className="p-5 border border-gray-200">
-        <h3 className="font-semibold text-gray-900 mb-3">Détail ({filtered.length} lignes)</h3>
+        <h3 className="font-semibold text-gray-900 mb-3">
+          Liste des absences ({filtered.length}
+          {dimensionFilter ? ` — ${dimensionFilter.label}` : ''})
+        </h3>
         {isLoading ? (
           <p className="text-sm text-gray-500">Chargement…</p>
         ) : filtered.length === 0 ? (
@@ -215,48 +416,59 @@ const AttendanceReportsPanel: React.FC = () => {
                   <th className="py-2 pr-3">Date</th>
                   <th className="py-2 pr-3">Élève</th>
                   <th className="py-2 pr-3">Classe</th>
+                  <th className="py-2 pr-3">Niveau</th>
+                  <th className="py-2 pr-3">Sexe</th>
+                  <th className="py-2 pr-3">Âge</th>
                   <th className="py-2 pr-3">Matière</th>
                   <th className="py-2 pr-3">Statut</th>
                   <th className="py-2 pr-3">Source</th>
-                  <th className="py-2 pr-3">Retard</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 200).map((a: any) => (
-                  <tr key={a.id} className="border-b border-gray-100">
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      {a.date
-                        ? format(parseISO(a.date), 'dd MMM yyyy', { locale: fr })
-                        : '—'}
-                    </td>
-                    <td className="py-2 pr-3">
-                      {a.student?.user?.firstName} {a.student?.user?.lastName}
-                    </td>
-                    <td className="py-2 pr-3">{a.student?.class?.name ?? '—'}</td>
-                    <td className="py-2 pr-3">{a.course?.name ?? '—'}</td>
-                    <td className="py-2 pr-3">
-                      {a.status === 'PRESENT'
-                        ? 'Présent'
-                        : a.status === 'LATE'
-                          ? 'Retard'
-                          : a.excused
-                            ? 'Absent (just.)'
-                            : 'Absent'}
-                    </td>
-                    <td className="py-2 pr-3 text-xs text-gray-600">
-                      {a.attendanceSource === 'BIOMETRIC'
-                        ? 'Bio.'
-                        : a.attendanceSource === 'NFC'
-                          ? 'NFC'
-                          : a.attendanceSource === 'MANUAL'
-                            ? 'Manuel'
-                            : '—'}
-                    </td>
-                    <td className="py-2 pr-3 text-xs">
-                      {a.status === 'LATE' && a.minutesLate != null ? `${a.minutesLate} min` : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {filtered.slice(0, 200).map((a: any) => {
+                  const age = ageFromDateOfBirth(a.student?.dateOfBirth, new Date(toDate));
+                  return (
+                    <tr key={a.id} className="border-b border-gray-100">
+                      <td className="py-2 pr-3 whitespace-nowrap">
+                        {a.date
+                          ? format(parseISO(a.date), 'dd MMM yyyy', { locale: fr })
+                          : '—'}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {a.student?.user?.firstName} {a.student?.user?.lastName}
+                      </td>
+                      <td className="py-2 pr-3">{a.student?.class?.name ?? '—'}</td>
+                      <td className="py-2 pr-3">{a.student?.class?.level ?? '—'}</td>
+                      <td className="py-2 pr-3">
+                        {a.student?.gender === 'MALE'
+                          ? 'G'
+                          : a.student?.gender === 'FEMALE'
+                            ? 'F'
+                            : a.student?.gender ?? '—'}
+                      </td>
+                      <td className="py-2 pr-3">{age != null ? `${age} ans` : '—'}</td>
+                      <td className="py-2 pr-3">{a.course?.name ?? '—'}</td>
+                      <td className="py-2 pr-3">
+                        {a.status === 'PRESENT'
+                          ? 'Présent'
+                          : a.status === 'LATE'
+                            ? 'Retard'
+                            : a.excused || a.status === 'EXCUSED'
+                              ? 'Absent (just.)'
+                              : 'Absent'}
+                      </td>
+                      <td className="py-2 pr-3 text-xs text-gray-600">
+                        {a.attendanceSource === 'BIOMETRIC'
+                          ? 'Bio.'
+                          : a.attendanceSource === 'NFC'
+                            ? 'NFC'
+                            : a.attendanceSource === 'MANUAL'
+                              ? 'Manuel'
+                              : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {filtered.length > 200 && (

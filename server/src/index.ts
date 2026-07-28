@@ -7,6 +7,7 @@ import http from 'http';
 import { startScheduledMongoBackups } from './jobs/scheduled-mongodb-backup';
 import { startScheduledTuitionReminders } from './jobs/scheduled-tuition-reminders';
 import { startScheduledAppointmentReminders } from './jobs/scheduled-appointment-reminders';
+import { startScheduledMenaPresenceImport } from './jobs/scheduled-mena-presence-import';
 import {
   logDatabaseUrlDiagnostics,
   logProductionEnvDiagnostics,
@@ -49,6 +50,7 @@ if (process.env.VERCEL !== '1') {
   startScheduledMongoBackups();
   startScheduledTuitionReminders();
   startScheduledAppointmentReminders();
+  startScheduledMenaPresenceImport();
   const server = http.createServer(app);
   attachRealtime(server);
   server.listen(PORT, () => {

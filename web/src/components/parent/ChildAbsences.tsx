@@ -16,6 +16,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import AbsencePermissionRequestsPanel from '../attendance/AbsencePermissionRequestsPanel';
+import DailyPresenceIndicator from '../attendance/DailyPresenceIndicator';
 
 interface ChildAbsencesProps {
   studentId: string;
@@ -77,6 +78,10 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
 
   return (
     <div className="space-y-6">
+      <DailyPresenceIndicator
+        queryKey={['parent-child-daily-presence', studentId]}
+        queryFn={() => parentApi.getChildDailyPresence(studentId, { limit: 14 })}
+      />
       <AbsencePermissionRequestsPanel
         mode="parent"
         studentId={studentId}

@@ -26,6 +26,7 @@ import {
 } from 'react-icons/fi';
 import { adminApi } from '../../services/api';
 import AttendanceDailySummarySection from './AttendanceDailySummarySection';
+import AttendanceDashboardCharts from './AttendanceDashboardCharts';
 import Card from '../ui/Card';
 import FilterDropdown from '../ui/FilterDropdown';
 import { ADM } from './adminModuleLayout';
@@ -37,6 +38,7 @@ import {
   studentAbsenceRateBarClass,
   studentAbsenceRateTone,
   type AttendancePeriodPreset,
+  type AttendanceStats,
 } from '@/lib/attendanceStats';
 import {
   CHART_AXIS_TICK,
@@ -66,6 +68,27 @@ function todayIso(): string {
   return new Date().toISOString().split('T')[0] ?? '';
 }
 
+const EMPTY_STATS: AttendanceStats = {
+  total: 0,
+  present: 0,
+  absentUnexcused: 0,
+  late: 0,
+  excusedAbsent: 0,
+  medicalCertificates: 0,
+  sanctionsRecorded: 0,
+  avgLateMinutes: null,
+  punctualityRate: 0,
+  bySource: { manual: 0, nfc: 0, biometric: 0, other: 0 },
+  byDay: [],
+  bySession: [],
+  byClass: [],
+  byLevel: [],
+  byGender: [],
+  byAgeGroup: [],
+  byStudent: [],
+  topLateStudents: [],
+};
+
 const AttendanceClassPeriodDashboard = ({ onOpenAbsences }: AttendanceClassPeriodDashboardProps) => {
   const [classId, setClassId] = useState('all');
   const [periodPreset, setPeriodPreset] = useState<AttendancePeriodPreset>('month');
@@ -90,7 +113,7 @@ const AttendanceClassPeriodDashboard = ({ onOpenAbsences }: AttendanceClassPerio
     queryFn: adminApi.getClasses,
   });
 
-  const { data: stats, isLoading, isFetching } = useQuery({
+  const { data: statsRaw, isLoading, isFetching } = useQuery({
     queryKey: ['admin-absence-stats', classId, fromDate, toDate],
     queryFn: () =>
       adminApi.getAbsenceStats({
@@ -100,6 +123,23 @@ const AttendanceClassPeriodDashboard = ({ onOpenAbsences }: AttendanceClassPerio
       }),
     staleTime: 30_000,
   });
+
+  const stats: AttendanceStats = useMemo(
+    () => ({
+      ...EMPTY_STATS,
+      ...statsRaw,
+      bySource: { ...EMPTY_STATS.bySource, ...statsRaw?.bySource },
+      byDay: statsRaw?.byDay ?? [],
+      bySession: statsRaw?.bySession ?? [],
+      byClass: statsRaw?.byClass ?? [],
+      byLevel: statsRaw?.byLevel ?? [],
+      byGender: statsRaw?.byGender ?? [],
+      byAgeGroup: statsRaw?.byAgeGroup ?? [],
+      byStudent: statsRaw?.byStudent ?? [],
+      topLateStudents: statsRaw?.topLateStudents ?? [],
+    }),
+    [statsRaw]
+  );
 
   const selectedClassName = useMemo(() => {
     if (classId === 'all') return 'Toutes les classes';
@@ -424,11 +464,11 @@ const AttendanceClassPeriodDashboard = ({ onOpenAbsences }: AttendanceClassPerio
                 <FiClock className="h-4 w-4 text-amber-700" aria-hidden />
                 <h3 className="font-semibold text-gray-900">Top retards</h3>
               </div>
-              {(stats?.topLateStudents.length ?? 0) === 0 ? (
+              {(stats.topLateStudents.length ?? 0) === 0 ? (
                 <p className="text-sm text-gray-500">Aucun retard sur la période.</p>
               ) : (
                 <ul className="space-y-2">
-                  {stats?.topLateStudents.slice(0, 8).map((student, index) => (
+                  {stats.topLateStudents.slice(0, 8).map((student, index) => (
                     <li
                       key={student.studentId}
                       className="flex items-center justify-between gap-2 rounded-lg border border-stone-100 bg-stone-50/60 px-3 py-2 text-sm"
@@ -449,9 +489,15 @@ const AttendanceClassPeriodDashboard = ({ onOpenAbsences }: AttendanceClassPerio
             </Card>
           </div>
 
+          <AttendanceDashboardCharts
+            stats={stats}
+            classId={classId}
+            selectedClassName={selectedClassName}
+          />
+
           <AttendanceDailySummarySection
-            byDay={stats?.byDay ?? []}
-            bySession={stats?.bySession ?? []}
+            byDay={stats.byDay}
+            bySession={stats.bySession}
           />
 
           <Card className="border border-gray-200 p-4">

@@ -12,11 +12,13 @@ export type AttendanceStatRow = {
   date: Date;
   course?: {
     name: string;
-    class?: { id: string; name: string } | null;
+    class?: { id: string; name: string; level?: string | null } | null;
   } | null;
   student?: {
     classId: string | null;
-    class?: { name: string } | null;
+    dateOfBirth?: Date | string | null;
+    gender?: string | null;
+    class?: { name: string; level?: string | null } | null;
     user?: { firstName: string | null; lastName: string | null } | null;
   } | null;
 };
@@ -30,6 +32,21 @@ export type AttendanceClassStats = {
   excusedAbsent: number;
   total: number;
   punctualityRate: number;
+};
+
+/** Agrégat générique pour listes d’absences (classe / niveau / sexe / âge). */
+export type AttendanceDimensionStats = {
+  key: string;
+  label: string;
+  present: number;
+  late: number;
+  absentUnexcused: number;
+  excusedAbsent: number;
+  /** Absences = non justifiées + justifiées (hors présents / retards). */
+  absencesTotal: number;
+  total: number;
+  punctualityRate: number;
+  absenceRate: number;
 };
 
 export type AttendanceDayStats = {
@@ -98,6 +115,9 @@ export type AttendanceStats = {
   byDay: AttendanceDayStats[];
   bySession: AttendanceSessionStats[];
   byClass: AttendanceClassStats[];
+  byLevel: AttendanceDimensionStats[];
+  byGender: AttendanceDimensionStats[];
+  byAgeGroup: AttendanceDimensionStats[];
   byStudent: AttendanceStudentStats[];
   topLateStudents: AttendanceLateStudent[];
 };
@@ -184,6 +204,108 @@ export function absenceRate(absences: number, total: number): number {
   return Math.round((absences / total) * 1000) / 10;
 }
 
+export function ageFromDateOfBirth(
+  dateOfBirth: Date | string | null | undefined,
+  asOf: Date = new Date()
+): number | null {
+  if (!dateOfBirth) return null;
+  const birth = dateOfBirth instanceof Date ? dateOfBirth : new Date(dateOfBirth);
+  if (Number.isNaN(birth.getTime())) return null;
+  let age = asOf.getFullYear() - birth.getFullYear();
+  const monthDiff = asOf.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && asOf.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  if (age < 0 || age > 120) return null;
+  return age;
+}
+
+/** Tranches d’âge scolaires (clé stable + libellé FR). */
+export function ageGroupFromAge(age: number | null): { key: string; label: string } {
+  if (age == null) return { key: 'unknown', label: 'Âge inconnu' };
+  if (age <= 10) return { key: '0-10', label: '10 ans et moins' };
+  if (age <= 13) return { key: '11-13', label: '11–13 ans' };
+  if (age <= 16) return { key: '14-16', label: '14–16 ans' };
+  if (age <= 18) return { key: '17-18', label: '17–18 ans' };
+  return { key: '19+', label: '19 ans et plus' };
+}
+
+export function genderLabel(gender: string | null | undefined): { key: string; label: string } {
+  const raw = (gender || '').toUpperCase();
+  if (raw === 'MALE' || raw === 'M' || raw === 'HOMME' || raw === 'GARCON' || raw === 'GARÇON') {
+    return { key: 'MALE', label: 'Garçons' };
+  }
+  if (raw === 'FEMALE' || raw === 'F' || raw === 'FEMME' || raw === 'FILLE') {
+    return { key: 'FEMALE', label: 'Filles' };
+  }
+  if (raw === 'OTHER' || raw === 'AUTRE') {
+    return { key: 'OTHER', label: 'Autre' };
+  }
+  return { key: 'unknown', label: 'Non renseigné' };
+}
+
+function emptyDimensionBucket(key: string, label: string): {
+  key: string;
+  label: string;
+  present: number;
+  late: number;
+  absentUnexcused: number;
+  excusedAbsent: number;
+  total: number;
+} {
+  return {
+    key,
+    label,
+    present: 0,
+    late: 0,
+    absentUnexcused: 0,
+    excusedAbsent: 0,
+    total: 0,
+  };
+}
+
+function bumpDimensionBucket(
+  map: Map<string, ReturnType<typeof emptyDimensionBucket>>,
+  key: string,
+  label: string,
+  status: AbsenceStatus,
+  excused: boolean
+): void {
+  let bucket = map.get(key);
+  if (!bucket) {
+    bucket = emptyDimensionBucket(key, label);
+    map.set(key, bucket);
+  }
+  bucket.total++;
+  if (status === 'PRESENT') bucket.present++;
+  else if (status === 'LATE') bucket.late++;
+  else if (status === 'ABSENT') {
+    if (excused) bucket.excusedAbsent++;
+    else bucket.absentUnexcused++;
+  } else if (status === 'EXCUSED') {
+    bucket.excusedAbsent++;
+  }
+}
+
+function finalizeDimensionBuckets(
+  map: Map<string, ReturnType<typeof emptyDimensionBucket>>
+): AttendanceDimensionStats[] {
+  return [...map.values()]
+    .map((bucket) => {
+      const absencesTotal = bucket.absentUnexcused + bucket.excusedAbsent;
+      return {
+        ...bucket,
+        absencesTotal,
+        punctualityRate: punctualityRate(bucket.present, bucket.late, bucket.total),
+        absenceRate: absenceRate(absencesTotal, bucket.total),
+      };
+    })
+    .sort((a, b) => {
+      if (b.absencesTotal !== a.absencesTotal) return b.absencesTotal - a.absencesTotal;
+      return a.label.localeCompare(b.label, 'fr');
+    });
+}
+
 export function computeAttendanceStats(rows: AttendanceStatRow[]): AttendanceStats {
   let present = 0;
   let absentUnexcused = 0;
@@ -198,11 +320,15 @@ export function computeAttendanceStats(rows: AttendanceStatRow[]): AttendanceSta
   const byDay = new Map<string, MutableDayBucket>();
   const bySession = new Map<string, MutableSessionBucket>();
   const byClass = new Map<string, MutableClassBucket>();
+  const byLevel = new Map<string, ReturnType<typeof emptyDimensionBucket>>();
+  const byGender = new Map<string, ReturnType<typeof emptyDimensionBucket>>();
+  const byAgeGroup = new Map<string, ReturnType<typeof emptyDimensionBucket>>();
   const byStudent = new Map<string, MutableStudentBucket>();
   const lateByStudent = new Map<
     string,
     { count: number; studentName: string; className: string }
   >();
+  const asOf = new Date();
 
   for (const row of rows) {
     const dayKey = utcDateKey(row.date);
@@ -291,6 +417,21 @@ export function computeAttendanceStats(rows: AttendanceStatRow[]): AttendanceSta
     byClass.set(classId, classBucket);
     byDay.set(dayKey, dayBucket);
     bySession.set(sessionKey, sessionBucket);
+
+    const levelRaw =
+      row.student?.class?.level?.trim() ||
+      row.course?.class?.level?.trim() ||
+      '';
+    const levelKey = levelRaw || 'unknown';
+    const levelLabel = levelRaw || 'Niveau non renseigné';
+    bumpDimensionBucket(byLevel, levelKey, levelLabel, row.status, row.excused);
+
+    const genderInfo = genderLabel(row.student?.gender);
+    bumpDimensionBucket(byGender, genderInfo.key, genderInfo.label, row.status, row.excused);
+
+    const age = ageFromDateOfBirth(row.student?.dateOfBirth, asOf);
+    const ageInfo = ageGroupFromAge(age);
+    bumpDimensionBucket(byAgeGroup, ageInfo.key, ageInfo.label, row.status, row.excused);
 
     const studentName = studentDisplayName(row);
     const studentClassId = row.student?.classId ?? 'unassigned';
@@ -397,6 +538,9 @@ export function computeAttendanceStats(rows: AttendanceStatRow[]): AttendanceSta
     byDay: byDayList,
     bySession: bySessionList,
     byClass: byClassList,
+    byLevel: finalizeDimensionBuckets(byLevel),
+    byGender: finalizeDimensionBuckets(byGender),
+    byAgeGroup: finalizeDimensionBuckets(byAgeGroup),
     byStudent: byStudentList,
     topLateStudents,
   };
