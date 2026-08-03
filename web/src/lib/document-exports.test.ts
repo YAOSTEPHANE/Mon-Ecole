@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import jsPDF from 'jspdf';
 import { dossierToPdfPayload, downloadHealthDossierPdf } from './healthDossierPdf';
 import { downloadJobDescriptionPdf } from './jobDescriptionPdf';
