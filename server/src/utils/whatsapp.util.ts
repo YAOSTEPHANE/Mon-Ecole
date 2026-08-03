@@ -1,19 +1,23 @@
 /**
  * WhatsApp Cloud API (Meta) — envoi de messages texte.
- * Sans WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID : mode journal (dev).
+ * Sans token / phone number id : mode journal (dev).
  */
 
+import {
+  getWhatsAppDefaultCountryCode,
+  getWhatsAppPhoneNumberId,
+  getWhatsAppToken,
+} from './integration-settings.util';
+
 export function isWhatsAppConfigured(): boolean {
-  return Boolean(
-    process.env.WHATSAPP_TOKEN?.trim() && process.env.WHATSAPP_PHONE_NUMBER_ID?.trim()
-  );
+  return Boolean(getWhatsAppToken() && getWhatsAppPhoneNumberId());
 }
 
 export function normalizeWaPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.startsWith('00')) return digits.slice(2);
   if (digits.startsWith('0') && digits.length === 9) {
-    const cc = (process.env.WHATSAPP_DEFAULT_COUNTRY_CODE || '237').replace(/\D/g, '');
+    const cc = getWhatsAppDefaultCountryCode().replace(/\D/g, '');
     return `${cc}${digits.slice(1)}`;
   }
   return digits;
@@ -40,8 +44,8 @@ export async function sendWhatsAppText(
     };
   }
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID!.trim();
-  const token = process.env.WHATSAPP_TOKEN!.trim();
+  const phoneNumberId = getWhatsAppPhoneNumberId();
+  const token = getWhatsAppToken();
   const version = process.env.WHATSAPP_API_VERSION?.trim() || 'v19.0';
 
   try {

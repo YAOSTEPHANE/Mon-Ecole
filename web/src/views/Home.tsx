@@ -11,7 +11,6 @@ import HomeDirectorSection from '../components/public/HomeDirectorSection';
 import HomePageImage from '../components/public/HomePageImage';
 import PreInscriptionSchoolEntry from '../components/public/PreInscriptionSchoolEntry';
 import HomeFneMatriculeLookup from '../components/public/HomeFneMatriculeLookup';
-import { getAcademicYearForDisplay } from '../utils/academicYear';
 import { getRoleDashboardPath } from '../lib/rolePaths';
 import {
   SCHOOL_MARQUEE,
@@ -28,7 +27,6 @@ import {
   FiAward,
   FiBarChart2,
   FiBook,
-  FiCalendar,
   FiCheck,
   FiCompass,
   FiClock,
@@ -57,12 +55,6 @@ const NAV_LINKS = [
 ];
 
 const MARQUEE_ITEMS = [...SCHOOL_MARQUEE];
-
-const TRUST_PILLS = [
-  { icon: FiAward, text: 'Excellence éducative' },
-  { icon: FiShield, text: 'Cadre structuré' },
-  { icon: FiHeart, text: 'Épanouissement des élèves' },
-];
 
 const PILLARS = [
   {
@@ -236,7 +228,6 @@ const TESTIMONIALS = [
 export default function Home() {
   const { user } = useAuth();
   const { navigationLogoAbsolute, branding } = useAppBranding();
-  const year = getAcademicYearForDisplay(branding.currentAcademicYear);
   const [menuOpen, setMenuOpen] = useState(false);
   const schoolDisplayName =
     (branding.schoolDisplayName && branding.schoolDisplayName.trim()) ||
@@ -269,15 +260,15 @@ export default function Home() {
   }, [headerTitle]);
 
   return (
-    <div className="home-page min-h-screen premium-body premium-body-v2 font-sans text-tran-mauve-950 antialiased">
-      <header className="home-header sticky top-0 z-50 glass-nav glass-nav-v2 shadow-[0_8px_30px_-12px_rgba(30,31,56,0.1)]">
+    <div className="home-page home-page--v3 min-h-screen premium-body premium-body-v2 font-sans text-tran-mauve-950 antialiased">
+      <header className="home-header sticky top-0 z-50 glass-nav glass-nav-v2">
         <div className="mx-auto flex h-14 min-h-14 max-w-7xl items-center justify-between px-3 sm:h-16 sm:px-6">
           <Link
             href="/"
             className="group flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45 focus-visible:ring-offset-2"
           >
             <div
-              className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-tran-mustard-900/20 ring-2 ring-tran-mustard-400/40 ${
+              className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-tran-mustard-900/25 ring-2 ring-tran-mustard-400/45 transition-transform duration-300 group-hover:scale-[1.03] ${
                 navigationLogoAbsolute
                   ? 'bg-white'
                   : 'bg-gradient-to-br from-tran-mauve-900 via-tran-mauve-800 to-tran-mauve-950 text-tran-mustard-100'
@@ -386,151 +377,94 @@ export default function Home() {
       </header>
 
       <main>
-        {/* Hero */}
-        <section className="home-hero-shell relative overflow-hidden bg-gradient-to-b from-tran-mauve-950 via-tran-mauve-900 to-[#0f1020]">
-          <div className="page-hero-v2__glow pointer-events-none absolute inset-0" aria-hidden />
-          <div className="page-hero-v2__noise pointer-events-none absolute inset-0" aria-hidden />
-          <div className="home-hero-fine-grid" aria-hidden />
+        {/* Hero full-bleed — marque, promesse, CTA */}
+        <section className="home-hero-shell home-hero-shell--cinematic relative isolate min-h-[min(92vh,54rem)] overflow-hidden text-white">
+          <div className="absolute inset-0" aria-hidden>
+            <HomePageImage
+              slot="homeHeroPlatform"
+              defaultPath="/home/hero-platform.jpg"
+              alt=""
+              fill
+              className="home-hero-bg-image object-cover scale-[1.04]"
+              sizes="100vw"
+              priority
+            />
+          </div>
+          <div className="home-hero-veil absolute inset-0" aria-hidden />
+          <div className="page-hero-v2__noise pointer-events-none absolute inset-0 opacity-50" aria-hidden />
+          <div className="home-hero-fine-grid pointer-events-none absolute inset-0 opacity-40" aria-hidden />
           <div
-            className="home-hero-orb home-hero-orb--drift-a absolute -left-24 top-0 h-[min(28rem,50vw)] w-[min(28rem,50vw)] bg-cptb-blue/30"
+            className="home-hero-orb home-hero-orb--drift-a absolute -left-28 top-10 h-[min(32rem,55vw)] w-[min(32rem,55vw)] bg-cptb-blue/35"
             aria-hidden
           />
           <div
-            className="home-hero-orb home-hero-orb--drift-b absolute -right-32 bottom-0 h-[min(24rem,45vw)] w-[min(24rem,45vw)] bg-tran-mustard-500/20"
+            className="home-hero-orb home-hero-orb--drift-b absolute -right-24 bottom-8 h-[min(26rem,48vw)] w-[min(26rem,48vw)] bg-tran-mustard-500/25"
             aria-hidden
           />
-          <div className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
-            <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-14">
-              <div className="home-section-fade lg:col-span-6">
-                <div className="home-hero-kicker mb-6">
-                  <span className="inline-flex items-center gap-2 font-semibold text-tran-mustard-100/95">
-                    <FiCalendar className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    {year}
-                  </span>
-                  <span className="home-hero-kicker__dot" aria-hidden />
-                  <span>{schoolLocationLabel}</span>
-                  {schoolCode ? (
-                    <>
-                      <span className="home-hero-kicker__dot hidden sm:inline-block" aria-hidden />
-                      <span className="tabular-nums">Code {schoolCode}</span>
-                    </>
-                  ) : null}
-                </div>
 
-                <h1 className="home-hero-h1 home-hero-title-line font-display text-[2.35rem] font-black leading-[1.05] tracking-tight text-white sm:text-5xl sm:leading-[1.02] lg:text-[3.5rem]">
-                  <span className="home-hero-brand-mark mb-3 block text-xl font-bold uppercase sm:text-2xl">
-                    {schoolShortName}
-                  </span>
-                  <span className="home-hero-h1__line">{schoolDisplayName}</span>
-                </h1>
-                <p className="home-hero-sub-line mt-6 max-w-lg text-lg leading-relaxed text-stone-300 sm:text-xl">
-                  {SCHOOL_DEFAULTS.tagline}. Une formation de qualité, dans un cadre structuré et moderne.
-                </p>
+          <div className="relative z-10 mx-auto flex min-h-[min(92vh,54rem)] max-w-7xl flex-col justify-end px-4 pb-20 pt-28 sm:px-6 sm:pb-24 lg:justify-center lg:pb-28 lg:pt-32">
+            <div className="home-section-fade max-w-3xl">
+              <p className="home-hero-brand-mark mb-5 font-display text-2xl font-bold uppercase tracking-[0.22em] sm:text-3xl lg:text-4xl">
+                {schoolShortName}
+              </p>
+              <h1 className="home-hero-h1 home-hero-title-line font-display text-[2.6rem] font-black leading-[1.02] tracking-tight text-white sm:text-5xl lg:text-[4.1rem] lg:leading-[0.98]">
+                <span className="home-hero-h1__line">{schoolDisplayName}</span>
+              </h1>
+              <p className="home-hero-sub-line mt-6 max-w-xl text-lg leading-relaxed text-stone-200/95 sm:text-xl">
+                {headerTagline || SCHOOL_DEFAULTS.tagline}
+              </p>
 
-                {!user && (
-                  <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <Link href="/login">
-                      <Button
-                        size="lg"
-                        variant="secondary"
-                        className="w-full border-0 bg-white px-8 font-bold text-stone-900 shadow-xl shadow-black/30 transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02] sm:w-auto"
-                      >
-                        Espace sécurisé
-                        <FiArrowRight className="ml-2 inline h-5 w-5" />
-                      </Button>
-                    </Link>
-                    <PreInscriptionSchoolEntry
-                      variant="button"
-                      buttonVariant="secondary"
-                      buttonSize="lg"
-                      className="w-full border border-white/25 bg-white/[0.08] px-8 font-semibold text-white backdrop-blur-md hover:border-tran-mustard-400/50 hover:bg-white/12 sm:w-auto"
-                    />
-                  </div>
-                )}
-                {user && (
-                  <div className="mt-10">
-                    <Link href={getRoleDashboardPath(user.role)}>
-                      <Button
-                        size="lg"
-                        variant="secondary"
-                        className="border-0 bg-white px-8 font-bold text-stone-900 shadow-xl transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02]"
-                      >
-                        Ouvrir mon espace
-                        <FiArrowRight className="ml-2 inline h-5 w-5" />
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-
-                <ul className="mt-10 flex flex-wrap gap-3">
-                  {TRUST_PILLS.map(({ icon: Icon, text }) => (
-                    <li key={text}>
-                      <span className="home-trust-pill inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm text-stone-300">
-                        <Icon className="h-4 w-4 shrink-0 text-tran-mustard-300" aria-hidden />
-                        {text}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="home-section-fade home-section-fade--late relative lg:col-span-6">
-                <div className="relative mx-auto max-w-lg lg:max-w-none">
-                  <div
-                    className="absolute -inset-8 rounded-[2.5rem] bg-gradient-to-tr from-cptb-blue/35 via-tran-mustard-400/15 to-transparent blur-3xl motion-reduce:opacity-40"
-                    aria-hidden
+              {!user ? (
+                <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Link href="/login">
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      className="home-hero-cta-primary w-full border-0 bg-white px-9 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02] sm:w-auto"
+                    >
+                      Espace sécurisé
+                      <FiArrowRight className="ml-2 inline h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <PreInscriptionSchoolEntry
+                    variant="button"
+                    buttonVariant="secondary"
+                    buttonSize="lg"
+                    className="home-hero-cta-ghost w-full border border-white/30 bg-white/[0.08] px-9 font-semibold text-white backdrop-blur-md hover:border-tran-mustard-400/55 hover:bg-white/14 sm:w-auto"
                   />
-                  <div className="home-hero-media home-hero-frame-in relative aspect-[4/3] min-h-[300px] sm:min-h-[340px] lg:min-h-[420px]">
-                    <HomePageImage
-                      slot="homeHeroPlatform"
-                      defaultPath="/home/hero-platform.jpg"
-                      alt="Mon Ecole — vie scolaire et apprentissage"
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                      priority
-                    />
-                    <div className="home-floating-badge left-4 top-4 sm:left-5 sm:top-5">
-                      <span className="home-floating-badge__icon">
-                        <FiAward className="h-3.5 w-3.5" aria-hidden />
-                      </span>
-                      Excellence académique
-                    </div>
-                    <div className="home-floating-badge home-floating-badge--delay right-4 top-[38%] sm:right-5">
-                      <span className="home-floating-badge__icon">
-                        <FiCpu className="h-3.5 w-3.5" aria-hidden />
-                      </span>
-                      Portail digital
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 z-10 p-5 sm:p-6">
-                      <p className="font-display text-lg font-semibold text-white drop-shadow-md sm:text-xl">
-                        Excellence · Discipline · Réussite
-                      </p>
-                      <p className="mt-1 max-w-md text-sm text-stone-300">
-                        Familles, élèves et équipes connectés sur un même portail.
-                      </p>
-                    </div>
-                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-10">
+                  <Link href={getRoleDashboardPath(user.role)}>
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      className="home-hero-cta-primary border-0 bg-white px-9 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02]"
+                    >
+                      Ouvrir mon espace
+                      <FiArrowRight className="ml-2 inline h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="home-scroll-hint pointer-events-none absolute bottom-[7.5rem] left-1/2 z-20 hidden -translate-x-1/2 lg:flex" aria-hidden>
+          <div className="home-scroll-hint pointer-events-none absolute bottom-8 left-1/2 z-20 hidden -translate-x-1/2 lg:flex" aria-hidden>
             <span>Découvrir</span>
             <span className="home-scroll-hint__line" />
           </div>
+        </section>
 
-          <div className="home-stats-rail relative z-10">
-            <div className="home-stats-rail__grid mx-auto grid max-w-7xl grid-cols-3 gap-3 px-4 py-6 sm:gap-5 sm:px-6 sm:py-7">
-              {SCHOOL_STATS.map((s) => (
-                <div key={s.l} className="home-stat-tile text-center sm:text-left">
-                  <p className="home-stat-num font-display text-2xl font-semibold tabular-nums sm:text-3xl">{s.n}</p>
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-stone-400">{s.l}</p>
-                  <p className="hidden text-xs text-stone-500 sm:block">{s.d}</p>
-                </div>
-              ))}
-            </div>
+        <section className="home-stats-rail relative z-10" aria-label="Chiffres clés">
+          <div className="home-stats-rail__grid mx-auto grid max-w-7xl grid-cols-3 gap-3 px-4 py-7 sm:gap-5 sm:px-6 sm:py-8">
+            {SCHOOL_STATS.map((s) => (
+              <div key={s.l} className="home-stat-tile text-center sm:text-left">
+                <p className="home-stat-num font-display text-2xl font-semibold tabular-nums sm:text-3xl">{s.n}</p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-stone-400">{s.l}</p>
+                <p className="hidden text-xs text-stone-500 sm:block">{s.d}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -572,8 +506,9 @@ export default function Home() {
         <section id="experience" className="relative z-10 px-4 py-16 sm:px-6 sm:py-20 scroll-mt-20">
           <HomeReveal>
             <div className="mx-auto max-w-7xl">
-              <div className="home-experience-shell relative overflow-hidden rounded-[2.25rem] border border-white/70 bg-white/72 p-5 shadow-[0_36px_90px_-45px_rgba(30,31,56,0.38)] backdrop-blur-2xl ring-1 ring-tran-mustard-400/15 sm:p-8 lg:p-10">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(201,162,39,0.18),transparent_34%),radial-gradient(circle_at_90%_20%,rgba(90,91,154,0.14),transparent_38%)]" aria-hidden />
+              <div className="home-experience-shell relative overflow-hidden rounded-[2.25rem] border border-white/80 bg-white/78 p-5 shadow-[0_40px_100px_-48px_rgba(30,31,56,0.42)] backdrop-blur-2xl ring-1 ring-tran-mustard-400/20 sm:p-8 lg:p-10">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(201,162,39,0.2),transparent_36%),radial-gradient(circle_at_92%_18%,rgba(0,24,168,0.12),transparent_40%)]" aria-hidden />
+                <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-tran-mustard-400/10 blur-3xl" aria-hidden />
                 <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.35fr] lg:items-end">
                   <div>
                     <span className="home-eyebrow">

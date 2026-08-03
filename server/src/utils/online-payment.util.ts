@@ -8,6 +8,7 @@ import {
   initiateOnlineCheckout,
   type PaymentProviderId,
 } from './payment-providers.util';
+import { getPaymentWebhookSecret } from './integration-settings.util';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -146,10 +147,10 @@ export async function failOnlinePayment(
 }
 
 export function assertWebhookSecret(headerSecret: string | undefined, bodySecret: string | undefined) {
-  const expected = process.env.PAYMENT_WEBHOOK_SECRET?.trim();
+  const expected = getPaymentWebhookSecret();
   if (!expected) {
     throw Object.assign(
-      new Error('PAYMENT_WEBHOOK_SECRET non configuré côté serveur'),
+      new Error('Secret webhook paiements non configuré (admin → Intégrations ou PAYMENT_WEBHOOK_SECRET)'),
       { status: 503 }
     );
   }

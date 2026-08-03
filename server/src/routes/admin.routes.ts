@@ -7,6 +7,7 @@ import {
   resolveAdminProvidedOrInvitePassword,
 } from '../utils/admin-user-initial-password.util';
 import { optionalPasswordPolicyValidator, PASSWORD_POLICY_HINT } from '../utils/password.util';
+import { isSyntheticStudentEmail } from '../utils/student-login-identifier.util';
 import prisma from '../utils/prisma';
 import { deleteStoredUploadUrl } from '../utils/upload-persist.util';
 import { reportCardClientPhotoUrl } from '../utils/report-card-photo-url.util';
@@ -67,6 +68,7 @@ import adminTeachersRoutes from './admin-teachers.routes';
 import adminEducatorsRoutes from './admin-educators.routes';
 import adminAdmissionsRoutes from './admin-admissions.routes';
 import adminPayrollRoutes from './admin-payroll.routes';
+import adminIntegrationsSettingsRoutes from './admin-integrations-settings.routes';
 import { attachSchoolContext } from '../middleware/school-context.middleware';
 import { guardAdminStudentRoute } from '../middleware/school-resource-guard.middleware';
 import type { SchoolContextRequest } from '../utils/school-context.util';
@@ -213,6 +215,7 @@ router.use(adminTeachersRoutes);
 router.use(adminEducatorsRoutes);
 router.use(adminAdmissionsRoutes);
 router.use(adminPayrollRoutes);
+router.use(adminIntegrationsSettingsRoutes);
 
 
 // ========== GESTION ACADÉMIQUE ==========
@@ -5025,10 +5028,18 @@ router.post('/security/users/:id/password-invite', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
-      select: { id: true, email: true, firstName: true },
+      select: { id: true, email: true, firstName: true, role: true },
     });
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+
+    if (isSyntheticStudentEmail(user.email)) {
+      return res.status(400).json({
+        error:
+          'Cet élève n’a pas d’adresse e-mail. Définissez le mot de passe directement (réinitialisation par l’administration).',
+        code: 'ADMIN_PASSWORD_RESET_REQUIRED',
+      });
     }
 
     await inviteNewUserToSetPassword(user.id, user.email, user.firstName);

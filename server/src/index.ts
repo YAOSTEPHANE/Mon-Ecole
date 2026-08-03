@@ -13,6 +13,7 @@ import {
   logProductionEnvDiagnostics,
 } from './utils/production-env-diagnostics.util';
 import { requireSensitiveFieldEncryptionKey } from './utils/field-encryption.util';
+import { refreshIntegrationSettingsCache } from './utils/integration-settings.util';
 
 dotenv.config();
 
@@ -36,6 +37,10 @@ try {
 
 logDatabaseUrlDiagnostics();
 logProductionEnvDiagnostics();
+
+void refreshIntegrationSettingsCache().catch((e) => {
+  console.warn('[integrations] Cache non chargé au démarrage:', e);
+});
 
 if (process.env.VERCEL === '1' && !useBlobStorage()) {
   console.error(

@@ -54,12 +54,14 @@ import GenerateReportModal from '../../components/admin/GenerateReportModal';
 import ExportDataModal from '../../components/admin/ExportDataModal';
 import SettingsModal from '../../components/admin/SettingsModal';
 import AdminTabLogoCard from '../../components/admin/AdminTabLogoCard';
+import IntegrationsSettingsPanel from '../../components/admin/IntegrationsSettingsPanel';
 import { 
   FiLayout, 
   FiUsers, 
   FiBook, 
   FiUserCheck, 
   FiSettings,
+  FiLink,
   FiBarChart,
   FiCalendar,
   FiBell,
@@ -276,6 +278,13 @@ const AdminDashboard = () => {
     { id: 'security', label: 'Sécurité & confidentialité', icon: FiShield, color: 'from-red-500 to-red-600', description: 'Sécurité et confidentialité' },
     { id: 'performance', label: 'Performance & rapidité', icon: FiZap, color: 'from-yellow-500 to-yellow-600', description: 'Performance et monitoring' },
     { id: 'settings', label: 'Paramètres', icon: FiSettings, color: 'from-gray-500 to-gray-600', description: 'Paramètres de l’établissement' },
+    {
+      id: 'integrations',
+      label: 'Intégrations',
+      icon: FiLink,
+      color: 'from-teal-500 to-cyan-600',
+      description: 'Connecter MENA, bornes NFC, paiements, WhatsApp et e-mail',
+    },
   ];
 
   const { data: workspaceContext } = useQuery({
@@ -306,7 +315,11 @@ const AdminDashboard = () => {
   const filteredTabs = useMemo(
     () =>
       filterTabsByVisibleModules(tabs, effectiveVisibleModules, {
-        alwaysInclude: isSuperAdmin ? ['schools'] : [],
+        alwaysInclude: [
+          ...(isSuperAdmin ? ['schools'] : []),
+          'integrations',
+          'settings',
+        ],
       }),
     [tabs, effectiveVisibleModules, isSuperAdmin],
   );
@@ -579,6 +592,7 @@ const AdminDashboard = () => {
               {activeTab === 'nfc-scanner' && <AccessControlModule />}
               {activeTab === 'security' && <SecurityPrivacyManagement />}
               {activeTab === 'performance' && <PerformanceManagement />}
+              {activeTab === 'integrations' && <IntegrationsSettingsPanel />}
               {activeTab === 'settings' && (
                 <div className="space-y-6">
                   <Card variant="premium" className="bg-gradient-to-r from-slate-700 to-slate-800 text-white border-none">
@@ -601,6 +615,29 @@ const AdminDashboard = () => {
                       setIsSettingsModalOpen(true);
                     }}
                   />
+
+                  <Card variant="premium" className="border border-teal-200 bg-teal-50/40">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-2">
+                      <div>
+                        <h3 className="text-lg font-bold text-teal-950">Intégrations externes</h3>
+                        <p className="text-sm text-teal-900/80">
+                          Connecter MENA, bornes NFC, paiements, WhatsApp et e-mail sans fichier technique.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const params = new URLSearchParams(searchParams?.toString() ?? '');
+                          params.set('tab', 'integrations');
+                          router.push(`/admin?${params.toString()}`);
+                        }}
+                        className="shrink-0 bg-teal-700 hover:bg-teal-800 text-white"
+                      >
+                        <FiLink className="w-4 h-4 mr-2" />
+                        Ouvrir Intégrations
+                      </Button>
+                    </div>
+                  </Card>
 
                   <Card variant="premium">
                     <div className="text-center py-12">

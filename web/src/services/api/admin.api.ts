@@ -2028,6 +2028,75 @@ export const adminApi = {
     const response = await api.get('/admin/integrations/payments');
     return response.data;
   },
+  getIntegrationSettings: async () => {
+    const response = await api.get('/admin/integrations/settings');
+    return response.data as {
+      webhooks: {
+        menaPresence: string;
+        paymentMobileMoney: string;
+        paymentWave: string;
+        paymentCinetpay: string;
+        paymentPaystack: string;
+      };
+      mena: {
+        webhookSecretConfigured: boolean;
+        webhookSecretFromDb: boolean;
+        watchDir: string | null;
+        watchDirFromDb: boolean;
+        importEnabled: boolean;
+        importEnabledFromDb: boolean;
+        cron: string;
+        cronFromDb: boolean;
+        dbUrlConfigured: boolean;
+        dbUrlFromDb: boolean;
+        dbQuery: string | null;
+        dbQueryFromDb: boolean;
+      };
+      nfc: { apiKeyConfigured: boolean; apiKeyFromDb: boolean };
+      payments: {
+        webhookSecretConfigured: boolean;
+        webhookSecretFromDb: boolean;
+        waveConfigured: boolean;
+        waveFromDb: boolean;
+        orangeConfigured: boolean;
+        orangeFromDb: boolean;
+        mtnConfigured: boolean;
+        mtnFromDb: boolean;
+        cinetpayConfigured: boolean;
+        cinetpayFromDb: boolean;
+        cinetpaySiteId: string | null;
+        paystackConfigured: boolean;
+        paystackFromDb: boolean;
+      };
+      whatsapp: {
+        configured: boolean;
+        tokenFromDb: boolean;
+        phoneNumberId: string | null;
+        phoneNumberIdFromDb: boolean;
+        defaultCountryCode: string;
+        defaultCountryCodeFromDb: boolean;
+      };
+      smtp: {
+        configured: boolean;
+        host: string | null;
+        hostFromDb: boolean;
+        port: number;
+        portFromDb: boolean;
+        secure: boolean;
+        secureFromDb: boolean;
+        user: string | null;
+        userFromDb: boolean;
+        passConfigured: boolean;
+        passFromDb: boolean;
+        emailFrom: string | null;
+        emailFromFromDb: boolean;
+      };
+    };
+  },
+  updateIntegrationSettings: async (data: Record<string, unknown>) => {
+    const response = await api.put('/admin/integrations/settings', data);
+    return response.data;
+  },
   getWhatsAppStatus: async () => {
     const response = await api.get('/admin/integrations/whatsapp/status');
     return response.data;

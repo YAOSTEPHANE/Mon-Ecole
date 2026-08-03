@@ -103,23 +103,32 @@ export default function HomeFneMatriculeLookup() {
   return (
     <section
       id="matricule-fne"
-      className="relative scroll-mt-24 border-y border-stone-200/80 bg-gradient-to-b from-stone-50 via-white to-tran-mustard-50/30 py-16 sm:py-20"
+      className="relative scroll-mt-24 overflow-hidden border-y border-stone-200/80 bg-gradient-to-b from-[#f7f6fb] via-white to-tran-mustard-50/40 py-16 sm:py-20"
     >
-      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+      <div
+        className="pointer-events-none absolute -left-24 top-0 h-64 w-64 rounded-full bg-cptb-blue/10 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-tran-mustard-400/15 blur-3xl"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
         <div className="text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-800">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-800">
             Service élèves & familles
           </p>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-tran-mauve-950 sm:text-3xl">
             Vérifier mon matricule FNE
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-stone-600 sm:text-base">
+          <div className="home-section-accent mx-auto mt-4" aria-hidden />
+          <p className="mt-4 text-sm leading-relaxed text-stone-600 sm:text-base">
             Retrouvez votre numéro matricule national directement ici, via le portail officiel
             SIGFNE / MENA. Aucune connexion à l’espace élève n’est requise.
           </p>
         </div>
 
-        <div className="mt-8 rounded-2xl border border-stone-200/90 bg-white p-5 shadow-[0_20px_50px_-28px_rgba(30,31,56,0.35)] sm:p-7">
+        <div className="mt-8 rounded-[1.75rem] border border-white/80 bg-white/90 p-5 shadow-[0_28px_64px_-32px_rgba(30,31,56,0.4)] ring-1 ring-tran-mustard-400/15 backdrop-blur-xl sm:p-7">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-stone-700">
               Cycle

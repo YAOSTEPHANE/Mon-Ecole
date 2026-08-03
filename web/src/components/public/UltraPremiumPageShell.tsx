@@ -13,7 +13,7 @@ type UltraPremiumPageShellProps = {
 };
 
 /**
- * En-tête sticky, héros sombre (glow + grain) et pied de page — langage visuel aligné sur l’accueil v2.
+ * En-tête sticky, héros sombre (glow + grain) et pied de page — langage visuel aligné sur l’accueil.
  */
 export default function UltraPremiumPageShell({
   navLabel,
@@ -36,14 +36,17 @@ export default function UltraPremiumPageShell({
         </div>
       </header>
 
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#0a0f2e] via-[#001270] to-zinc-950 text-white">
+      <section className="relative overflow-hidden bg-[#07081a] text-white">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f2e] via-[#001270] to-[#07081a]" aria-hidden />
         <div className="page-hero-v2__glow absolute inset-0" aria-hidden />
-        <div className="page-hero-v2__noise absolute inset-0" aria-hidden />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cptb-gold/45 to-transparent" />
-        <div className="relative mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 sm:py-16">
-          <h1 className="font-display text-4xl font-black tracking-tight md:text-5xl">{title}</h1>
-          <div className="mx-auto mt-4 h-0.5 w-14 rounded-full bg-gradient-to-r from-cptb-blue via-cptb-gold to-amber-300" />
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-stone-300 sm:text-xl">
+        <div className="page-hero-v2__noise absolute inset-0 opacity-45" aria-hidden />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cptb-gold/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cptb-gold/35 to-transparent" />
+        <div className="relative mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 sm:py-20">
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.22em] text-cptb-gold/90">{navLabel}</p>
+          <h1 className="font-display text-4xl font-black tracking-tight md:text-5xl lg:text-[3.25rem]">{title}</h1>
+          <div className="mx-auto mt-5 h-0.5 w-16 rounded-full bg-gradient-to-r from-cptb-blue via-cptb-gold to-amber-300" />
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-stone-300 sm:text-xl">
             {description}
           </p>
         </div>

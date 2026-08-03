@@ -3018,6 +3018,51 @@ model AppBranding {
   @@map("app_branding")
 }
 
+/// Configuration des intégrations externes (singleton id = "default").
+/// Les secrets sont stockés chiffrés (enc:v1:…) via SENSITIVE_FIELD_ENCRYPTION_KEY.
+/// Une valeur en base écrase le .env correspondant ; champ vide = repli sur l’env.
+model PlatformIntegrations {
+  id String @id @map("_id")
+
+  /// Présence MENA journalière
+  menaPresenceWebhookSecret String?
+  menaPresenceWatchDir      String?
+  menaPresenceImportEnabled Boolean @default(false)
+  menaPresenceCron          String?
+  menaPresenceDbUrl         String?
+  menaPresenceDbQuery       String?
+
+  /// Bornes NFC / biométrie
+  nfcApiKey String?
+
+  /// Paiements
+  paymentWebhookSecret String?
+  waveApiKey           String?
+  orangeMoneyApiKey    String?
+  mtnMomoApiKey        String?
+  mtnMomoSubscriptionKey String?
+  cinetpayApiKey       String?
+  cinetpaySiteId       String?
+  paystackSecretKey    String?
+
+  /// WhatsApp Business Cloud API
+  whatsappToken             String?
+  whatsappPhoneNumberId     String?
+  whatsappDefaultCountryCode String?
+
+  /// E-mail SMTP
+  smtpHost   String?
+  smtpPort   Int?
+  smtpSecure Boolean?
+  smtpUser   String?
+  smtpPass   String?
+  emailFrom  String?
+
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_integrations")
+}
+
 /// Cible d'une demande de modification (note ou moyenne bulletin)
 enum AcademicChangeTarget {
   GRADE

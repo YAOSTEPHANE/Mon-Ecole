@@ -7,6 +7,7 @@ import {
   isWhatsAppConfigured,
   normalizeWaPhone,
 } from '../utils/whatsapp.util';
+import { getWhatsAppDefaultCountryCode } from '../utils/integration-settings.util';
 import { scoreTimetableCandidates, pickBestTimetableSlot } from '../utils/timetable-optimizer.util';
 import { linearForecast, growthRate } from '../utils/predictive-bi.util';
 import {
@@ -65,7 +66,7 @@ router.post(
       if (normalized.length < 8 || normalized.length > 15) {
         return res.status(400).json({ error: 'Numéro WhatsApp invalide' });
       }
-      const countryCode = (process.env.WHATSAPP_DEFAULT_COUNTRY_CODE || '237').replace(/\D/g, '');
+      const countryCode = getWhatsAppDefaultCountryCode().replace(/\D/g, '');
       const local =
         countryCode && normalized.startsWith(countryCode)
           ? `0${normalized.slice(countryCode.length)}`

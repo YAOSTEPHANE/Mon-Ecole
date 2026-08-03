@@ -6,11 +6,14 @@ import { adminApi } from '@/services/api';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff, FiKey, FiMail } from 'react-icons/fi';
+import { isSyntheticStudentEmail } from '@/lib/studentLoginIdentifier';
 
 type AdminUserPasswordSectionProps = {
   userId: string;
   userEmail?: string | null;
   userLabel?: string | null;
+  /** Identifiant de connexion affiché (n° élève / matricule) si pas d’e-mail réel. */
+  loginIdentifier?: string | null;
   compact?: boolean;
 };
 
@@ -18,10 +21,12 @@ export default function AdminUserPasswordSection({
   userId,
   userEmail,
   userLabel,
+  loginIdentifier,
   compact = false,
 }: AdminUserPasswordSectionProps) {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const noRealEmail = isSyntheticStudentEmail(userEmail) || !userEmail?.includes('@');
 
   const changePasswordMutation = useMutation({
     mutationFn: () => adminApi.changeUserPassword(userId, newPassword.trim()),
@@ -59,7 +64,17 @@ export default function AdminUserPasswordSection({
           Accès au compte
         </p>
         {userLabel ? <p className="text-xs text-stone-700 mt-0.5">{userLabel}</p> : null}
-        {userEmail ? <p className="text-[11px] text-stone-500">{userEmail}</p> : null}
+        {noRealEmail ? (
+          <p className="text-[11px] text-stone-600 mt-0.5">
+            Identifiant de connexion :{' '}
+            <span className="font-mono font-semibold">
+              {loginIdentifier || 'n° élève / matricule'}
+            </span>
+            {' — '}réinitialisation du mot de passe par l&apos;administration uniquement.
+          </p>
+        ) : userEmail ? (
+          <p className="text-[11px] text-stone-500">{userEmail}</p>
+        ) : null}
       </div>
 
       <div>
@@ -101,17 +116,19 @@ export default function AdminUserPasswordSection({
           <FiKey className="w-4 h-4 mr-1 inline" />
           Appliquer le mot de passe
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          onClick={() => inviteMutation.mutate()}
-          disabled={inviteMutation.isPending}
-          isLoading={inviteMutation.isPending}
-        >
-          <FiMail className="w-4 h-4 mr-1 inline" />
-          Envoyer un lien par e-mail
-        </Button>
+        {!noRealEmail ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => inviteMutation.mutate()}
+            disabled={inviteMutation.isPending}
+            isLoading={inviteMutation.isPending}
+          >
+            <FiMail className="w-4 h-4 mr-1 inline" />
+            Envoyer un lien par e-mail
+          </Button>
+        ) : null}
       </div>
     </div>
   );

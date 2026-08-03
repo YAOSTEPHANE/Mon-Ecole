@@ -5,6 +5,11 @@ import {
   parseMenaPresenceCsv,
   type MenaPresenceImportReport,
 } from './mena-daily-presence-import.util';
+import {
+  getMenaPresenceDbQuery,
+  getMenaPresenceDbUrl,
+  getMenaPresenceWatchDir,
+} from './integration-settings.util';
 
 export type ScheduledMenaPresenceResult = {
   fileReports: Array<{ file: string; report: MenaPresenceImportReport }>;
@@ -15,7 +20,7 @@ export type ScheduledMenaPresenceResult = {
 async function importFromWatchDir(): Promise<
   Array<{ file: string; report: MenaPresenceImportReport }>
 > {
-  const dir = process.env.MENA_PRESENCE_WATCH_DIR?.trim();
+  const dir = getMenaPresenceWatchDir();
   if (!dir) return [];
 
   if (!fs.existsSync(dir)) {
@@ -68,8 +73,8 @@ async function importFromWatchDir(): Promise<
  * Nécessite le package `pg` si URL postgres — sinon on journalise et on skip.
  */
 async function importFromExternalDb(): Promise<MenaPresenceImportReport | null> {
-  const dbUrl = process.env.MENA_PRESENCE_DB_URL?.trim();
-  const query = process.env.MENA_PRESENCE_DB_QUERY?.trim();
+  const dbUrl = getMenaPresenceDbUrl();
+  const query = getMenaPresenceDbQuery();
   if (!dbUrl || !query) return null;
 
   try {

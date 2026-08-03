@@ -6,6 +6,7 @@ import {
   type MenaPresenceImportRow,
 } from '../utils/mena-daily-presence-import.util';
 import { deviceBiometricLimiter } from '../middleware/rate-limit.middleware';
+import { getMenaPresenceWebhookSecret } from '../utils/integration-settings.util';
 
 const router = express.Router();
 
@@ -20,11 +21,11 @@ function readPresenceSecret(req: Request): string | undefined {
 }
 
 function verifyMenaPresenceSecret(req: Request, res: Response, next: NextFunction): void {
-  const expected = process.env.MENA_PRESENCE_WEBHOOK_SECRET?.trim();
+  const expected = getMenaPresenceWebhookSecret();
   if (!expected) {
     res.status(503).json({
       error:
-        'MENA_PRESENCE_WEBHOOK_SECRET non configuré sur le serveur. Impossible d’accepter les webhooks.',
+        'Secret webhook MENA non configuré (admin → Intégrations, ou MENA_PRESENCE_WEBHOOK_SECRET). Impossible d’accepter les webhooks.',
     });
     return;
   }

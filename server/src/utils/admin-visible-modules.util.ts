@@ -44,6 +44,7 @@ export const ADMIN_MODULE_IDS = [
   'security',
   'performance',
   'settings',
+  'integrations',
 ] as const;
 
 export type AdminModuleId = (typeof ADMIN_MODULE_IDS)[number];
@@ -51,7 +52,13 @@ export type AdminModuleId = (typeof ADMIN_MODULE_IDS)[number];
 const MODULE_SET = new Set<string>(ADMIN_MODULE_IDS);
 
 /** Modules toujours visibles pour les comptes administrateur (hors super-admin). */
-const ADMIN_ALWAYS_VISIBLE_MODULES: AdminModuleId[] = ['dashboard', 'workspaces', 'admissions'];
+const ADMIN_ALWAYS_VISIBLE_MODULES: AdminModuleId[] = [
+  'dashboard',
+  'workspaces',
+  'admissions',
+  'integrations',
+  'settings',
+];
 
 export const ADMIN_MODULE_LABELS: Record<AdminModuleId, string> = {
   dashboard: 'Tableau de bord',
@@ -94,6 +101,7 @@ export const ADMIN_MODULE_LABELS: Record<AdminModuleId, string> = {
   security: 'Sécurité & confidentialité',
   performance: 'Performance & rapidité',
   settings: 'Paramètres',
+  integrations: 'Intégrations',
 };
 
 export const ADMIN_MODULE_CATEGORIES: {
@@ -138,7 +146,7 @@ export const ADMIN_MODULE_CATEGORIES: {
   },
   {
     title: 'Système & conformité',
-    moduleIds: ['security', 'performance', 'settings', 'workspaces', 'schools'],
+    moduleIds: ['security', 'performance', 'settings', 'integrations', 'workspaces', 'schools'],
   },
 ];
 

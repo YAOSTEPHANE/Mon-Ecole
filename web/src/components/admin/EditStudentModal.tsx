@@ -23,6 +23,7 @@ import {
 } from 'react-icons/fi';
 import FneMatriculeVerifyActions from './FneMatriculeVerifyActions';
 import AdminUserPasswordSection from './AdminUserPasswordSection';
+import { isSyntheticStudentEmail } from '@/lib/studentLoginIdentifier';
 import { useSchool } from '@/contexts/SchoolContext';
 import { useSchoolReady, schoolQueryKey } from '@/hooks/useSchoolReady';
 
@@ -86,7 +87,9 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
       setFormData({
         firstName: student.user?.firstName || '',
         lastName: student.user?.lastName || '',
-        email: student.user?.email || '',
+        email: isSyntheticStudentEmail(student.user?.email)
+          ? ''
+          : student.user?.email || '',
         phone: student.user?.phone || '',
         dateOfBirth: student.dateOfBirth 
           ? new Date(student.dateOfBirth).toISOString().split('T')[0]
@@ -241,7 +244,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
       if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
       if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
       if (!formData.email.trim()) {
-        newErrors.email = 'L\'email est requis';
+        // Sans e-mail réel : connexion par n° élève / matricule (compte technique côté serveur)
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         newErrors.email = 'Email invalide';
       }
@@ -478,7 +481,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    Email <span className="text-red-500">*</span>
+                    Email <span className="text-stone-500 font-normal">(optionnel)</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
@@ -492,9 +495,13 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                       className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
                         errors.email ? 'border-red-500' : 'border-stone-200'
                       }`}
-                      placeholder="email@exemple.com"
+                      placeholder="Vide = connexion par matricule"
                     />
                   </div>
+                  <p className="mt-0.5 text-[11px] text-stone-500 leading-snug">
+                    Sans e-mail réel, l’élève se connecte avec le n° élève / matricule. Réinit. MDP via
+                    « Accès au compte » ci-dessous.
+                  </p>
                   {errors.email && (
                     <p className="mt-1 text-xs text-red-500 flex items-center">
                       <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
@@ -946,8 +953,11 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
           {student?.user?.id ? (
             <AdminUserPasswordSection
               userId={student.user.id}
-              userEmail={formData.email}
+              userEmail={student.user.email}
               userLabel={`${formData.firstName} ${formData.lastName}`.trim()}
+              loginIdentifier={
+                formData.nationalMatricule.trim() || student.studentId || undefined
+              }
               compact
             />
           ) : null}

@@ -141,12 +141,22 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
     onSuccess: (data: unknown) => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
-      const sent = (data as { passwordSetupEmailSent?: boolean })?.passwordSetupEmailSent;
-      toast.success(
-        sent
-          ? 'Élève créé. Un lien pour choisir le mot de passe a été envoyé à son e-mail (valide 48 h).'
-          : 'Élève créé avec succès !'
-      );
+      const payload = data as {
+        passwordSetupEmailSent?: boolean;
+        usesMatriculeLogin?: boolean;
+        loginIdentifier?: string;
+      };
+      if (payload.usesMatriculeLogin && payload.loginIdentifier) {
+        toast.success(
+          `Élève créé. Identifiant de connexion : ${payload.loginIdentifier} (mot de passe défini par l’admin).`,
+        );
+      } else if (payload.passwordSetupEmailSent) {
+        toast.success(
+          'Élève créé. Un lien pour choisir le mot de passe a été envoyé à son e-mail (valide 48 h).',
+        );
+      } else {
+        toast.success('Élève créé avec succès !');
+      }
       handleClose();
     },
     onError: (error: unknown) => {
@@ -187,14 +197,24 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
     if (step === 1) {
       if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
       if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
-      if (!formData.email.trim()) {
-        newErrors.email = 'L\'email est requis';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      const emailTrim = formData.email.trim();
+      if (emailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
         newErrors.email = 'Email invalide';
       }
       const pw = formData.password.trim();
       const cpw = formData.confirmPassword.trim();
-      if (pw.length > 0) {
+      if (!emailTrim) {
+        if (!pw) {
+          newErrors.password =
+            'Sans e-mail, un mot de passe initial est obligatoire (connexion par n° élève / matricule)';
+        } else {
+          const policyError = validatePasswordStrength(pw);
+          if (policyError) newErrors.password = policyError;
+          if (pw !== cpw) {
+            newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+          }
+        }
+      } else if (pw.length > 0) {
         const policyError = validatePasswordStrength(pw);
         if (policyError) newErrors.password = policyError;
         if (pw !== cpw) {
@@ -234,7 +254,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
 
     const pw = formData.password.trim();
     const submitData = {
-      email: formData.email,
+      ...(formData.email.trim() ? { email: formData.email.trim() } : {}),
       ...(pw.length > 0 && !validatePasswordStrength(pw) ? { password: pw } : {}),
       firstName: formData.firstName,
       lastName: formData.lastName,
@@ -409,7 +429,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
 
               <div>
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  Email <span className="text-red-500">*</span>
+                  Email <span className="text-stone-500 font-normal">(optionnel)</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
@@ -423,9 +443,13 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
                     className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
                       errors.email ? 'border-red-500' : 'border-stone-200'
                     }`}
-                    placeholder="email@exemple.com"
+                    placeholder="Laisser vide = connexion par n° élève / matricule"
                   />
                 </div>
+                <p className="mt-0.5 text-[11px] text-stone-500 leading-snug">
+                  Sans e-mail, l’élève se connecte avec son n° élève ou matricule FNE. Le mot de passe est
+                  défini et réinitialisé par l’administration.
+                </p>
                 {errors.email && (
                   <p className="mt-1 text-xs text-red-500 flex items-center">
                     <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
@@ -437,7 +461,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    Mot de passe <span className="text-stone-500 font-normal">(optionnel)</span>
+                    Mot de passe{' '}
+                    {!formData.email.trim() ? (
+                      <span className="text-red-500">*</span>
+                    ) : (
+                      <span className="text-stone-500 font-normal">(optionnel)</span>
+                    )}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
@@ -451,12 +480,18 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
                       className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
                         errors.password ? 'border-red-500' : 'border-stone-200'
                       }`}
-                      placeholder="Laisser vide = lien par e-mail"
+                      placeholder={
+                        formData.email.trim()
+                          ? 'Laisser vide = lien par e-mail'
+                          : 'Obligatoire sans e-mail'
+                      }
                       autoComplete="new-password"
                     />
                   </div>
                   <p className="mt-0.5 text-[11px] text-stone-500 leading-snug">
-                    Si vide, l’élève reçoit un e-mail pour définir son mot de passe (48 h). Sinon : {PASSWORD_POLICY_HINT}
+                    {formData.email.trim()
+                      ? `Si vide, l’élève reçoit un e-mail pour définir son mot de passe (48 h). Sinon : ${PASSWORD_POLICY_HINT}`
+                      : `Sans e-mail : mot de passe obligatoire. ${PASSWORD_POLICY_HINT}`}
                   </p>
                   {errors.password && (
                     <p className="mt-1 text-xs text-red-500 flex items-center">

@@ -101,7 +101,7 @@ export default function LoginScreen() {
           autoComplete="email"
           value={email}
           onChangeText={setEmail}
-          placeholder="votre.email@exemple.com"
+          placeholder="e-mail ou n° élève / matricule"
           placeholderTextColor={colors.muted}
         />
 

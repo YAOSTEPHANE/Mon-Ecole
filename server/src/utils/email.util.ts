@@ -1,5 +1,13 @@
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import {
+  getEmailFrom as getConfiguredEmailFrom,
+  getSmtpHost,
+  getSmtpPass,
+  getSmtpPort,
+  getSmtpSecure,
+  getSmtpUser,
+} from './integration-settings.util';
 import prisma from './prisma';
 
 /**
@@ -129,16 +137,16 @@ export function getPublicFrontendBase(): string {
 }
 
 export function isSmtpConfigured(): boolean {
-  const host = process.env.SMTP_HOST?.trim();
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim();
+  const host = getSmtpHost();
+  const user = getSmtpUser();
+  const pass = getSmtpPass();
   if (!host || !user || !pass) return false;
   if (user === 'your-email@gmail.com' || pass === 'your-password') return false;
   return true;
 }
 
 function getEmailFrom(): string {
-  return process.env.EMAIL_FROM?.trim() || process.env.SMTP_USER || 'noreply@localhost';
+  return getConfiguredEmailFrom();
 }
 
 /**
@@ -177,12 +185,12 @@ export async function sendTransactionalHtmlEmail(
 async function getTransporter(): Promise<nodemailer.Transporter | null> {
   if (!isSmtpConfigured()) return null;
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
+    host: getSmtpHost(),
+    port: getSmtpPort(),
+    secure: getSmtpSecure(),
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: getSmtpUser(),
+      pass: getSmtpPass(),
     },
   });
 }

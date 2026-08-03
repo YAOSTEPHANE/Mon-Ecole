@@ -43,6 +43,7 @@ export const ADMIN_MODULE_IDS = [
   'security',
   'performance',
   'settings',
+  'integrations',
 ] as const;
 
 export type AdminModuleId = (typeof ADMIN_MODULE_IDS)[number];
@@ -91,6 +92,7 @@ export const ADMIN_MODULE_LABELS: Record<AdminModuleId, string> = {
   security: 'Sécurité & confidentialité',
   performance: 'Performance & rapidité',
   settings: 'Paramètres',
+  integrations: 'Intégrations',
 };
 
 export const ADMIN_MODULE_DESCRIPTIONS: Partial<Record<AdminModuleId, string>> = {
@@ -100,6 +102,7 @@ export const ADMIN_MODULE_DESCRIPTIONS: Partial<Record<AdminModuleId, string>> =
   accounting: 'Grand livre, budget, dépenses et exports',
   security: 'Audit, confidentialité et accès',
   settings: 'Charte graphique et paramètres établissement',
+  integrations: 'MENA, NFC, paiements, WhatsApp et e-mail — sans toucher au serveur',
 };
 
 export const ADMIN_MODULE_CATEGORIES: {
@@ -145,7 +148,7 @@ export const ADMIN_MODULE_CATEGORIES: {
   },
   {
     title: 'Système & conformité',
-    moduleIds: ['security', 'performance', 'settings', 'workspaces', 'schools'],
+    moduleIds: ['security', 'performance', 'settings', 'integrations', 'workspaces', 'schools'],
   },
 ];
 

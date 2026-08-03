@@ -6,6 +6,7 @@ import {
   completeOnlinePayment,
   failOnlinePayment,
 } from '../utils/online-payment.util';
+import { getPaymentEnv } from '../utils/integration-settings.util';
 
 const router = express.Router();
 
@@ -106,7 +107,7 @@ router.post('/webhooks/mobile-money', async (req, res) => {
 /** Paystack — événement charge.success / charge.failed */
 router.post('/webhooks/paystack', async (req, res) => {
   try {
-    const secret = process.env.PAYSTACK_SECRET_KEY?.trim();
+    const secret = getPaymentEnv('PAYSTACK_SECRET_KEY');
     const signature = req.header('x-paystack-signature') || '';
     if (secret) {
       const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody;

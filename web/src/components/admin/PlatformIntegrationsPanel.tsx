@@ -52,11 +52,21 @@ export default function PlatformIntegrationsPanel({ compact = false }: { compact
   return (
     <div className={`space-y-4 ${compact ? 'text-sm' : ''}`}>
       <Card className="p-4 space-y-3 border border-emerald-100 bg-emerald-50/40">
-        <h3 className="text-sm font-semibold text-emerald-950">Connecteurs paiements</h3>
-        <p className="text-xs text-emerald-900/80">
-          Webhook : <code className="text-[11px]">{payments?.webhookPath || '/api/payments/webhooks/…'}</code>
-          {' — '}aussi Paystack / CinetPay / Wave.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-emerald-950">Connecteurs paiements</h3>
+            <p className="text-xs text-emerald-900/80">
+              Webhook : <code className="text-[11px]">{payments?.webhookPath || '/api/payments/webhooks/…'}</code>
+              {' — '}aussi Paystack / CinetPay / Wave.
+            </p>
+          </div>
+          <a
+            href="/admin?tab=integrations"
+            className="shrink-0 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-900 hover:bg-emerald-50"
+          >
+            Configurer →
+          </a>
+        </div>
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {providers.map((p) => (
             <li
@@ -78,8 +88,12 @@ export default function PlatformIntegrationsPanel({ compact = false }: { compact
         <p className="text-xs text-gray-600">
           Statut :{' '}
           <span className={wa?.configured ? 'text-emerald-700 font-medium' : 'text-amber-700'}>
-            {wa?.configured ? 'API configurée' : 'Mode journal (dev) — définir WHATSAPP_TOKEN'}
+            {wa?.configured ? 'API configurée' : 'Mode journal (dev) — configurer dans Intégrations'}
           </span>
+          {' · '}
+          <a href="/admin?tab=integrations" className="font-semibold text-teal-800 underline-offset-2 hover:underline">
+            Ouvrir Intégrations
+          </a>
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
           <Input label="Téléphone" value={waPhone} onChange={(e) => setWaPhone(e.target.value)} placeholder="+2376…" />

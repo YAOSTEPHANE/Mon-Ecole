@@ -67,13 +67,14 @@ const Login = () => {
     window.location.href = `${base}/auth/oauth/${provider}/start`;
   };
 
-  // Gérer la soumission de l'email
+  // Gérer la soumission de l'identifiant (e-mail ou matricule élève)
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && email.includes('@')) {
+    const identifier = email.trim();
+    if (identifier.length >= 2) {
       setStep('password');
     } else {
-      toast.error('Veuillez entrer une adresse email valide');
+      toast.error('Veuillez entrer votre e-mail, n° élève ou matricule');
     }
   };
 
@@ -197,12 +198,12 @@ const Login = () => {
             </div>
 
             {step === 'email' ? (
-              // Étape 1 : Saisie de l'email
+              // Étape 1 : Saisie de l'identifiant
               <form onSubmit={handleEmailSubmit} className="space-y-6">
-                {/* Email Input */}
+                {/* Email / matricule Input */}
                 <div className="space-y-2">
                   <label htmlFor="login-email" className="block text-sm font-semibold text-stone-800">
-                    Adresse email
+                    E-mail ou n° élève / matricule
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -210,23 +211,26 @@ const Login = () => {
                     </div>
                     <input
                       id="login-email"
-                      type="email"
+                      type="text"
                       name="username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      placeholder="votre.email@exemple.com"
+                      placeholder="email@exemple.com ou matricule"
                       autoFocus
                       autoComplete="username"
                       className="w-full pl-12 pr-4 py-4 bg-white/90 border-2 border-stone-200 rounded-xl shadow-sm transition-all duration-200 text-stone-900 placeholder:text-stone-400 hover:border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
                     />
                   </div>
+                  <p className="text-xs text-stone-500">
+                    Élèves sans e-mail : utilisez votre numéro d&apos;élève ou matricule FNE.
+                  </p>
                 </div>
 
                 {/* Submit Button - Continuer */}
                 <Button
                   type="submit"
-                  disabled={!email || !email.includes('@')}
+                  disabled={email.trim().length < 2}
                   className="w-full"
                   size="lg"
                 >

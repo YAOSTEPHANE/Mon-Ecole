@@ -3,6 +3,8 @@
  * Mode sandbox si aucune clé opérateur n’est configurée.
  */
 
+import { getPaymentEnv } from './integration-settings.util';
+
 export type PaymentProviderId =
   | 'WAVE'
   | 'ORANGE_MONEY'
@@ -35,7 +37,7 @@ export type InitiateCheckoutResult = {
 };
 
 function env(name: string): string {
-  return process.env[name]?.trim() || '';
+  return getPaymentEnv(name);
 }
 
 export function resolvePaymentProvider(operator?: string, method?: string): PaymentProviderId {

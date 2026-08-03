@@ -910,81 +910,215 @@ async function main() {
 
   await prisma.grade.createMany({ data: gradeRows });
 
-  // Créer des absences (réparties sur plusieurs mois pour les graphiques)
+  // Créer des absences (dates relatives à aujourd’hui pour les graphiques du mois / 7 jours / 3 mois)
   console.log('📋 Création des absences...');
+  const daysAgo = (n: number): Date => {
+    const d = new Date();
+    d.setHours(10, 0, 0, 0);
+    d.setDate(d.getDate() - n);
+    return d;
+  };
+
   await prisma.absence.createMany({
     data: [
+      // Semaine en cours / mois courant — visibles par défaut sur le tableau de bord
       {
         studentId: student1Profile!.id,
         courseId: course1.id,
         teacherId: teacher1Profile!.id,
-        date: new Date('2025-10-10'),
+        date: daysAgo(1),
         status: 'ABSENT',
         reason: 'Maladie',
         excused: true,
+        hasMedicalCertificate: true,
+        attendanceSource: 'MANUAL',
       },
       {
         studentId: student2Profile!.id,
         courseId: course2.id,
         teacherId: teacher2Profile!.id,
-        date: new Date('2025-11-12'),
+        date: daysAgo(1),
         status: 'LATE',
         reason: 'Retard transport',
         excused: true,
+        minutesLate: 12,
+        attendanceSource: 'NFC',
       },
       {
         studentId: student3Profile!.id,
         courseId: course3.id,
         teacherId: teacher3Profile!.id,
-        date: new Date('2025-12-03'),
+        date: daysAgo(2),
         status: 'ABSENT',
         reason: 'Rendez-vous médical',
         excused: true,
+        attendanceSource: 'MANUAL',
       },
       {
         studentId: student4Profile!.id,
         courseId: course4.id,
         teacherId: teacher1Profile!.id,
-        date: new Date('2026-01-15'),
-        status: 'ABSENT',
-        reason: 'Maladie',
-        excused: false,
+        date: daysAgo(2),
+        status: 'PRESENT',
+        attendanceSource: 'BIOMETRIC',
       },
       {
         studentId: student5Profile!.id,
         courseId: course5.id,
         teacherId: teacher2Profile!.id,
-        date: new Date('2026-02-07'),
+        date: daysAgo(3),
         status: 'LATE',
         reason: 'Transport',
         excused: true,
+        minutesLate: 8,
+        attendanceSource: 'NFC',
       },
       {
         studentId: student7Profile!.id,
         courseId: course1.id,
         teacherId: teacher1Profile!.id,
-        date: new Date('2026-03-20'),
+        date: daysAgo(4),
         status: 'ABSENT',
         reason: 'Famille',
         excused: true,
+        attendanceSource: 'MANUAL',
       },
       {
         studentId: student8Profile!.id,
         courseId: course2.id,
         teacherId: teacher2Profile!.id,
-        date: new Date('2026-04-14'),
+        date: daysAgo(5),
         status: 'LATE',
         reason: 'Réveil tardif',
         excused: false,
+        minutesLate: 20,
+        attendanceSource: 'MANUAL',
       },
       {
         studentId: student9Profile!.id,
         courseId: course4.id,
         teacherId: teacher1Profile!.id,
-        date: new Date('2026-05-02'),
+        date: daysAgo(6),
         status: 'ABSENT',
         reason: 'Sans justification',
         excused: false,
+        attendanceSource: 'MANUAL',
+        sanctionNote: 'Avertissement oral',
+      },
+      {
+        studentId: student1Profile!.id,
+        courseId: course1.id,
+        teacherId: teacher1Profile!.id,
+        date: daysAgo(7),
+        status: 'PRESENT',
+        attendanceSource: 'NFC',
+      },
+      {
+        studentId: student2Profile!.id,
+        courseId: course2.id,
+        teacherId: teacher2Profile!.id,
+        date: daysAgo(8),
+        status: 'ABSENT',
+        reason: 'Grippe',
+        excused: false,
+        attendanceSource: 'MANUAL',
+      },
+      {
+        studentId: student3Profile!.id,
+        courseId: course3.id,
+        teacherId: teacher3Profile!.id,
+        date: daysAgo(10),
+        status: 'PRESENT',
+        attendanceSource: 'BIOMETRIC',
+      },
+      {
+        studentId: student4Profile!.id,
+        courseId: course4.id,
+        teacherId: teacher1Profile!.id,
+        date: daysAgo(12),
+        status: 'ABSENT',
+        reason: 'Maladie',
+        excused: false,
+        attendanceSource: 'MANUAL',
+      },
+      {
+        studentId: student5Profile!.id,
+        courseId: course5.id,
+        teacherId: teacher2Profile!.id,
+        date: daysAgo(15),
+        status: 'LATE',
+        reason: 'Embouteillages',
+        excused: true,
+        minutesLate: 15,
+        attendanceSource: 'NFC',
+      },
+      {
+        studentId: student7Profile!.id,
+        courseId: course1.id,
+        teacherId: teacher1Profile!.id,
+        date: daysAgo(18),
+        status: 'ABSENT',
+        reason: 'Voyage familial',
+        excused: true,
+        attendanceSource: 'MANUAL',
+      },
+      {
+        studentId: student8Profile!.id,
+        courseId: course2.id,
+        teacherId: teacher2Profile!.id,
+        date: daysAgo(22),
+        status: 'PRESENT',
+        attendanceSource: 'MANUAL',
+      },
+      {
+        studentId: student9Profile!.id,
+        courseId: course4.id,
+        teacherId: teacher1Profile!.id,
+        date: daysAgo(25),
+        status: 'ABSENT',
+        reason: 'Sans justification',
+        excused: false,
+        attendanceSource: 'MANUAL',
+      },
+      {
+        studentId: student1Profile!.id,
+        courseId: course2.id,
+        teacherId: teacher2Profile!.id,
+        date: daysAgo(28),
+        status: 'LATE',
+        reason: 'Retard',
+        excused: false,
+        minutesLate: 7,
+        attendanceSource: 'NFC',
+      },
+      {
+        studentId: student2Profile!.id,
+        courseId: course1.id,
+        teacherId: teacher1Profile!.id,
+        date: daysAgo(35),
+        status: 'ABSENT',
+        reason: 'Maladie',
+        excused: true,
+        hasMedicalCertificate: true,
+        attendanceSource: 'MANUAL',
+      },
+      {
+        studentId: student3Profile!.id,
+        courseId: course5.id,
+        teacherId: teacher2Profile!.id,
+        date: daysAgo(42),
+        status: 'PRESENT',
+        attendanceSource: 'BIOMETRIC',
+      },
+      {
+        studentId: student4Profile!.id,
+        courseId: course3.id,
+        teacherId: teacher3Profile!.id,
+        date: daysAgo(50),
+        status: 'ABSENT',
+        reason: 'Rendez-vous',
+        excused: true,
+        attendanceSource: 'MANUAL',
       },
     ],
   });
@@ -1833,7 +1967,7 @@ async function main() {
   console.log(`   - 2 Classes (6ème A : 5 élèves, 5ème B : 4 élèves)`);
   console.log(`   - 5 Cours (3 en 6ème A, 2 en 5ème B)`);
   console.log(`   - Nombreuses notes sur sept. 2025 – mai 2026 (graphiques admin / élève)`);
-  console.log(`   - 8 Absences réparties sur plusieurs mois`);
+  console.log(`   - 20 Absences / présences / retards sur les ~50 derniers jours (visibles sur le tableau de bord mois)`);
   console.log(`   - 4 Devoirs + remises pour tous les élèves`);
   console.log(`   - 6 Entrées d'emploi du temps (6ème A)`);
 }

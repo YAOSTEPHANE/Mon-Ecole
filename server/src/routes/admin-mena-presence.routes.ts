@@ -8,35 +8,27 @@ import {
   parseMenaPresenceCsv,
 } from '../utils/mena-daily-presence-import.util';
 
+import {
+  getMenaPresenceCron,
+  getMenaPresenceDbQuery,
+  getMenaPresenceDbUrl,
+  getMenaPresenceWatchDir,
+  getMenaPresenceWebhookSecret,
+  isMenaPresenceImportEnabled,
+} from '../utils/integration-settings.util';
+
 const router = express.Router();
-
-function presenceWebhookConfigured(): boolean {
-  return Boolean(process.env.MENA_PRESENCE_WEBHOOK_SECRET?.trim());
-}
-
-function watchDirConfigured(): boolean {
-  return Boolean(process.env.MENA_PRESENCE_WATCH_DIR?.trim());
-}
-
-function dbImportConfigured(): boolean {
-  return Boolean(process.env.MENA_PRESENCE_DB_URL?.trim());
-}
-
-function scheduledImportEnabled(): boolean {
-  const v = process.env.ENABLE_SCHEDULED_MENA_PRESENCE_IMPORT?.trim().toLowerCase();
-  return v === '1' || v === 'true' || v === 'yes';
-}
 
 /** Statut des canaux d’import présence journalière MENA. */
 router.get('/mena-presence/status', async (_req: SchoolContextRequest, res) => {
   try {
     res.json({
-      webhookConfigured: presenceWebhookConfigured(),
-      watchDirConfigured: watchDirConfigured(),
-      watchDir: process.env.MENA_PRESENCE_WATCH_DIR?.trim() || null,
-      dbConfigured: dbImportConfigured(),
-      scheduledImportEnabled: scheduledImportEnabled(),
-      cron: process.env.MENA_PRESENCE_IMPORT_CRON?.trim() || '15 18 * * *',
+      webhookConfigured: Boolean(getMenaPresenceWebhookSecret()),
+      watchDirConfigured: Boolean(getMenaPresenceWatchDir()),
+      watchDir: getMenaPresenceWatchDir() || null,
+      dbConfigured: Boolean(getMenaPresenceDbUrl()),
+      scheduledImportEnabled: isMenaPresenceImportEnabled(),
+      cron: getMenaPresenceCron(),
     });
   } catch (e) {
     console.error('GET /admin/mena-presence/status:', e);

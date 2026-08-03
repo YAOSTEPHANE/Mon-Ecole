@@ -33,6 +33,11 @@ import QRCode from 'qrcode';
 import { generateTwoFactorSecret, verifyTwoFactorToken } from '../utils/two-factor.util';
 import { prismaConnectionErrorMessage } from '../utils/production-env-diagnostics.util';
 import { mergeUserUiPreferences } from '../utils/user-ui-preferences.util';
+import {
+  findUserByLoginIdentifier,
+  isRealEmailAddress,
+  isSyntheticStudentEmail,
+} from '../utils/student-login-identifier.util';
 
 const router = express.Router();
 
@@ -147,12 +152,13 @@ router.post(
   }
 );
 
-// Connexion
+// Connexion — e-mail, ou pour les élèves : n° élève / matricule FNE
 router.post(
   '/login',
   authLoginLimiter,
   [
-    body('email').isEmail().withMessage('Email invalide'),
+    body('email').optional({ values: 'falsy' }).isString(),
+    body('identifier').optional({ values: 'falsy' }).isString(),
     body('password').notEmpty().withMessage('Mot de passe requis'),
   ],
   async (req, res) => {
@@ -162,27 +168,21 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const emailNorm = String(req.body.email ?? '')
-        .trim()
-        .toLowerCase();
+      const rawIdentifier = String(req.body.identifier ?? req.body.email ?? '').trim();
+      if (!rawIdentifier) {
+        return res.status(400).json({
+          error: 'Identifiant requis (e-mail, n° élève ou matricule)',
+        });
+      }
+
       const { password, twoFactorCode } = req.body;
 
-      // Trouver l'utilisateur (tous les profils pour le même schéma que /auth/me)
-      const user = await prisma.user.findUnique({
-        where: { email: emailNorm },
-        include: {
-          teacherProfile: true,
-          studentProfile: true,
-          parentProfile: true,
-          educatorProfile: true,
-          staffProfile: true,
-        },
-      });
+      const user = await findUserByLoginIdentifier(rawIdentifier);
 
       // Logs de débogage en mode développement
       if (process.env.NODE_ENV === 'development') {
         console.log('🔍 Tentative de connexion:', {
-          email: emailNorm,
+          identifier: rawIdentifier,
           userExists: !!user,
           isActive: user?.isActive,
         });
@@ -190,14 +190,14 @@ router.post(
 
       if (!user) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('❌ Utilisateur non trouvé:', emailNorm);
+          console.log('❌ Utilisateur non trouvé:', rawIdentifier);
         }
         return res.status(401).json({ error: 'Identifiants invalides' });
       }
 
       if (!user.isActive) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('❌ Utilisateur inactif:', emailNorm);
+          console.log('❌ Utilisateur inactif:', rawIdentifier);
         }
         return res.status(401).json({ error: 'Votre compte a été désactivé. Contactez l\'administrateur.' });
       }
@@ -228,14 +228,14 @@ router.post(
 
       if (process.env.NODE_ENV === 'development') {
         console.log('🔐 Vérification du mot de passe:', {
-          email: emailNorm,
+          identifier: rawIdentifier,
           isValid: isValidPassword,
         });
       }
 
       if (!isValidPassword) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('❌ Mot de passe incorrect pour:', emailNorm);
+          console.log('❌ Mot de passe incorrect pour:', rawIdentifier);
         }
         return res.status(401).json({ error: 'Identifiants invalides' });
       }
@@ -564,11 +564,14 @@ router.post('/2fa/disable', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-// Demande de réinitialisation de mot de passe
+// Demande de réinitialisation de mot de passe (e-mail réel uniquement)
 router.post(
   '/forgot-password',
   authForgotPasswordLimiter,
-  [body('email').isEmail().withMessage('Email invalide')],
+  [
+    body('email').optional({ values: 'falsy' }).isString(),
+    body('identifier').optional({ values: 'falsy' }).isString(),
+  ],
   async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -576,26 +579,37 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const emailNorm = String(req.body.email ?? '')
-        .trim()
-        .toLowerCase();
+      const rawIdentifier = String(req.body.identifier ?? req.body.email ?? '').trim();
+      if (!rawIdentifier) {
+        return res.status(400).json({ error: 'Identifiant ou e-mail requis' });
+      }
 
+      // Élèves sans e-mail (matricule) : reset uniquement par l’admin
+      if (!rawIdentifier.includes('@') || isSyntheticStudentEmail(rawIdentifier)) {
+        return res.status(400).json({
+          error:
+            'Les élèves connectés avec leur n° élève / matricule doivent demander la réinitialisation du mot de passe à l’administration.',
+          code: 'ADMIN_PASSWORD_RESET_REQUIRED',
+        });
+      }
+
+      if (!isRealEmailAddress(rawIdentifier)) {
+        return res.status(400).json({ error: 'Adresse e-mail invalide' });
+      }
+
+      const emailNorm = rawIdentifier.toLowerCase();
       const user = await prisma.user.findUnique({
         where: { email: emailNorm },
       });
 
       // Pour la sécurité, ne pas révéler si l'email existe
-      // On retourne toujours le même message
-      if (!user || !user.isActive) {
+      if (!user || !user.isActive || isSyntheticStudentEmail(user.email)) {
         return res.json({
           message: 'Si cet email existe, un lien de réinitialisation a été envoyé',
         });
       }
 
-      // Créer un token de réinitialisation
       const token = await createPasswordResetToken(user.id);
-
-      // Envoyer l'email de réinitialisation
       await sendPasswordResetEmail(emailNorm, token, user.firstName);
 
       res.json({

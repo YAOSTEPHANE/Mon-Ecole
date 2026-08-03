@@ -7,7 +7,7 @@ import {
   inviteNewUserToSetPassword,
   resolveAdminProvidedOrInvitePassword,
 } from '../utils/admin-user-initial-password.util';
-import { optionalPasswordPolicyValidator, PASSWORD_POLICY_HINT } from '../utils/password.util';
+import { optionalPasswordPolicyValidator, PASSWORD_POLICY_HINT, validatePasswordStrength } from '../utils/password.util';
 import { generateDigitalCardPublicId } from '../utils/digital-card.util';
 import { buildStudentEnrollmentDossierPayload } from '../utils/student-enrollment-dossier.util';
 import { deleteStoredUploadUrl, discardUploadedFile, persistUploadedFile } from '../utils/upload-persist.util';
@@ -21,6 +21,10 @@ import QRCode from 'qrcode';
 import type { SchoolContextRequest } from '../utils/school-context.util';
 import { studentScopeWhere } from '../utils/school-context.util';
 import { isObjectId } from '../utils/school-access-guard.util';
+import {
+  isSyntheticStudentEmail,
+  resolveStudentAccountEmail,
+} from '../utils/student-login-identifier.util';
 
 const router = express.Router();
 
@@ -160,11 +164,15 @@ router.get('/students', async (req: SchoolContextRequest, res) => {
   }
 });
 
-// Créer un élève
+// Créer un élève (e-mail optionnel : sans e-mail, connexion par n° élève / matricule)
 router.post(
   '/students',
   [
-    body('email').isEmail(),
+    body('email')
+      .optional({ values: 'falsy' })
+      .trim()
+      .isEmail()
+      .withMessage('Email invalide'),
     body('password')
       .optional({ values: 'falsy' })
       .trim()
@@ -237,13 +245,51 @@ router.post(
         }
       }
 
-      // Vérifier si l'email existe déjà
+      let accountEmail: string;
+      let usesMatriculeLogin: boolean;
+      try {
+        const resolved = resolveStudentAccountEmail({
+          email,
+          studentId: String(studentId),
+          nationalMatricule:
+            typeof nationalMatricule === 'string' ? nationalMatricule : null,
+        });
+        accountEmail = resolved.email;
+        usesMatriculeLogin = resolved.usesMatriculeLogin;
+      } catch (resolveErr: unknown) {
+        return res.status(400).json({
+          error: resolveErr instanceof Error ? resolveErr.message : 'Identifiant de connexion invalide',
+        });
+      }
+
+      // Sans e-mail réel : l’admin doit définir le mot de passe (pas d’invitation e-mail)
+      const passwordRaw = typeof password === 'string' ? password.trim() : '';
+      if (usesMatriculeLogin && !passwordRaw) {
+        return res.status(400).json({
+          error:
+            'Sans adresse e-mail, un mot de passe initial est obligatoire (l’élève se connecte avec son n° élève / matricule).',
+        });
+      }
+      if (usesMatriculeLogin && passwordRaw) {
+        try {
+          validatePasswordStrength(passwordRaw);
+        } catch (pwErr: unknown) {
+          return res.status(400).json({
+            error: pwErr instanceof Error ? pwErr.message : PASSWORD_POLICY_HINT,
+          });
+        }
+      }
+
       const existingUser = await prisma.user.findUnique({
-        where: { email },
+        where: { email: accountEmail },
       });
 
       if (existingUser) {
-        return res.status(400).json({ error: 'Cet email est déjà utilisé' });
+        return res.status(400).json({
+          error: usesMatriculeLogin
+            ? 'Ce n° élève / matricule est déjà utilisé comme identifiant de connexion'
+            : 'Cet email est déjà utilisé',
+        });
       }
 
       // Vérifier si le studentId existe déjà
@@ -255,7 +301,10 @@ router.post(
         return res.status(400).json({ error: 'Ce numéro d\'élève existe déjà' });
       }
 
-      const { hashedPassword, shouldSendSetupEmail } = await resolveAdminProvidedOrInvitePassword(password);
+      const { hashedPassword, shouldSendSetupEmail } = await resolveAdminProvidedOrInvitePassword(
+        usesMatriculeLogin ? passwordRaw : password,
+      );
+      const sendSetupEmail = shouldSendSetupEmail && !usesMatriculeLogin && !isSyntheticStudentEmail(accountEmail);
 
       const sensitiveFields = encryptStudentScalarsForPrismaCreate({
         address,
@@ -271,7 +320,7 @@ router.post(
       // Créer l'utilisateur et le profil élève
       const user = await prisma.user.create({
         data: {
-          email,
+          email: accountEmail,
           password: hashedPassword,
           firstName,
           lastName,
@@ -318,7 +367,9 @@ router.post(
           data: {
             userId: (req as any).user?.id,
             type: 'student_added',
-            description: `Élève créé: ${firstName} ${lastName} (${studentId})${classId ? ' - Classe assignée' : ''}`,
+            description: `Élève créé: ${firstName} ${lastName} (${studentId})${classId ? ' - Classe assignée' : ''}${
+              usesMatriculeLogin ? ' — connexion par matricule' : ''
+            }`,
             ipAddress: req.ip || req.socket.remoteAddress,
             userAgent: req.get('user-agent'),
             severity: 'info',
@@ -329,7 +380,7 @@ router.post(
         console.error('Erreur lors de la création de l\'événement de sécurité:', eventError);
       }
 
-      if (shouldSendSetupEmail) {
+      if (sendSetupEmail) {
         try {
           await inviteNewUserToSetPassword(user.id, user.email, user.firstName);
         } catch (inviteErr) {
@@ -344,7 +395,15 @@ router.post(
       res.status(201).json({
         ...userWithoutPassword,
         studentProfile: profile,
-        passwordSetupEmailSent: shouldSendSetupEmail,
+        passwordSetupEmailSent: sendSetupEmail,
+        usesMatriculeLogin,
+        loginIdentifier: usesMatriculeLogin
+          ? String(
+              (typeof nationalMatricule === 'string' && nationalMatricule.trim()
+                ? nationalMatricule.trim()
+                : studentId) || studentId,
+            )
+          : accountEmail,
       });
     } catch (error: unknown) {
       console.error('POST /admin/students:', error);

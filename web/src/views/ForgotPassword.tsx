@@ -19,8 +19,14 @@ const ForgotPassword = () => {
       setEmailSent(true);
       toast.success('Email de réinitialisation envoyé !');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || "Erreur lors de l'envoi de l'email";
-      toast.error(errorMessage);
+      const code = error.response?.data?.code;
+      const errorMessage =
+        error.response?.data?.error || "Erreur lors de l'envoi de l'email";
+      if (code === 'ADMIN_PASSWORD_RESET_REQUIRED') {
+        toast.error(errorMessage);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -64,6 +70,12 @@ const ForgotPassword = () => {
                   ? 'Vérifiez votre boîte mail'
                   : 'Entrez votre adresse e-mail pour recevoir un lien de réinitialisation'}
               </p>
+              {!emailSent ? (
+                <p className="mt-3 text-sm text-stone-500 leading-relaxed">
+                  Élèves sans e-mail (connexion par n° élève / matricule) : contactez
+                  l&apos;administration pour réinitialiser le mot de passe.
+                </p>
+              ) : null}
             </div>
 
             {emailSent ? (
