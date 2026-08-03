@@ -13,6 +13,12 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // Évite l’auto-détection React (cassée avec ESLint 10 / anciennes versions du plugin).
+    settings: {
+      react: { version: "19" },
+    },
+  },
 ]);
 
 export default eslintConfig;
