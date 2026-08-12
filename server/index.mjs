@@ -1,6 +1,6 @@
 /**
  * Entrée Express pour Vercel Services.
- * Doit s’appeler index.mjs (détecté par @vercel/express) pour que le shim
+ * Doit s'appeler index.mjs (détecté par @vercel/express) pour que le shim
  * runtime soit émis en .mjs et non en .js (sinon crash ESM → 500 sur /api/*).
  */
 import express from 'express';
