@@ -14,10 +14,16 @@
     },
     "api": {
       "root": "server",
-      "entrypoint": "src/index.ts",
+      "entrypoint": "index.mjs",
       "routePrefix": "/api",
       "framework": "express",
-      "buildCommand": "npx prisma generate"
+      "buildCommand": "npx prisma generate && node ./scripts/bundle-for-vercel.mjs",
+      "includeFiles": [
+        "vercel-api.cjs",
+        "prisma/**",
+        "node_modules/@prisma/**",
+        "node_modules/.prisma/**"
+      ]
     }
   }
 }

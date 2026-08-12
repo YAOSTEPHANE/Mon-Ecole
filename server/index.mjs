@@ -1,15 +1,14 @@
 /**
- * Entrée Express pour Vercel Services.
- * Le package a "type":"module" pour que le shim `__vc_service_vc_init.js` (ESM)
- * soit accepté ; dist/ reste CommonJS via dist/package.json.
+ * Entrée Vercel Services (ESM) : "type":"module" valide le shim runtime.
+ * Le handler applicatif est pré-bundlé en CommonJS (vercel-api.cjs).
  */
 import express from 'express';
 import { createRequire } from 'node:module';
 
-// Détection @vercel/express (imports express).
+// Détection framework @vercel/express
 void express;
 
 const require = createRequire(import.meta.url);
-const mod = require('./dist/index.js');
+const mod = require('./vercel-api.cjs');
 
 export default mod?.default ?? mod;

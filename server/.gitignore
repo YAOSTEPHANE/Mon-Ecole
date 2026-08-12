@@ -1,6 +1,7 @@
 node_modules/
 dist/
 compiled/
+vercel-api.cjs
 .env
 *.log
 .DS_Store
