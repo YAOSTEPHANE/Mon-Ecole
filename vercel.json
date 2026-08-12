@@ -14,7 +14,7 @@
     },
     "api": {
       "root": "server",
-      "entrypoint": "index.cjs",
+      "entrypoint": "index.mjs",
       "routePrefix": "/api",
       "framework": "express",
       "buildCommand": "npm run build",
