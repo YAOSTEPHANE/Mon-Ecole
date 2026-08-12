@@ -5,10 +5,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getRealtimeOrigin } from "@/lib/realtimeSocket";
+import { getRealtimeOrigin, isRealtimeEnabled } from "@/lib/realtimeSocket";
 
 /**
  * Connexion Socket.IO : invalide les notifications et toast léger.
+ * Désactivé automatiquement sur Vercel (API relative `/api`, pas de WS serverless).
  */
 export default function RealtimeBootstrap() {
   const { token, user } = useAuth();
@@ -16,7 +17,7 @@ export default function RealtimeBootstrap() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!user?.id || !isRealtimeEnabled()) {
       socketRef.current?.disconnect();
       socketRef.current = null;
       return;

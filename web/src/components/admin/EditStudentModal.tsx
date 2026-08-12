@@ -237,23 +237,60 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
     }));
   };
 
-  const validateStep = (step: number): boolean => {
+  const collectStepErrors = (step: number): Record<string, string> => {
     const newErrors: Record<string, string> = {};
 
     if (step === 1) {
       if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
       if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
-      if (!formData.email.trim()) {
-        // Sans e-mail réel : connexion par n° élève / matricule (compte technique côté serveur)
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         newErrors.email = 'Email invalide';
       }
       if (!formData.dateOfBirth) newErrors.dateOfBirth = 'La date de naissance est requise';
+      if (!formData.birthPlace.trim()) newErrors.birthPlace = 'Le lieu de naissance est requis';
       if (!formData.gender) newErrors.gender = 'Le genre est requis';
+      if (!formData.phone.trim()) newErrors.phone = 'Le téléphone est requis';
     }
 
+    if (step === 2) {
+      if (!formData.classId.trim()) newErrors.classId = 'Le niveau / la classe est requis';
+    }
+
+    if (step === 3) {
+      if (!formData.address.trim()) newErrors.address = "L'adresse est requise";
+      if (!formData.emergencyContact.trim()) {
+        newErrors.emergencyContact = "Le contact d'urgence est requis";
+      }
+      if (!formData.emergencyPhone.trim()) {
+        newErrors.emergencyPhone = "Le téléphone d'urgence est requis";
+      }
+    }
+
+    return newErrors;
+  };
+
+  const validateStep = (step: number): boolean => {
+    const newErrors = collectStepErrors(step);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const validateFullForm = (): boolean => {
+    const allErrors = {
+      ...collectStepErrors(1),
+      ...collectStepErrors(2),
+      ...collectStepErrors(3),
+    };
+    setErrors(allErrors);
+    if (Object.keys(allErrors).length === 0) return true;
+
+    const step1Keys = ['firstName', 'lastName', 'email', 'dateOfBirth', 'birthPlace', 'gender', 'phone'];
+    if (step1Keys.some((k) => allErrors[k])) setCurrentStep(1);
+    else if (allErrors.classId) setCurrentStep(2);
+    else setCurrentStep(3);
+
+    toast.error('Complétez toutes les étapes du formulaire avant d’enregistrer.');
+    return false;
   };
 
   const handleNext = () => {
@@ -268,13 +305,13 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateStep(currentStep)) {
-      return;
-    }
 
     if (currentStep < 3) {
       handleNext();
+      return;
+    }
+
+    if (!validateFullForm()) {
       return;
     }
 
@@ -512,7 +549,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
 
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    Téléphone
+                    Téléphone <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
@@ -523,10 +560,18 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full pl-8 pr-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all"
-                      placeholder="+33 6 12 34 56 78"
+                      className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
+                        errors.phone ? 'border-red-500' : 'border-stone-200'
+                      }`}
+                      placeholder="+225 07 00 00 00 00"
                     />
                   </div>
+                  {errors.phone && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center">
+                      <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                      {errors.phone}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -560,7 +605,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
 
                 <div>
                   <label htmlFor="edit-student-birth-place" className="block text-xs font-semibold text-stone-700 mb-1">
-                    Lieu de naissance
+                    Lieu de naissance <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="edit-student-birth-place"
@@ -569,8 +614,16 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                     value={formData.birthPlace}
                     onChange={handleChange}
                     placeholder="Ex. Bouaké, Abidjan…"
-                    className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all"
+                    className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
+                      errors.birthPlace ? 'border-red-500' : 'border-stone-200'
+                    }`}
                   />
+                  {errors.birthPlace && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center">
+                      <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                      {errors.birthPlace}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -663,13 +716,15 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    Classe
+                    Classe <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="classId"
                     value={formData.classId}
                     onChange={handleChange}
-                    className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all"
+                    className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
+                      errors.classId ? 'border-red-500' : 'border-stone-200'
+                    }`}
                   >
                     <option value="">Sélectionner une classe</option>
                     {classes?.map((cls: any) => (
@@ -679,6 +734,12 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                       </option>
                     ))}
                   </select>
+                  {errors.classId && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center">
+                      <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                      {errors.classId}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -812,7 +873,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
             <div className="space-y-2 animate-fade-in">
               <div>
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  Adresse
+                  Adresse <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute top-2 left-2.5 flex items-start pointer-events-none">
@@ -823,16 +884,24 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                     value={formData.address}
                     onChange={handleChange}
                     rows={2}
-                    className="w-full pl-8 pr-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all resize-none"
+                    className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all resize-none ${
+                      errors.address ? 'border-red-500' : 'border-stone-200'
+                    }`}
                     placeholder="Adresse complète"
                   />
                 </div>
+                {errors.address && (
+                  <p className="mt-1 text-xs text-red-500 flex items-center">
+                    <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                    {errors.address}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    Contact d'urgence
+                    Contact d&apos;urgence <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
@@ -843,15 +912,23 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                       name="emergencyContact"
                       value={formData.emergencyContact}
                       onChange={handleChange}
-                      className="w-full pl-8 pr-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all"
+                      className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
+                        errors.emergencyContact ? 'border-red-500' : 'border-stone-200'
+                      }`}
                       placeholder="Nom du contact"
                     />
                   </div>
+                  {errors.emergencyContact && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center">
+                      <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                      {errors.emergencyContact}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    Téléphone d'urgence
+                    Téléphone d&apos;urgence <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
@@ -862,10 +939,18 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                       name="emergencyPhone"
                       value={formData.emergencyPhone}
                       onChange={handleChange}
-                      className="w-full pl-8 pr-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all"
-                      placeholder="+33 6 12 34 56 78"
+                      className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
+                        errors.emergencyPhone ? 'border-red-500' : 'border-stone-200'
+                      }`}
+                      placeholder="+225 07 00 00 00 00"
                     />
                   </div>
+                  {errors.emergencyPhone && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center">
+                      <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                      {errors.emergencyPhone}
+                    </p>
+                  )}
                 </div>
               </div>
 
