@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Card from '../ui/Card';
@@ -48,7 +49,6 @@ import {
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import RecentActivity from './RecentActivity';
 import QuickActions from './QuickActions';
 import NotificationsWidget from './NotificationsWidget';
 import { useSchool } from '../../contexts/SchoolContext';
@@ -59,6 +59,11 @@ import {
   PremiumSectionTitle,
 } from '../dashboard/premium';
 import { PremiumChartCard } from '../charts';
+
+const RecentActivity = dynamic(() => import('./RecentActivity'), {
+  ssr: false,
+  loading: () => <div className="h-52 bg-gray-100 rounded-lg animate-pulse" />,
+});
 
 interface DashboardStatsProps {
   onAddStudent?: () => void;
