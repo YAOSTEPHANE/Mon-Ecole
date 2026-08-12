@@ -55,7 +55,7 @@ export async function notifyStaffOfPendingCashPayment(
     type: 'payment_pending_cash',
     title,
     content,
-    link: '/staff?tab=payments_mgmt',
+    link: '/staff?tab=treasury',
     email: undefined,
   });
 }

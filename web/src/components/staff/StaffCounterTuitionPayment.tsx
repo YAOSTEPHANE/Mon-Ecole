@@ -9,6 +9,7 @@ import Badge from '../ui/Badge';
 import { staffApi } from '../../services/api/staff.api';
 import type { SupportStaffKindKey } from '@/views/staff/staffSpaceConfig';
 import { FiDollarSign, FiSearch, FiUser } from 'react-icons/fi';
+import PendingCashPaymentsPanel from '../payments/PendingCashPaymentsPanel';
 
 const COUNTER_KINDS = new Set<SupportStaffKindKey>(['SECRETARY', 'BURSAR', 'ACCOUNTANT']);
 
@@ -134,6 +135,8 @@ export default function StaffCounterTuitionPayment({ supportKind }: StaffCounter
   }
 
   return (
+    <div className="space-y-4">
+      <PendingCashPaymentsPanel mode="staff" compact />
     <Card className="p-5 sm:p-6 border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/30 shadow-sm ring-1 ring-emerald-900/5">
       <div className="flex items-start gap-3 mb-5">
         <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/70">
@@ -310,5 +313,6 @@ export default function StaffCounterTuitionPayment({ supportKind }: StaffCounter
         )}
       </div>
     </Card>
+    </div>
   );
 }

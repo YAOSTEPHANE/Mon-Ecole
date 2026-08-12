@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Card from '../ui/Card';
@@ -35,6 +36,8 @@ type FeesTab =
   | 'history';
 
 const FeesManagementModule: React.FC = () => {
+  const pathname = usePathname();
+  const pendingCashMode = pathname?.startsWith('/staff') ? 'staff' : 'admin';
   const [tab, setTab] = useState<FeesTab>('overview');
   const qc = useQueryClient();
   const [invoiceYear, setInvoiceYear] = useState('');
@@ -284,7 +287,7 @@ const FeesManagementModule: React.FC = () => {
       {tab === 'billing' && <TuitionFeesManagement embedded compact />}
       {tab === 'payments' && (
         <div className="space-y-4">
-          <PendingCashPaymentsPanel mode="admin" compact />
+          <PendingCashPaymentsPanel mode={pendingCashMode} compact />
           <PaymentsManagement embedded compact />
         </div>
       )}

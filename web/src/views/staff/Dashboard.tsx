@@ -121,8 +121,29 @@ const StaffDashboard = () => {
       return;
     }
     if (fromUrl && !visibleModules.includes(fromUrl as StaffModuleId)) {
-      setActiveTab('overview');
+      // Notif « paiement espèces » pointe vers payments_mgmt : basculer vers un onglet
+      // de validation cash réellement accessible (treasury / fees / counter).
+      const cashFallbackOrder: StaffModuleId[] = [
+        'payments_mgmt',
+        'treasury',
+        'fees_mgmt',
+        'counter',
+      ];
+      const cashFallback =
+        fromUrl === 'payments_mgmt' || fromUrl === 'treasury' || fromUrl === 'fees_mgmt'
+          ? cashFallbackOrder.find((id) => visibleModules.includes(id))
+          : undefined;
+
       const params = new URLSearchParams(searchParams.toString());
+      if (cashFallback) {
+        setActiveTab(cashFallback);
+        params.set('tab', cashFallback);
+        const qs = params.toString();
+        router.replace(qs ? `/staff?${qs}` : '/staff', { scroll: false });
+        return;
+      }
+
+      setActiveTab('overview');
       params.delete('tab');
       const qs = params.toString();
       router.replace(qs ? `/staff?${qs}` : '/staff', { scroll: false });
