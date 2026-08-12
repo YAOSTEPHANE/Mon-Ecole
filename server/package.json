@@ -2,11 +2,11 @@
   "name": "school-manager-server",
   "version": "1.0.0",
   "description": "Backend API pour School Manager App",
-  "main": "compiled/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node compiled/index.js",
+    "start": "node dist/index.js",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
