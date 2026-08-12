@@ -5,18 +5,18 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * Bundle unique pour Vercel Services : le tracing NFT ne suit pas bien
- * un `require('./dist')` et omet dotenv / express / etc.
+ * Bundle léger pour Vercel Services (sans Socket.IO / jobs).
  * Prisma reste external (binaires natifs).
  */
 await esbuild.build({
   absWorkingDir: root,
-  entryPoints: ['src/index.ts'],
+  entryPoints: ['src/vercel-entry.ts'],
   bundle: true,
   platform: 'node',
   target: 'node20',
   format: 'cjs',
   outfile: 'vercel-api.cjs',
+  minify: true,
   logLevel: 'info',
   banner: {
     js: 'var __import_meta_url = require("url").pathToFileURL(__filename).href;',
