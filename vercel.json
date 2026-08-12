@@ -14,11 +14,10 @@
     },
     "api": {
       "root": "server",
-      "entrypoint": "index.mjs",
+      "entrypoint": "src/index.ts",
       "routePrefix": "/api",
       "framework": "express",
-      "buildCommand": "npm run build",
-      "includeFiles": ["dist/**", "node_modules/**", "prisma/**"]
+      "buildCommand": "npx prisma generate"
     }
   }
 }
