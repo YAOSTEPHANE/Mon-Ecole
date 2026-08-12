@@ -1,23 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '../../components/Layout';
-import StudentOverview from '../../components/student/StudentOverview';
-import StudentProfile from '../../components/student/StudentProfile';
-import StudentGrades from '../../components/student/StudentGrades';
-import StudentSchedule from '../../components/student/StudentSchedule';
-import StudentAbsences from '../../components/student/StudentAbsences';
-import StudentAssignments from '../../components/student/StudentAssignments';
-import StudentConduct from '../../components/student/StudentConduct';
-import StudentPayments from '../../components/student/StudentPayments';
-import StudentAcademicHistory from '../../components/student/StudentAcademicHistory';
-import IdentityDocumentsPanel from '../../components/identity/IdentityDocumentsPanel';
-import SchoolCommunication from '../../components/portal/SchoolCommunication';
-import StudentExtracurricularPanel from '../../components/student/StudentExtracurricularPanel';
-import StudentOrientationPanel from '../../components/student/StudentOrientationPanel';
-import DigitalLibraryBrowser from '../../components/digital-library/DigitalLibraryBrowser';
-import ElearningHub from '../../components/elearning/ElearningHub';
-import StudentMockExamsPanel from '../../components/student/StudentMockExamsPanel';
+import DashboardTabLoading from '../../components/dashboard/DashboardTabLoading';
 import {
   FiLayout,
   FiUser,
@@ -49,6 +35,23 @@ import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import { STUDENT_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+
+const StudentOverview = dynamic(() => import('../../components/student/StudentOverview'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentProfile = dynamic(() => import('../../components/student/StudentProfile'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentGrades = dynamic(() => import('../../components/student/StudentGrades'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentSchedule = dynamic(() => import('../../components/student/StudentSchedule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentAbsences = dynamic(() => import('../../components/student/StudentAbsences'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentAssignments = dynamic(() => import('../../components/student/StudentAssignments'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentConduct = dynamic(() => import('../../components/student/StudentConduct'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentPayments = dynamic(() => import('../../components/student/StudentPayments'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentAcademicHistory = dynamic(() => import('../../components/student/StudentAcademicHistory'), { loading: () => <DashboardTabLoading />, ssr: false });
+const IdentityDocumentsPanel = dynamic(() => import('../../components/identity/IdentityDocumentsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SchoolCommunication = dynamic(() => import('../../components/portal/SchoolCommunication'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentExtracurricularPanel = dynamic(() => import('../../components/student/StudentExtracurricularPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentOrientationPanel = dynamic(() => import('../../components/student/StudentOrientationPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const DigitalLibraryBrowser = dynamic(() => import('../../components/digital-library/DigitalLibraryBrowser'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ElearningHub = dynamic(() => import('../../components/elearning/ElearningHub'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentMockExamsPanel = dynamic(() => import('../../components/student/StudentMockExamsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 
 const VALID_TAB_IDS = [
   'overview',

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import authRoutes from '../routes/auth.routes';
 import adminRoutes from '../routes/admin.routes';
 import teacherRoutes from '../routes/teacher.routes';
@@ -58,6 +59,7 @@ export function createApp(): express.Express {
 
   app.disable('x-powered-by');
   app.use(securityHeaders);
+  app.use(compression());
 
   app.use(
     cors({
@@ -100,7 +102,11 @@ export function createApp(): express.Express {
     express.json({
       limit: '10mb',
       verify: (req, _res, buffer) => {
-        (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+        // rawBody uniquement pour les webhooks paiement (signature HMAC).
+        const path = req.url || '';
+        if (path.includes('/webhooks/') || path.includes('/payments/webhooks')) {
+          (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+        }
       },
     }),
   );

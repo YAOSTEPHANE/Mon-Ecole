@@ -14,6 +14,10 @@ import {
   rejectCashPayment,
   validateCashPayment,
 } from '../utils/cash-payment-validation.util';
+import {
+  completeOnlinePayment,
+  listPendingMobileMoneyPayments,
+} from '../utils/online-payment.util';
 import { enrollStudentFromAdmission } from '../utils/admission-enroll.util';
 import { buildStudentEnrollmentDossierPayload } from '../utils/student-enrollment-dossier.util';
 import {
@@ -431,13 +435,9 @@ router.get('/treasury/summary', requireStaffModule('treasury'), async (req: Scho
 
     const [fees, paymentsToday, paymentsMonth, overdueCount] = await Promise.all([
       prisma.tuitionFee.findMany({
-        where: { student: currentStudentScope(req) },
+        where: { isPaid: false, student: currentStudentScope(req) },
         select: {
-          id: true,
           amount: true,
-          isPaid: true,
-          dueDate: true,
-          studentId: true,
           payments: { where: { status: 'COMPLETED' }, select: { amount: true } },
         },
       }),
@@ -553,7 +553,7 @@ router.post(
       role: staff.role,
       name,
     }, req.schoolId);
-    res.json({ payment, message: 'Paiement espèces validé et pris en compte' });
+    res.json({ payment, message: 'Paiement validé et pris en compte' });
   } catch (error: unknown) {
     const err = error as Error & { status?: number };
     if (err.status && err.status !== 500) return res.status(err.status).json({ error: err.message });
@@ -573,13 +573,47 @@ router.post(
     const name = [staff?.firstName, staff?.lastName].filter(Boolean).join(' ').trim() || 'Économe';
     const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined;
     const payment = await rejectCashPayment(prisma, req.params.id, { name }, reason, req.schoolId);
-    res.json({ payment, message: 'Déclaration espèces refusée' });
+    res.json({ payment, message: 'Déclaration refusée' });
   } catch (error: unknown) {
     const err = error as Error & { status?: number };
     if (err.status && err.status !== 500) return res.status(err.status).json({ error: err.message });
     res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
+
+router.get(
+  '/treasury/pending-online',
+  requireStaffAnyModule(CASH_VALIDATION_MODULES),
+  async (req: SchoolContextRequest, res) => {
+    try {
+      const rows = await listPendingMobileMoneyPayments(prisma, req.schoolId);
+      res.json(rows);
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  },
+);
+
+router.post(
+  '/treasury/pending-online/:id/confirm',
+  requireStaffAnyModule(CASH_VALIDATION_MODULES),
+  async (req: SchoolContextRequest, res) => {
+    try {
+      const transactionId =
+        typeof req.body?.transactionId === 'string' ? req.body.transactionId.trim() : undefined;
+      const payment = await completeOnlinePayment(prisma, req.params.id, {
+        transactionId,
+        providerNote: `Confirmé manuellement (économat) le ${new Date().toLocaleString('fr-FR')}`,
+        schoolId: req.schoolId,
+      });
+      res.json({ payment, message: 'Paiement en ligne confirmé' });
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status !== 500) return res.status(err.status).json({ error: err.message });
+      res.status(500).json({ error: err.message || 'Erreur serveur' });
+    }
+  },
+);
 
 // ——— Directeur des études : pilotage ———
 

@@ -1,4 +1,4 @@
-import type { Payment, Prisma, PrismaClient, Role } from '@prisma/client';
+import type { Payment, PaymentMethod, Prisma, PrismaClient, Role } from '@prisma/client';
 import prisma from './prisma';
 import { autoReceiptUrl } from './tuition-financial-automation.util';
 import { finalizeCompletedTuitionPayment } from './tuition-fee-paid-sync.util';
@@ -8,6 +8,9 @@ import {
 } from './parent-notify.util';
 import { assertPaymentInSchool } from './school-access-guard.util';
 type Db = PrismaClient | Prisma.TransactionClient;
+
+/** Déclarations portail à valider manuellement (espèces ou virement). */
+export const PORTAL_MANUAL_PAYMENT_METHODS: PaymentMethod[] = ['CASH', 'BANK_TRANSFER'];
 
 const PENDING_CASH_INCLUDE = {
   tuitionFee: { select: { period: true, academicYear: true, amount: true } },
@@ -24,7 +27,7 @@ export async function listPendingCashPayments(client: Db = prisma, schoolId?: st
   return client.payment.findMany({
     where: {
       status: 'PENDING',
-      paymentMethod: 'CASH',
+      paymentMethod: { in: PORTAL_MANUAL_PAYMENT_METHODS },
       payerRole: { in: ['STUDENT', 'PARENT'] },
       ...(schoolId ? { student: { OR: [{ schoolId }, { class: { schoolId } }] } } : {}),
     },
@@ -33,14 +36,15 @@ export async function listPendingCashPayments(client: Db = prisma, schoolId?: st
   });
 }
 
-function assertPendingCashFromPortal(payment: Payment) {
+function assertPendingManualFromPortal(payment: Payment) {
   if (payment.status !== 'PENDING') {
     throw Object.assign(new Error('Ce paiement n’est plus en attente de validation'), { status: 400 });
   }
-  if (payment.paymentMethod !== 'CASH') {
-    throw Object.assign(new Error('Seuls les paiements espèces déclarés en ligne sont validables ici'), {
-      status: 400,
-    });
+  if (!PORTAL_MANUAL_PAYMENT_METHODS.includes(payment.paymentMethod)) {
+    throw Object.assign(
+      new Error('Seuls les paiements espèces ou virement déclarés en ligne sont validables ici'),
+      { status: 400 },
+    );
   }
   if (payment.payerRole !== 'STUDENT' && payment.payerRole !== 'PARENT') {
     throw Object.assign(new Error('Paiement non éligible à cette validation'), { status: 400 });
@@ -60,16 +64,17 @@ export async function validateCashPayment(
   if (!payment) {
     throw Object.assign(new Error('Paiement introuvable'), { status: 404 });
   }
-  assertPendingCashFromPortal(payment);
+  assertPendingManualFromPortal(payment);
 
   const validationNote = `Validé par l'économe (${validator.name}) le ${new Date().toLocaleString('fr-FR')}`;
   const notes = payment.notes ? `${payment.notes} — ${validationNote}` : validationNote;
+  const prefix = payment.paymentMethod === 'BANK_TRANSFER' ? 'BANK-VAL' : 'CASH-VAL';
 
   const updated = await client.payment.update({
     where: { id: paymentId },
     data: {
       status: 'COMPLETED',
-      transactionId: `CASH-VAL-${Date.now()}`,
+      transactionId: `${prefix}-${Date.now()}`,
       paidAt: new Date(),
       receiptUrl: autoReceiptUrl(payment.paymentReference || paymentId),
       notes,
@@ -98,7 +103,7 @@ export async function rejectCashPayment(
   if (!payment) {
     throw Object.assign(new Error('Paiement introuvable'), { status: 404 });
   }
-  assertPendingCashFromPortal(payment);
+  assertPendingManualFromPortal(payment);
 
   const rejectionNote = `Refusé par l'économe (${validator.name})${reason?.trim() ? ` : ${reason.trim()}` : ''}`;
   const notes = payment.notes ? `${payment.notes} — ${rejectionNote}` : rejectionNote;

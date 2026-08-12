@@ -1681,6 +1681,8 @@ model Grade {
   course          Course         @relation(fields: [courseId], references: [id])
   teacher         Teacher        @relation(fields: [teacherId], references: [id])
 
+  @@index([studentId])
+  @@index([studentId, date])
   @@map("grades")
 }
 
@@ -1714,6 +1716,8 @@ model Absence {
   course                Course        @relation(fields: [courseId], references: [id])
   teacher               Teacher       @relation(fields: [teacherId], references: [id])
 
+  @@index([studentId])
+  @@index([studentId, date])
   @@map("absences")
 }
 
@@ -2311,6 +2315,8 @@ model Notification {
 
   user        User     @relation(fields: [userId], references: [id])
 
+  @@index([userId, read])
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 
@@ -2515,6 +2521,7 @@ model TuitionFee {
   @@index([studentId, academicYear])
   @@index([feeType])
   @@index([invoiceNumber])
+  @@index([isPaid, dueDate])
   @@map("tuition_fees")
 }
 
@@ -2550,6 +2557,10 @@ model Payment {
   @@index([paymentProvider, status])
   @@index([receiptNumber])
   @@index([verificationCode])
+  @@index([studentId])
+  @@index([tuitionFeeId])
+  @@index([status, createdAt])
+  @@index([status, paidAt])
   @@map("payments")
 }
 

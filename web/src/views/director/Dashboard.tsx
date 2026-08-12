@@ -70,7 +70,7 @@ export default function DirectorDashboard() {
     ? [
         { label: 'Dossiers admission', value: (kpis.cards.admissionsPending ?? 0) + (kpis.cards.admissionsUnderReview ?? 0), subtitle: `${kpis.cards.admissionsPending} attente`, icon: FiUsers, accent: 'violet' as const },
         { label: 'Encaissements (30 j.)', value: `${fmt(kpis.cards.paymentsCompleted30dAmount ?? 0)} FCFA`, subtitle: `${kpis.cards.paymentsCompleted30dCount} paiement(s)`, icon: FiTrendingUp, accent: 'emerald' as const },
-        { label: 'Mobile Money attente', value: pendingMm.length, subtitle: 'À confirmer / webhook', icon: FiDollarSign, accent: 'amber' as const },
+        { label: 'Paiements en ligne', value: pendingMm.length, subtitle: 'MM / carte à confirmer', icon: FiDollarSign, accent: 'amber' as const },
         { label: 'Rendus devoirs', value: kpis.cards.studentAssignmentsSubmissionRate != null ? `${kpis.cards.studentAssignmentsSubmissionRate} %` : '—', subtitle: 'Taux global', icon: FiBookOpen, accent: 'slate' as const },
       ]
     : [];
@@ -125,7 +125,7 @@ export default function DirectorDashboard() {
                     Cantine & transport
                   </Link>
                   <Link href="/admin?tab=payments" className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100">
-                    Paiements {pendingMm.length > 0 ? `(${pendingMm.length} MM)` : ''}
+                    Paiements {pendingMm.length > 0 ? `(${pendingMm.length} en ligne)` : ''}
                   </Link>
                   <Link href="/admin?tab=elearning" className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900 hover:bg-violet-100">
                     Visio / e-learning

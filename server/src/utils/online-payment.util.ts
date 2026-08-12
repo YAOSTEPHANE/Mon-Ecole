@@ -27,7 +27,7 @@ export async function listPendingMobileMoneyPayments(client: Db = prisma, school
   return client.payment.findMany({
     where: {
       status: 'PENDING',
-      paymentMethod: 'MOBILE_MONEY',
+      paymentMethod: { in: ['MOBILE_MONEY', 'CARD'] },
       payerRole: { in: ['STUDENT', 'PARENT'] },
       ...(schoolId ? { student: { OR: [{ schoolId }, { class: { schoolId } }] } } : {}),
     },
@@ -105,9 +105,11 @@ export async function completeOnlinePayment(
   }
 
   try {
+    const methodLabel =
+      payment.paymentMethod === 'CARD' ? 'carte bancaire' : 'Mobile Money';
     await notifyParentsForStudent(payment.studentId, {
       type: 'PAYMENT',
-      title: 'Paiement Mobile Money confirmé',
+      title: `Paiement ${methodLabel} confirmé`,
       content: `Un paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été confirmé.`,
       link: '/parent?tab=payments',
     });

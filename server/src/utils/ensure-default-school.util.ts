@@ -20,133 +20,153 @@ export class SchoolPrismaNotReadyError extends Error {
   }
 }
 
+/** Cache process : backfill + seed ne tournent qu'une fois par école et par démarrage. */
+const warmedSchoolIds = new Set<string>();
+let cachedDefaultSchoolId: string | null = null;
+let ensureInFlight: Promise<string> | null = null;
+
+async function warmSchoolOnce(schoolId: string): Promise<void> {
+  if (warmedSchoolIds.has(schoolId)) return;
+  await backfillOrphanRecords(schoolId);
+  const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
+  await seedSchoolStaffMetiers(schoolId);
+  warmedSchoolIds.add(schoolId);
+}
+
 /**
  * Garantit au moins un établissement actif et rattache les données existantes sans schoolId.
+ * Après le premier passage, les requêtes suivantes ne relancent plus le backfill.
  */
 export async function ensureDefaultSchool(): Promise<string> {
-  const schools = getSchoolDelegate();
-  if (!schools) {
-    throw new SchoolPrismaNotReadyError();
+  if (cachedDefaultSchoolId && warmedSchoolIds.has(cachedDefaultSchoolId)) {
+    return cachedDefaultSchoolId;
   }
+  if (ensureInFlight) return ensureInFlight;
 
-  const defaultSchools = (await schools.findMany({
-    where: { isDefault: true, isActive: true },
-    orderBy: { createdAt: 'asc' },
-    select: { id: true },
-  })) as { id: string }[];
-  if (defaultSchools.length > 0) {
-    const keeper = defaultSchools[0]!;
-    if (defaultSchools.length > 1) {
-      await schools.updateMany({
-        where: { id: { in: defaultSchools.slice(1).map((s) => s.id) } },
-        data: { isDefault: false },
-      });
+  ensureInFlight = (async () => {
+    const schools = getSchoolDelegate();
+    if (!schools) {
+      throw new SchoolPrismaNotReadyError();
     }
-    await backfillOrphanRecords(keeper.id);
-    const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
-    await seedSchoolStaffMetiers(keeper.id);
-    return keeper.id;
-  }
 
-  const any = await schools.findFirst({
-    where: { isActive: true },
-    orderBy: { createdAt: 'asc' },
-    select: { id: true },
-  });
-  if (any) {
-    await schools.update({
-      where: { id: any.id },
-      data: { isDefault: true },
-    });
-    await backfillOrphanRecords(any.id);
-    const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
-    await seedSchoolStaffMetiers(any.id);
-    return any.id;
-  }
+    const defaultSchools = (await schools.findMany({
+      where: { isDefault: true, isActive: true },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    })) as { id: string }[];
+    if (defaultSchools.length > 0) {
+      const keeper = defaultSchools[0]!;
+      if (defaultSchools.length > 1) {
+        await schools.updateMany({
+          where: { id: { in: defaultSchools.slice(1).map((s) => s.id) } },
+          data: { isDefault: false },
+        });
+      }
+      await warmSchoolOnce(keeper.id);
+      cachedDefaultSchoolId = keeper.id;
+      return keeper.id;
+    }
 
-  const brandingDelegate = getAppBrandingDelegate();
-  const legacyBranding = brandingDelegate
-    ? await brandingDelegate.findUnique({ where: { id: APP_BRANDING_ID } })
-    : null;
-
-  const displayName =
-    legacyBranding?.schoolDisplayName?.trim() ||
-    legacyBranding?.appTitle?.trim() ||
-    'Établissement principal';
-
-  let slug = slugify(displayName);
-  const slugTaken = await schools.findFirst({ where: { slug }, select: { id: true } });
-  if (slugTaken) {
-    await schools.update({
-      where: { id: slugTaken.id },
-      data: { isDefault: true },
-    });
-    await backfillOrphanRecords(slugTaken.id);
-    const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
-    await seedSchoolStaffMetiers(slugTaken.id);
-    return slugTaken.id;
-  }
-
-  let school: { id: string };
-  try {
-    school = (await schools.create({
-      data: {
-        name: displayName,
-        slug,
-        shortName: legacyBranding?.appTitle?.trim() || null,
-        address: legacyBranding?.schoolAddress?.trim() || null,
-        phone: legacyBranding?.schoolPhone?.trim() || null,
-        email: legacyBranding?.schoolEmail?.trim() || null,
-        website: legacyBranding?.schoolWebsite?.trim() || null,
-        principalName: legacyBranding?.schoolPrincipal?.trim() || null,
-        isDefault: true,
-        isActive: true,
-      },
-    })) as { id: string };
-  } catch (error) {
-    const raced = await schools.findFirst({
-      where: { slug },
+    const any = await schools.findFirst({
+      where: { isActive: true },
       orderBy: { createdAt: 'asc' },
       select: { id: true },
     });
-    if (raced) {
-      await backfillOrphanRecords(raced.id);
-      const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
-      await seedSchoolStaffMetiers(raced.id);
-      return raced.id;
+    if (any) {
+      await schools.update({
+        where: { id: any.id },
+        data: { isDefault: true },
+      });
+      await warmSchoolOnce(any.id);
+      cachedDefaultSchoolId = any.id;
+      return any.id;
     }
-    throw error;
-  }
 
-  if (brandingDelegate && legacyBranding) {
-    await brandingDelegate.upsert({
-      where: { id: school.id },
-      create: {
-        id: school.id,
-        schoolId: school.id,
-        navigationLogoUrl: legacyBranding.navigationLogoUrl,
-        loginLogoUrl: legacyBranding.loginLogoUrl,
-        faviconUrl: legacyBranding.faviconUrl,
-        appTitle: legacyBranding.appTitle,
-        appTagline: legacyBranding.appTagline,
-        schoolDisplayName: legacyBranding.schoolDisplayName ?? displayName,
-        schoolAddress: legacyBranding.schoolAddress,
-        schoolPhone: legacyBranding.schoolPhone,
-        schoolEmail: legacyBranding.schoolEmail,
-        schoolWebsite: legacyBranding.schoolWebsite,
-        schoolPrincipal: legacyBranding.schoolPrincipal,
-      },
-      update: {
-        schoolId: school.id,
-        schoolDisplayName: legacyBranding.schoolDisplayName ?? displayName,
-      },
-    });
-  }
+    const brandingDelegate = getAppBrandingDelegate();
+    const legacyBranding = brandingDelegate
+      ? await brandingDelegate.findUnique({ where: { id: APP_BRANDING_ID } })
+      : null;
 
-  await backfillOrphanRecords(school.id);
-  const { seedSchoolStaffMetiers } = await import('./school-staff-metiers.util');
-  await seedSchoolStaffMetiers(school.id);
-  return school.id;
+    const displayName =
+      legacyBranding?.schoolDisplayName?.trim() ||
+      legacyBranding?.appTitle?.trim() ||
+      'Établissement principal';
+
+    const slug = slugify(displayName);
+    const slugTaken = await schools.findFirst({ where: { slug }, select: { id: true } });
+    if (slugTaken) {
+      await schools.update({
+        where: { id: slugTaken.id },
+        data: { isDefault: true },
+      });
+      await warmSchoolOnce(slugTaken.id);
+      cachedDefaultSchoolId = slugTaken.id;
+      return slugTaken.id;
+    }
+
+    let school: { id: string };
+    try {
+      school = (await schools.create({
+        data: {
+          name: displayName,
+          slug,
+          shortName: legacyBranding?.appTitle?.trim() || null,
+          address: legacyBranding?.schoolAddress?.trim() || null,
+          phone: legacyBranding?.schoolPhone?.trim() || null,
+          email: legacyBranding?.schoolEmail?.trim() || null,
+          website: legacyBranding?.schoolWebsite?.trim() || null,
+          principalName: legacyBranding?.schoolPrincipal?.trim() || null,
+          isDefault: true,
+          isActive: true,
+        },
+      })) as { id: string };
+    } catch (error) {
+      const raced = await schools.findFirst({
+        where: { slug },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (raced) {
+        await warmSchoolOnce(raced.id);
+        cachedDefaultSchoolId = raced.id;
+        return raced.id;
+      }
+      throw error;
+    }
+
+    if (brandingDelegate && legacyBranding) {
+      await brandingDelegate.upsert({
+        where: { id: school.id },
+        create: {
+          id: school.id,
+          schoolId: school.id,
+          navigationLogoUrl: legacyBranding.navigationLogoUrl,
+          loginLogoUrl: legacyBranding.loginLogoUrl,
+          faviconUrl: legacyBranding.faviconUrl,
+          appTitle: legacyBranding.appTitle,
+          appTagline: legacyBranding.appTagline,
+          schoolDisplayName: legacyBranding.schoolDisplayName ?? displayName,
+          schoolAddress: legacyBranding.schoolAddress,
+          schoolPhone: legacyBranding.schoolPhone,
+          schoolEmail: legacyBranding.schoolEmail,
+          schoolWebsite: legacyBranding.schoolWebsite,
+          schoolPrincipal: legacyBranding.schoolPrincipal,
+        },
+        update: {
+          schoolId: school.id,
+          schoolDisplayName: legacyBranding.schoolDisplayName ?? displayName,
+        },
+      });
+    }
+
+    await warmSchoolOnce(school.id);
+    cachedDefaultSchoolId = school.id;
+    return school.id;
+  })().finally(() => {
+    ensureInFlight = null;
+  });
+
+  return ensureInFlight;
 }
 
 async function idsMissingSchoolId(
@@ -167,6 +187,11 @@ async function idsMissingSchoolId(
     case 'staffMember':
       rows = await prisma.staffMember.findMany({ select: { id: true, schoolId: true } });
       break;
+    default: {
+      const _exhaustive: never = model;
+      void _exhaustive;
+      return [];
+    }
   }
   return rows.filter((r) => r.schoolId == null || r.schoolId === '').map((r) => r.id);
 }

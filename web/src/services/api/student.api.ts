@@ -146,7 +146,16 @@ export const studentApi = {
     const response = await api.get('/student/tuition-fees');
     return response.data;
   },
-  createPayment: async (tuitionFeeId: string, paymentMethod: string, amount: number, phoneNumber?: string, operator?: string, transactionCode?: string) => {
+  createPayment: async (
+    tuitionFeeId: string,
+    paymentMethod: string,
+    amount: number,
+    phoneNumber?: string,
+    operator?: string,
+    transactionCode?: string,
+    accountNumber?: string,
+    reference?: string,
+  ) => {
     const response = await api.post('/student/payments', {
       tuitionFeeId,
       paymentMethod,
@@ -154,8 +163,14 @@ export const studentApi = {
       phoneNumber,
       operator,
       transactionCode,
+      accountNumber,
+      reference,
     });
     return response.data;
+  },
+  getPaymentSettings: async () => {
+    const response = await api.get('/student/payment-settings');
+    return response.data as { defaultCountryCode: string };
   },
   getPayments: async () => {
     const response = await api.get('/student/payments');

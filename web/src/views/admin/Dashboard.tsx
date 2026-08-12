@@ -1,61 +1,16 @@
 import { useMemo, useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Layout from '../../components/Layout';
-import StudentsList from '../../components/admin/StudentsList';
-import ClassesList from '../../components/admin/ClassesList';
-import TeachersList from '../../components/admin/TeachersList';
-import StaffPersonnelModule, {
-  type PersonnelCategoryFilter,
-} from '../../components/admin/staff/StaffPersonnelModule';
-import ParentGuardiansModule from '../../components/admin/parents/ParentGuardiansModule';
-import DashboardStats from '../../components/admin/DashboardStats';
-import SchoolOverviewCharts from '../../components/admin/SchoolOverviewCharts';
-import AllActivities from './AllActivities';
-import AllNotifications from './AllNotifications';
-import CompleteManagement from '../../components/admin/CompleteManagement';
-import MultiRolesManagement from '../../components/admin/MultiRolesManagement';
-import PedagogicalTracking from '../../components/admin/PedagogicalTracking';
-import CommunicationHubModule from '../../components/admin/CommunicationHubModule';
-import AdvancedAnalytics from '../../components/admin/AdvancedAnalytics';
-import ScheduleManagement from '../../components/admin/ScheduleManagement';
-import AcademicManagement from '../../components/admin/AcademicManagement';
-import GradingEvaluationManagement from '../../components/admin/GradingEvaluationManagement';
-import FeesManagementModule from '../../components/admin/FeesManagementModule';
-import AdministrativeManagement from '../../components/admin/AdministrativeManagement';
-import AdmissionsManagementModule from '../../components/admin/AdmissionsManagementModule';
-import SecurityPrivacyManagement from '../../components/admin/SecurityPrivacyManagement';
-import PerformanceManagement from '../../components/admin/PerformanceManagement';
-import TuitionFeesManagement from '../../components/admin/TuitionFeesManagement';
-import PaymentsManagement from '../../components/admin/PaymentsManagement';
-import AccountingManagementModule from '../../components/admin/AccountingManagementModule';
-import AccessControlModule from '../../components/admin/AccessControlModule';
-import PointageEleves from '../../components/admin/PointageEleves';
-import AttendanceManagementModule from '../../components/admin/AttendanceManagementModule';
-import HRManagementModule from '../../components/admin/hr/HRManagementModule';
-import LibraryManagementModule from '../../components/admin/library/LibraryManagementModule';
-import HealthManagementModule from '../../components/admin/health/HealthManagementModule';
-import ElearningHub from '../../components/elearning/ElearningHub';
-import MaterialManagementModule from '../../components/admin/material/MaterialManagementModule';
-import DisciplineAdminModule from '../../components/admin/DisciplineAdminModule';
-import ExtracurricularAdminModule from '../../components/admin/ExtracurricularAdminModule';
-import CampusServicesModule from '../../components/admin/CampusServicesModule';
-import SchoolOperationsHub from '../../components/admin/SchoolOperationsHub';
-import OrientationAdminModule from '../../components/admin/OrientationAdminModule';
-import ReportsStatisticsModule from '../../components/admin/reports/ReportsStatisticsModule';
-import AdminModulesHub from '../../components/admin/AdminModulesHub';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
+import DashboardTabLoading from '../../components/dashboard/DashboardTabLoading';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import AddStudentModal from '../../components/admin/AddStudentModal';
-import AddClassModal from '../../components/admin/AddClassModal';
-import AddTeacherModal from '../../components/admin/AddTeacherModal';
-import GenerateReportModal from '../../components/admin/GenerateReportModal';
-import ExportDataModal from '../../components/admin/ExportDataModal';
-import SettingsModal from '../../components/admin/SettingsModal';
 import AdminTabLogoCard from '../../components/admin/AdminTabLogoCard';
-import IntegrationsSettingsPanel from '../../components/admin/IntegrationsSettingsPanel';
+import SchoolSwitcher from '../../components/admin/SchoolSwitcher';
+import type { PersonnelCategoryFilter } from '../../components/admin/staff/StaffPersonnelModule';
 import { 
   FiLayout, 
   FiUsers, 
@@ -103,15 +58,62 @@ import { fr } from 'date-fns/locale';
 import type { IconType } from 'react-icons';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
-import AdminWorkspacesPanel from '../../components/admin/AdminWorkspacesPanel';
-import SchoolsManagementPanel from '../../components/admin/SchoolsManagementPanel';
-import SchoolSwitcher from '../../components/admin/SchoolSwitcher';
 import { useSchool } from '../../contexts/SchoolContext';
 import {
   ADMIN_VALID_TAB_IDS,
   filterTabsByVisibleModules,
   isAdminModuleId,
 } from '../../lib/adminModules';
+
+const StudentsList = dynamic(() => import('../../components/admin/StudentsList'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ClassesList = dynamic(() => import('../../components/admin/ClassesList'), { loading: () => <DashboardTabLoading />, ssr: false });
+const TeachersList = dynamic(() => import('../../components/admin/TeachersList'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StaffPersonnelModule = dynamic(() => import('../../components/admin/staff/StaffPersonnelModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentGuardiansModule = dynamic(() => import('../../components/admin/parents/ParentGuardiansModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const DashboardStats = dynamic(() => import('../../components/admin/DashboardStats'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SchoolOverviewCharts = dynamic(() => import('../../components/admin/SchoolOverviewCharts'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AllActivities = dynamic(() => import('./AllActivities'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AllNotifications = dynamic(() => import('./AllNotifications'), { loading: () => <DashboardTabLoading />, ssr: false });
+const CompleteManagement = dynamic(() => import('../../components/admin/CompleteManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const MultiRolesManagement = dynamic(() => import('../../components/admin/MultiRolesManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const PedagogicalTracking = dynamic(() => import('../../components/admin/PedagogicalTracking'), { loading: () => <DashboardTabLoading />, ssr: false });
+const CommunicationHubModule = dynamic(() => import('../../components/admin/CommunicationHubModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AdvancedAnalytics = dynamic(() => import('../../components/admin/AdvancedAnalytics'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ScheduleManagement = dynamic(() => import('../../components/admin/ScheduleManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AcademicManagement = dynamic(() => import('../../components/admin/AcademicManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const GradingEvaluationManagement = dynamic(() => import('../../components/admin/GradingEvaluationManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const FeesManagementModule = dynamic(() => import('../../components/admin/FeesManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AdministrativeManagement = dynamic(() => import('../../components/admin/AdministrativeManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AdmissionsManagementModule = dynamic(() => import('../../components/admin/AdmissionsManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SecurityPrivacyManagement = dynamic(() => import('../../components/admin/SecurityPrivacyManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const PerformanceManagement = dynamic(() => import('../../components/admin/PerformanceManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const TuitionFeesManagement = dynamic(() => import('../../components/admin/TuitionFeesManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const PaymentsManagement = dynamic(() => import('../../components/admin/PaymentsManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AccountingManagementModule = dynamic(() => import('../../components/admin/AccountingManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AccessControlModule = dynamic(() => import('../../components/admin/AccessControlModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const PointageEleves = dynamic(() => import('../../components/admin/PointageEleves'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AttendanceManagementModule = dynamic(() => import('../../components/admin/AttendanceManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const HRManagementModule = dynamic(() => import('../../components/admin/hr/HRManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const LibraryManagementModule = dynamic(() => import('../../components/admin/library/LibraryManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const HealthManagementModule = dynamic(() => import('../../components/admin/health/HealthManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ElearningHub = dynamic(() => import('../../components/elearning/ElearningHub'), { loading: () => <DashboardTabLoading />, ssr: false });
+const MaterialManagementModule = dynamic(() => import('../../components/admin/material/MaterialManagementModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const DisciplineAdminModule = dynamic(() => import('../../components/admin/DisciplineAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ExtracurricularAdminModule = dynamic(() => import('../../components/admin/ExtracurricularAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const CampusServicesModule = dynamic(() => import('../../components/admin/CampusServicesModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SchoolOperationsHub = dynamic(() => import('../../components/admin/SchoolOperationsHub'), { loading: () => <DashboardTabLoading />, ssr: false });
+const OrientationAdminModule = dynamic(() => import('../../components/admin/OrientationAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ReportsStatisticsModule = dynamic(() => import('../../components/admin/reports/ReportsStatisticsModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AdminModulesHub = dynamic(() => import('../../components/admin/AdminModulesHub'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AddStudentModal = dynamic(() => import('../../components/admin/AddStudentModal'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AddClassModal = dynamic(() => import('../../components/admin/AddClassModal'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AddTeacherModal = dynamic(() => import('../../components/admin/AddTeacherModal'), { loading: () => <DashboardTabLoading />, ssr: false });
+const GenerateReportModal = dynamic(() => import('../../components/admin/GenerateReportModal'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ExportDataModal = dynamic(() => import('../../components/admin/ExportDataModal'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SettingsModal = dynamic(() => import('../../components/admin/SettingsModal'), { loading: () => <DashboardTabLoading />, ssr: false });
+const IntegrationsSettingsPanel = dynamic(() => import('../../components/admin/IntegrationsSettingsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AdminWorkspacesPanel = dynamic(() => import('../../components/admin/AdminWorkspacesPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SchoolsManagementPanel = dynamic(() => import('../../components/admin/SchoolsManagementPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 
 const VALID_TAB_IDS = ADMIN_VALID_TAB_IDS;
 

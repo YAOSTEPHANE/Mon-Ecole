@@ -17,7 +17,9 @@ type PendingRow = {
   id: string;
   amount: number;
   createdAt: string;
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER' | string;
   paymentReference?: string | null;
+  notes?: string | null;
   payer?: { firstName?: string; lastName?: string; role?: string };
   student?: {
     user?: { firstName?: string; lastName?: string };
@@ -30,6 +32,10 @@ type PendingCashPaymentsPanelProps = {
   mode: 'admin' | 'staff';
   compact?: boolean;
 };
+
+function methodLabel(method?: string) {
+  return method === 'BANK_TRANSFER' ? 'Virement' : 'Espèces';
+}
 
 export default function PendingCashPaymentsPanel({ mode, compact = false }: PendingCashPaymentsPanelProps) {
   const qc = useQueryClient();
@@ -58,8 +64,11 @@ export default function PendingCashPaymentsPanel({ mode, compact = false }: Pend
 
   const validateMut = useMutation({
     mutationFn: (paymentId: string) => api.validateCashPayment(paymentId),
-    onSuccess: () => {
-      toast.success('Paiement espèces validé');
+    onSuccess: (_data, paymentId) => {
+      const row = rows.find((r) => r.id === paymentId);
+      toast.success(
+        row?.paymentMethod === 'BANK_TRANSFER' ? 'Virement validé' : 'Paiement espèces validé',
+      );
       invalidate();
     },
     onError: (e: { response?: { data?: { error?: string } } }) =>
@@ -85,10 +94,10 @@ export default function PendingCashPaymentsPanel({ mode, compact = false }: Pend
         <div>
           <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
             <FiClock className="h-4 w-4 text-amber-600" aria-hidden />
-            Espèces en attente de validation
+            Espèces &amp; virements à valider
           </h3>
           <p className="mt-1 text-xs text-stone-600">
-            Déclarations des parents et élèves à confirmer après encaissement physique par l&apos;économe.
+            Déclarations des parents et élèves à confirmer après encaissement ou réception du virement.
           </p>
         </div>
         <Badge variant="warning">{rows.length} en attente</Badge>
@@ -98,7 +107,7 @@ export default function PendingCashPaymentsPanel({ mode, compact = false }: Pend
         <p className="text-sm text-stone-500">Chargement…</p>
       ) : rows.length === 0 ? (
         <p className="rounded-lg border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500">
-          Aucune déclaration espèces en attente.
+          Aucune déclaration espèces ou virement en attente.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -109,6 +118,11 @@ export default function PendingCashPaymentsPanel({ mode, compact = false }: Pend
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <Badge variant={row.paymentMethod === 'BANK_TRANSFER' ? 'info' : 'warning'}>
+                      {methodLabel(row.paymentMethod)}
+                    </Badge>
+                  </div>
                   <p className="font-semibold text-stone-900">
                     {row.student?.user?.lastName} {row.student?.user?.firstName}
                     {row.student?.class?.name ? ` · ${row.student.class.name}` : ''}
@@ -122,6 +136,9 @@ export default function PendingCashPaymentsPanel({ mode, compact = false }: Pend
                     {' · '}
                     {format(new Date(row.createdAt), 'dd MMM yyyy à HH:mm', { locale: fr })}
                   </p>
+                  {row.notes ? (
+                    <p className="mt-1 text-xs text-stone-600">{row.notes}</p>
+                  ) : null}
                   {row.paymentReference ? (
                     <p className="text-[10px] text-stone-400">Réf. {row.paymentReference}</p>
                   ) : null}
@@ -171,7 +188,9 @@ export default function PendingCashPaymentsPanel({ mode, compact = false }: Pend
                     onClick={() => validateMut.mutate(row.id)}
                   >
                     <FiCheck className="mr-1 h-3.5 w-3.5" />
-                    Valider l&apos;encaissement
+                    {row.paymentMethod === 'BANK_TRANSFER'
+                      ? 'Valider le virement'
+                      : "Valider l'encaissement"}
                   </Button>
                   <Button
                     type="button"

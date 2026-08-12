@@ -1,28 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '../../components/Layout';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
+import DashboardTabLoading from '../../components/dashboard/DashboardTabLoading';
 import { PARENT_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
 import ParentSidebar, { type ParentNavItem } from '../../components/parent/ParentSidebar';
-import ParentOverview from '../../components/parent/ParentOverview';
-import ChildrenList from '../../components/parent/ChildrenList';
-import ChildGrades from '../../components/parent/ChildGrades';
-import ChildAbsences from '../../components/parent/ChildAbsences';
-import ChildReenrollment from '../../components/parent/ChildReenrollment';
-import ChildSchedule from '../../components/parent/ChildSchedule';
-import ChildAssignments from '../../components/parent/ChildAssignments';
-import ChildPayments from '../../components/parent/ChildPayments';
-import ChildReportCards from '../../components/parent/ChildReportCards';
-import ChildConduct from '../../components/parent/ChildConduct';
-import ParentAppointmentsPanel from '../../components/parent/ParentAppointmentsPanel';
-import ParentFamilyProfilePanel from '../../components/parent/ParentFamilyProfilePanel';
-import ParentExtracurricularPanel from '../../components/parent/ParentExtracurricularPanel';
-import ParentCampusPanel from '../../components/parent/ParentCampusPanel';
-import ParentOrientationPanel from '../../components/parent/ParentOrientationPanel';
-import ParentNotificationsPanel from '../../components/parent/ParentNotificationsPanel';
-import SchoolCommunication from '../../components/portal/SchoolCommunication';
 import Card from '../../components/ui/Card';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -48,6 +33,24 @@ import {
   FiCoffee,
   FiUserPlus,
 } from 'react-icons/fi';
+
+const ParentOverview = dynamic(() => import('../../components/parent/ParentOverview'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildrenList = dynamic(() => import('../../components/parent/ChildrenList'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildGrades = dynamic(() => import('../../components/parent/ChildGrades'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildAbsences = dynamic(() => import('../../components/parent/ChildAbsences'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildReenrollment = dynamic(() => import('../../components/parent/ChildReenrollment'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildSchedule = dynamic(() => import('../../components/parent/ChildSchedule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildAssignments = dynamic(() => import('../../components/parent/ChildAssignments'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildPayments = dynamic(() => import('../../components/parent/ChildPayments'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildReportCards = dynamic(() => import('../../components/parent/ChildReportCards'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ChildConduct = dynamic(() => import('../../components/parent/ChildConduct'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentAppointmentsPanel = dynamic(() => import('../../components/parent/ParentAppointmentsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentFamilyProfilePanel = dynamic(() => import('../../components/parent/ParentFamilyProfilePanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentExtracurricularPanel = dynamic(() => import('../../components/parent/ParentExtracurricularPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentCampusPanel = dynamic(() => import('../../components/parent/ParentCampusPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentOrientationPanel = dynamic(() => import('../../components/parent/ParentOrientationPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentNotificationsPanel = dynamic(() => import('../../components/parent/ParentNotificationsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SchoolCommunication = dynamic(() => import('../../components/portal/SchoolCommunication'), { loading: () => <DashboardTabLoading />, ssr: false });
 
 const VALID_PARENT_TABS = [
   'overview',

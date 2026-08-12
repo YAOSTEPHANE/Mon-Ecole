@@ -29,3 +29,5 @@ server/backups/
 /playwright/.cache/
 /test-results/
 e2e/.e2e-ready.json
+
+server/compiled/

@@ -6,6 +6,7 @@ import { fr } from 'date-fns/locale';
 import { staffApi } from '@/services/api/staff.api';
 import Card from '../ui/Card';
 import PendingCashPaymentsPanel from '../payments/PendingCashPaymentsPanel';
+import PendingMobileMoneyPanel from '../payments/PendingMobileMoneyPanel';
 
 function formatFcfa(n: number) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n);
@@ -28,6 +29,7 @@ export default function StaffTreasuryPanel() {
   return (
     <div className="space-y-4">
       <PendingCashPaymentsPanel mode="staff" />
+      <PendingMobileMoneyPanel mode="staff" />
       {summaryLoading ? (
         <p className="text-sm text-stone-500">Chargement…</p>
       ) : summary ? (

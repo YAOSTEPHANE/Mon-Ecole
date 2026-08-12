@@ -19,15 +19,28 @@ import {
   FiAlertCircle,
   FiSearch,
   FiFilter,
-  FiTrendingUp
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { formatFCFA } from '../../utils/currency';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { chartBlueRed, CHART_BLUE, CHART_ANIMATION_MS } from '../charts';
-import jsPDF from 'jspdf';
+import {
+  formatMobileMoneyPhoneInput,
+  isValidMobileMoneyPhone,
+  mobileMoneyPhoneHint,
+  mobileMoneyPhonePlaceholder,
+} from '../../utils/mobileMoneyPhone';
+import dynamic from 'next/dynamic';
+
+const PaymentsCharts = dynamic(() => import('../payments/PaymentsCharts'), {
+  ssr: false,
+  loading: () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="h-[300px] animate-pulse rounded-xl bg-stone-100" />
+      <div className="h-[300px] animate-pulse rounded-xl bg-stone-100" />
+    </div>
+  ),
+});
 
 interface ChildPaymentsProps {
   studentId: string;
@@ -54,15 +67,52 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
     queryFn: () => parentApi.getChildPayments(studentId),
   });
 
+  const { data: paymentSettings } = useQuery({
+    queryKey: ['parent-payment-settings'],
+    queryFn: () => parentApi.getPaymentSettings(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const countryCode = paymentSettings?.defaultCountryCode?.replace(/\D/g, '') || '237';
+
   const createPaymentMutation = useMutation({
-    mutationFn: ({ tuitionFeeId, paymentMethod, amount, phoneNumber, operator, transactionCode }: { tuitionFeeId: string; paymentMethod: string; amount: number; phoneNumber?: string; operator?: string; transactionCode?: string }) =>
-      parentApi.createPayment(studentId, tuitionFeeId, paymentMethod, amount, phoneNumber, operator, transactionCode),
+    mutationFn: ({
+      tuitionFeeId,
+      paymentMethod,
+      amount,
+      phoneNumber,
+      operator,
+      transactionCode,
+      accountNumber,
+      reference,
+    }: {
+      tuitionFeeId: string;
+      paymentMethod: string;
+      amount: number;
+      phoneNumber?: string;
+      operator?: string;
+      transactionCode?: string;
+      accountNumber?: string;
+      reference?: string;
+    }) =>
+      parentApi.createPayment(
+        studentId,
+        tuitionFeeId,
+        paymentMethod,
+        amount,
+        phoneNumber,
+        operator,
+        transactionCode,
+        accountNumber,
+        reference,
+      ),
     onSuccess: (data: { payment?: { paymentMethod?: string; id?: string } }) => {
-      const isCash = data.payment?.paymentMethod === 'CASH';
+      const method = data.payment?.paymentMethod;
       setShowPaymentModal(false);
-      if (isCash) {
+      if (method === 'CASH' || method === 'BANK_TRANSFER') {
         toast.success(
-          "Déclaration enregistrée. Elle sera prise en compte après validation par l'économe.",
+          method === 'BANK_TRANSFER'
+            ? "Déclaration de virement enregistrée. Elle sera prise en compte après validation par l'économe."
+            : "Déclaration enregistrée. Elle sera prise en compte après validation par l'économe.",
         );
         queryClient.invalidateQueries({ queryKey: ['parent-child-tuition-fees'] });
         queryClient.invalidateQueries({ queryKey: ['parent-child-payments'] });
@@ -123,13 +173,13 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
   const getPaymentMethodDescription = (method: string) => {
     switch (method) {
       case 'CARD':
-        return 'Paiement sécurisé par carte bancaire';
+        return 'Paiement par carte — confirmation automatique (webhook) ou validation admin / économat';
       case 'MOBILE_MONEY':
-        return 'Paiement via Mobile Money (Orange Money, MTN Mobile Money, etc.)';
+        return 'Mobile Money — confirmation automatique (webhook) ou validation admin / économat';
       case 'BANK_TRANSFER':
-        return 'Virement bancaire direct';
+        return 'Virement — déclaration en ligne, validation par l\'économe après réception';
       case 'CASH':
-        return 'Déclaration espèces — validation par l\'économe après dépôt';
+        return 'Espèces — déclaration en ligne, validation par l\'économe après dépôt';
       default:
         return '';
     }
@@ -218,8 +268,9 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
     }));
   }, [payments]);
 
-  const generateReceipt = (payment: any) => {
+  const generateReceipt = async (payment: any) => {
     try {
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       const currentDate = new Date().toLocaleDateString('fr-FR');
       
@@ -356,11 +407,8 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
         toast.error('Veuillez saisir votre numéro de téléphone pour Mobile Money');
         return;
       }
-      // Valider le format du numéro
-      const phoneRegex = /^(\+237\s?)?[67]\d{8}$/;
-      const cleanPhone = paymentDetails.phoneNumber.replace(/\s/g, '');
-      if (!phoneRegex.test(cleanPhone)) {
-        toast.error('Format de numéro invalide. Utilisez: +237 6XX XXX XXX ou 6XX XXX XXX');
+      if (!isValidMobileMoneyPhone(paymentDetails.phoneNumber, countryCode)) {
+        toast.error(`Format de numéro invalide. ${mobileMoneyPhoneHint(countryCode)}`);
         return;
       }
       if (!paymentDetails.operator) {
@@ -398,6 +446,8 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
       phoneNumber: paymentDetails.phoneNumber,
       operator: paymentDetails.operator,
       transactionCode: paymentDetails.transactionCode,
+      accountNumber: paymentDetails.accountNumber,
+      reference: paymentDetails.reference,
     });
   };
 
@@ -476,63 +526,7 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
       </div>
 
       {/* Graphiques */}
-      {(paymentChartData.length > 0 || paymentMethodData.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {paymentChartData.length > 0 && (
-            <Card>
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <FiTrendingUp className="w-5 h-5 mr-2 text-blue-600" />
-                Évolution des paiements
-              </h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={paymentChartData}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={(value: any) => formatFCFA(value)} />
-                  <Line
-                    type="monotone"
-                    dataKey="amount"
-                    stroke={CHART_BLUE}
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    isAnimationActive
-                    animationDuration={CHART_ANIMATION_MS}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card>
-          )}
-
-          {paymentMethodData.length > 0 && (
-            <Card>
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <FiCreditCard className="w-5 h-5 mr-2 text-purple-600" />
-                Méthodes de paiement
-              </h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={paymentMethodData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {paymentMethodData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={chartBlueRed(index)} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-          )}
-        </div>
-      )}
+      <PaymentsCharts paymentChartData={paymentChartData} paymentMethodData={paymentMethodData} />
 
       {/* Filtres et recherche */}
       <Card>
@@ -904,24 +898,15 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
                       type="tel"
                       value={paymentDetails.phoneNumber || ''}
                       onChange={(e) => {
-                        let value = e.target.value;
-                        // Formatage automatique
-                        value = value.replace(/\D/g, ''); // Garder seulement les chiffres
-                        if (value.startsWith('237')) {
-                          value = '+' + value;
-                        } else if (value.length > 0 && !value.startsWith('+')) {
-                          if (value.length <= 9) {
-                            value = '+237 ' + value;
-                          }
-                        }
+                        const value = formatMobileMoneyPhoneInput(e.target.value, countryCode);
                         setPaymentDetails({ ...paymentDetails, phoneNumber: value });
                       }}
-                      placeholder="+237 6XX XXX XXX"
-                      maxLength={17}
+                      placeholder={mobileMoneyPhonePlaceholder(countryCode)}
+                      maxLength={20}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Format: +237 6XX XXX XXX ou 6XX XXX XXX
+                      {mobileMoneyPhoneHint(countryCode)}
                     </p>
                   </div>
 
@@ -949,7 +934,7 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
                         <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
                           <li>Composez *144# sur votre téléphone Orange</li>
                           <li>Sélectionnez "Payer une facture" ou "Payer un service"</li>
-                          <li>Entrez le numéro de compte: <strong>237 6XX XXX XXX</strong></li>
+                          <li>Entrez le numéro de compte: <strong>{countryCode} …</strong></li>
                           <li>Entrez le montant: <strong>{formatFCFA(parseFloat(paymentAmount) || 0)}</strong></li>
                           <li>Confirmez avec votre code PIN</li>
                           <li>Entrez le code de transaction reçu ci-dessus</li>
@@ -959,7 +944,7 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
                         <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
                           <li>Composez *126# sur votre téléphone MTN</li>
                           <li>Sélectionnez "Paiement de facture"</li>
-                          <li>Entrez le numéro de compte: <strong>237 6XX XXX XXX</strong></li>
+                          <li>Entrez le numéro de compte: <strong>{countryCode} …</strong></li>
                           <li>Entrez le montant: <strong>{formatFCFA(parseFloat(paymentAmount) || 0)}</strong></li>
                           <li>Confirmez avec votre code PIN</li>
                           <li>Entrez le code de transaction reçu ci-dessus</li>
@@ -969,7 +954,7 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
                         <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
                           <li>Composez *155# sur votre téléphone Moov</li>
                           <li>Sélectionnez "Paiement"</li>
-                          <li>Entrez le numéro de compte: <strong>237 6XX XXX XXX</strong></li>
+                          <li>Entrez le numéro de compte: <strong>{countryCode} …</strong></li>
                           <li>Entrez le montant: <strong>{formatFCFA(parseFloat(paymentAmount) || 0)}</strong></li>
                           <li>Confirmez avec votre code PIN</li>
                           <li>Entrez le code de transaction reçu ci-dessus</li>
@@ -992,9 +977,12 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
 
               {paymentMethod === 'BANK_TRANSFER' && (
                 <div className="mt-4 space-y-3">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                    Effectuez le virement, puis déclarez-le ici. L&apos;économe le validera après réception.
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Numéro de compte
+                      Numéro de compte <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1047,7 +1035,7 @@ const ChildPayments = ({ studentId }: ChildPaymentsProps) => {
               >
                 {createPaymentMutation.isPending
                   ? 'Traitement...'
-                  : paymentMethod === 'CASH'
+                  : paymentMethod === 'CASH' || paymentMethod === 'BANK_TRANSFER'
                     ? 'Soumettre la déclaration'
                     : 'Confirmer le paiement'}
               </Button>

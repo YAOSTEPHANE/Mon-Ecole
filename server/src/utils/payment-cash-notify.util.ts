@@ -23,6 +23,8 @@ export type PendingCashPaymentNotifyPayload = {
   period?: string;
   academicYear?: string;
   payerRole: string;
+  /** CASH (défaut) ou BANK_TRANSFER */
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER';
 };
 
 async function resolveCashPaymentRecipientIds(): Promise<string[]> {
@@ -46,13 +48,16 @@ export async function notifyStaffOfPendingCashPayment(
       : '';
 
   const amountStr = `${Math.round(payload.amount)} FCFA`;
-  const title = 'Paiement espèces à valider';
-  const content =
-    `${studentName} — ${amountStr}${periodLabel} — déclaration ${payload.payerRole === 'PARENT' ? 'parent' : 'élève'} ` +
-    `(réf. ${ref}). Validez après encaissement au guichet.`;
+  const isTransfer = payload.paymentMethod === 'BANK_TRANSFER';
+  const title = isTransfer ? 'Virement à valider' : 'Paiement espèces à valider';
+  const content = isTransfer
+    ? `${studentName} — ${amountStr}${periodLabel} — déclaration virement ${payload.payerRole === 'PARENT' ? 'parent' : 'élève'} ` +
+      `(réf. ${ref}). Validez après réception du virement.`
+    : `${studentName} — ${amountStr}${periodLabel} — déclaration ${payload.payerRole === 'PARENT' ? 'parent' : 'élève'} ` +
+      `(réf. ${ref}). Validez après encaissement au guichet.`;
 
   await notifyUsersImportant(recipients, {
-    type: 'payment_pending_cash',
+    type: isTransfer ? 'payment_pending_bank_transfer' : 'payment_pending_cash',
     title,
     content,
     link: '/staff?tab=treasury',

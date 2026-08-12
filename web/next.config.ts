@@ -86,6 +86,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(process.cwd()),
   },
+  experimental: {
+    optimizePackageImports: ["recharts", "react-icons", "date-fns"],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: [...SECURITY_HEADERS, ...PRODUCTION_SECURITY_HEADERS] },

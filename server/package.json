@@ -2,11 +2,11 @@
   "name": "school-manager-server",
   "version": "1.0.0",
   "description": "Backend API pour School Manager App",
-  "main": "dist/index.js",
+  "main": "compiled/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node compiled/index.js",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
@@ -44,6 +44,7 @@
     "@sentry/node": "^10.65.0",
     "@vercel/blob": "^2.6.1",
     "bcryptjs": "^3.0.3",
+    "compression": "^1.8.1",
     "cors": "^2.8.6",
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
@@ -62,6 +63,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.5",

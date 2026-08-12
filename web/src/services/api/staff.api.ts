@@ -166,6 +166,14 @@ export const staffApi = {
     const response = await api.post(`/staff/treasury/pending-cash/${paymentId}/reject`, { reason });
     return response.data;
   },
+  listPendingOnlinePayments: async () => {
+    const response = await api.get('/staff/treasury/pending-online');
+    return response.data;
+  },
+  confirmOnlinePayment: async (paymentId: string, data?: { transactionId?: string }) => {
+    const response = await api.post(`/staff/treasury/pending-online/${paymentId}/confirm`, data || {});
+    return response.data;
+  },
   getAcademicOverview: async () => {
     const response = await api.get('/staff/academic/overview');
     return response.data;

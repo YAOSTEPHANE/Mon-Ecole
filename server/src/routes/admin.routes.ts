@@ -6976,7 +6976,7 @@ router.post('/payments/:id/confirm-mobile-money', async (req: SchoolContextReque
       providerNote: `Confirmé manuellement (admin/sandbox) le ${new Date().toLocaleString('fr-FR')}`,
       schoolId: req.schoolId,
     });
-    res.json({ payment, message: 'Paiement Mobile Money confirmé' });
+    res.json({ payment, message: 'Paiement en ligne confirmé' });
   } catch (e: unknown) {
     if (e instanceof SchoolAccessDeniedError) {
       return res.status(e.status).json({ error: e.message });
@@ -7000,7 +7000,7 @@ router.post('/payments/:id/validate-cash', async (req: SchoolContextRequest, res
       role: admin.role,
       name,
     }, req.schoolId);
-    res.json({ payment, message: 'Paiement espèces validé et pris en compte' });
+    res.json({ payment, message: 'Paiement validé et pris en compte' });
   } catch (e: unknown) {
     if (e instanceof SchoolAccessDeniedError) {
       return res.status(e.status).json({ error: e.message });
@@ -7020,7 +7020,7 @@ router.post('/payments/:id/reject-cash', async (req: SchoolContextRequest, res) 
     const name = [admin?.firstName, admin?.lastName].filter(Boolean).join(' ').trim() || 'Administration';
     const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined;
     const payment = await rejectCashPayment(prisma, req.params.id, { name }, reason, req.schoolId);
-    res.json({ payment, message: 'Déclaration espèces refusée' });
+    res.json({ payment, message: 'Déclaration refusée' });
   } catch (e: unknown) {
     if (e instanceof SchoolAccessDeniedError) {
       return res.status(e.status).json({ error: e.message });

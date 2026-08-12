@@ -77,7 +77,7 @@ function studentLabel(
   return `${student.user.firstName} ${student.user.lastName}`.trim() || 'votre enfant';
 }
 
-/** Après déclaration espèces (parent ou élève) — accusé aux parents. */
+/** Après déclaration espèces ou virement (parent ou élève) — accusé aux parents. */
 export async function notifyParentCashPaymentSubmitted(paymentId: string): Promise<void> {
   const payment = await loadPaymentContext(paymentId);
   if (!payment) return;
@@ -86,6 +86,8 @@ export async function notifyParentCashPaymentSubmitted(paymentId: string): Promi
   const period = payment.tuitionFee.period;
   const year = payment.tuitionFee.academicYear;
   const amount = new Intl.NumberFormat('fr-FR').format(payment.amount);
+  const isTransfer = payment.paymentMethod === 'BANK_TRANSFER';
+  const methodWord = isTransfer ? 'virement' : 'espèces';
 
   const recipientIds =
     payment.payerRole === 'PARENT'
@@ -96,18 +98,22 @@ export async function notifyParentCashPaymentSubmitted(paymentId: string): Promi
 
   const content =
     payment.payerRole === 'PARENT'
-      ? `Votre déclaration de ${amount} FCFA pour ${name} (${period} — ${year}) est en attente de validation par l’économat après dépôt à l’administration.`
-      : `Une déclaration espèces de ${amount} FCFA pour ${name} (${period} — ${year}) a été enregistrée par l’élève. Validation par l’économat après dépôt à l’administration.`;
+      ? isTransfer
+        ? `Votre déclaration de virement de ${amount} FCFA pour ${name} (${period} — ${year}) est en attente de validation par l’économat après réception du virement.`
+        : `Votre déclaration de ${amount} FCFA pour ${name} (${period} — ${year}) est en attente de validation par l’économat après dépôt à l’administration.`
+      : isTransfer
+        ? `Une déclaration de virement de ${amount} FCFA pour ${name} (${period} — ${year}) a été enregistrée par l’élève. Validation par l’économat après réception.`
+        : `Une déclaration espèces de ${amount} FCFA pour ${name} (${period} — ${year}) a été enregistrée par l’élève. Validation par l’économat après dépôt à l’administration.`;
 
   await notifyUsersImportant(recipientIds, {
     type: 'payment',
-    title: 'Déclaration espèces enregistrée',
+    title: `Déclaration ${methodWord} enregistrée`,
     content,
     link: '/parent?tab=payments',
   });
 }
 
-/** Après validation espèces par l’économat. */
+/** Après validation espèces / virement par l’économat. */
 export async function notifyParentCashPaymentValidated(paymentId: string): Promise<void> {
   const payment = await loadPaymentContext(paymentId);
   if (!payment) return;
@@ -122,16 +128,17 @@ export async function notifyParentCashPaymentValidated(paymentId: string): Promi
   const name = studentLabel(payment.student);
   const period = payment.tuitionFee.period;
   const amount = new Intl.NumberFormat('fr-FR').format(payment.amount);
+  const methodWord = payment.paymentMethod === 'BANK_TRANSFER' ? 'virement' : 'espèces';
 
   await notifyUsersImportant(payerIds, {
     type: 'payment',
-    title: 'Paiement espèces validé',
+    title: `Paiement ${methodWord} validé`,
     content: `Le paiement de ${amount} FCFA pour ${name} (${period}) a été confirmé par l’économat. Le reçu est disponible dans Paiements.`,
     link: '/parent?tab=payments',
   });
 }
 
-/** Après refus d’une déclaration espèces. */
+/** Après refus d’une déclaration espèces / virement. */
 export async function notifyParentCashPaymentRejected(
   paymentId: string,
   reason?: string,
@@ -148,10 +155,11 @@ export async function notifyParentCashPaymentRejected(
 
   const name = studentLabel(payment.student);
   const reasonPart = reason?.trim() ? ` Motif : ${reason.trim()}` : '';
+  const methodWord = payment.paymentMethod === 'BANK_TRANSFER' ? 'virement' : 'espèces';
 
   await notifyUsersImportant(payerIds, {
     type: 'payment',
-    title: 'Déclaration espèces refusée',
+    title: `Déclaration ${methodWord} refusée`,
     content: `La déclaration de paiement pour ${name} n’a pas été retenue.${reasonPart} Contactez l’économat si besoin.`,
     link: '/parent?tab=payments',
   });

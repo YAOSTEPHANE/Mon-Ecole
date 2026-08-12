@@ -178,7 +178,7 @@ const PaymentsManagement: React.FC<PaymentsManagementProps> = ({
   return (
     <div className={compact ? ADM.root : 'space-y-4 text-sm'}>
       <PendingCashPaymentsPanel mode={pendingCashMode} compact />
-      {pendingCashMode === 'admin' && <PendingMobileMoneyPanel compact />}
+      <PendingMobileMoneyPanel mode={pendingCashMode} compact />
       {pendingCashMode === 'admin' && <PlatformIntegrationsPanel compact />}
       {/* Header */}
       <div
@@ -188,8 +188,7 @@ const PaymentsManagement: React.FC<PaymentsManagementProps> = ({
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-gray-900 sm:text-xl">Gestion des Paiements</h2>
             <p className="mt-0.5 text-xs leading-snug text-gray-600 sm:text-sm">
-              Encaissements confirmés uniquement (les espèces déclarées en ligne restent en attente de validation
-              économe).
+              Encaissements confirmés, plus les files de validation (espèces, virement, Mobile Money, carte).
             </p>
           </div>
         )}

@@ -480,7 +480,7 @@ export default function IntegrationsSettingsPanel() {
           }}
         />
         <Input
-          label="Indicatif pays par défaut"
+          label="Indicatif pays par défaut (WhatsApp & Mobile Money)"
           value={waCountry}
           onChange={(e) => {
             setClearFlags((p) => ({ ...p, waCountry: false }));
@@ -488,6 +488,9 @@ export default function IntegrationsSettingsPanel() {
           }}
           placeholder="237"
         />
+        <p className="text-xs text-stone-500">
+          Ex. 237 (Cameroun), 227 (Niger) — utilisé pour les numéros Mobile Money.
+        </p>
       </Card>
 
       <Card className="space-y-4 border border-gray-200 p-4">

@@ -23,6 +23,11 @@ import { notifyStaffOfPendingCashPayment } from '../utils/payment-cash-notify.ut
 import { notifyParentCashPaymentSubmitted } from '../utils/parent-notify.util';
 import { attachOnlineCheckout } from '../utils/online-payment.util';
 import { notifyParentWhatsApp } from '../utils/whatsapp.util';
+import {
+  getPaymentDefaultCountryCode,
+  isValidMobileMoneyPhone,
+  mobileMoneyPhoneFormatHint,
+} from '../utils/payment-phone.util';
 import { getStudentGamificationSummary, awardGamificationPoints } from '../utils/gamification.util';
 import {
   assertStudentCanAccessMockExam,
@@ -1696,6 +1701,14 @@ router.delete('/identity-documents/:id', async (req: AuthRequest, res) => {
 
 // ========== GESTION DES PAIEMENTS ==========
 
+router.get('/payment-settings', async (_req: AuthRequest, res) => {
+  try {
+    res.json({ defaultCountryCode: getPaymentDefaultCountryCode() });
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // Obtenir les frais de scolarité de l'élève
 router.get('/tuition-fees', async (req: AuthRequest, res) => {
   try {
@@ -1757,7 +1770,8 @@ router.get('/tuition-fees', async (req: AuthRequest, res) => {
 // Créer un paiement (initier le processus de paiement)
 router.post('/payments', async (req: AuthRequest, res) => {
   try {
-    const { tuitionFeeId, paymentMethod, amount, phoneNumber, operator, transactionCode } = req.body;
+    const { tuitionFeeId, paymentMethod, amount, phoneNumber, operator, transactionCode, accountNumber, reference } =
+      req.body;
 
     if (!tuitionFeeId || !paymentMethod || !amount) {
       return res.status(400).json({ error: 'tuitionFeeId, paymentMethod et amount sont requis' });
@@ -1768,11 +1782,17 @@ router.post('/payments', async (req: AuthRequest, res) => {
       if (!phoneNumber) {
         return res.status(400).json({ error: 'Le numéro de téléphone est requis pour Mobile Money' });
       }
-      // Valider le format du numéro (ex: +237 6XX XXX XXX ou 6XX XXX XXX)
-      const phoneRegex = /^(\+237\s?)?[67]\d{8}$/;
-      const cleanPhone = phoneNumber.replace(/\s/g, '');
-      if (!phoneRegex.test(cleanPhone)) {
-        return res.status(400).json({ error: 'Format de numéro de téléphone invalide. Utilisez le format: +237 6XX XXX XXX ou 6XX XXX XXX' });
+      const countryCode = getPaymentDefaultCountryCode();
+      if (!isValidMobileMoneyPhone(String(phoneNumber), countryCode)) {
+        return res.status(400).json({
+          error: `Format de numéro de téléphone invalide. Utilisez le format: ${mobileMoneyPhoneFormatHint(countryCode)}`,
+        });
+      }
+    }
+
+    if (paymentMethod === 'BANK_TRANSFER') {
+      if (!accountNumber || !String(accountNumber).trim()) {
+        return res.status(400).json({ error: 'Le numéro de compte est requis pour un virement' });
       }
     }
 
@@ -1826,10 +1846,17 @@ router.post('/payments', async (req: AuthRequest, res) => {
     // Générer une référence de paiement unique
     const paymentReference = `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    // Préparer les notes pour Mobile Money
+    // Préparer les notes pour Mobile Money / virement / espèces
     let paymentNotes = '';
     if (paymentMethod === 'MOBILE_MONEY') {
       paymentNotes = `Mobile Money - Téléphone: ${phoneNumber}${operator ? `, Opérateur: ${operator}` : ''}${transactionCode ? `, Code: ${transactionCode}` : ''}`;
+    } else if (paymentMethod === 'CARD') {
+      paymentNotes =
+        "Carte bancaire — en attente de confirmation prestataire (webhook) ou validation manuelle";
+    } else if (paymentMethod === 'BANK_TRANSFER') {
+      paymentNotes = `Virement — Compte: ${String(accountNumber).trim()}${
+        reference ? `, Réf. virement: ${String(reference).trim()}` : ''
+      } — en attente de validation par l'économe après réception`;
     } else if (paymentMethod === 'CASH') {
       paymentNotes =
         "Espèces — déclaration en ligne en attente de validation par l'économe après dépôt à l'administration";
@@ -1864,7 +1891,7 @@ router.post('/payments', async (req: AuthRequest, res) => {
       },
     });
 
-    if (paymentMethod === 'CASH') {
+    if (paymentMethod === 'CASH' || paymentMethod === 'BANK_TRANSFER') {
       await notifyStaffOfPendingCashPayment({
         paymentId: payment.id,
         amount: payment.amount,
@@ -1874,6 +1901,7 @@ router.post('/payments', async (req: AuthRequest, res) => {
         period: payment.tuitionFee.period,
         academicYear: payment.tuitionFee.academicYear,
         payerRole: 'STUDENT',
+        paymentMethod,
       }).catch((err) => console.error('notifyStaffOfPendingCashPayment:', err));
       void notifyParentCashPaymentSubmitted(payment.id).catch((err) =>
         console.error('notifyParentCashPaymentSubmitted:', err),
