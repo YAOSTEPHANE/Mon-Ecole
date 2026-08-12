@@ -9,7 +9,8 @@ export function getUploadsRootDir(): string {
   if (process.env.VERCEL === '1') {
     return path.join('/tmp', 'school-manager-uploads');
   }
-  return path.join(__dirname, '../../uploads');
+  // process.cwd() = racine du package server (évite __dirname, incompatible ESM).
+  return path.join(process.cwd(), 'uploads');
 }
 
 /**
