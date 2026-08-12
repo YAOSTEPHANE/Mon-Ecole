@@ -1627,6 +1627,57 @@ router.get('/children/:studentId/report-cards', async (req: AuthRequest, res) =>
   }
 });
 
+// Accusé de réception / signature parent sur un bulletin publié
+router.post('/children/:studentId/report-cards/:reportCardId/acknowledge', async (req: AuthRequest, res) => {
+  try {
+    const { studentId, reportCardId } = req.params;
+    const signature =
+      typeof req.body?.signature === 'string' ? req.body.signature.trim() : '';
+
+    const parent = await prisma.parent.findFirst({
+      where: { userId: req.user!.id },
+      include: { students: { where: { studentId } } },
+    });
+    if (!parent || parent.students.length === 0) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    if (!signature || signature.length < 2) {
+      return res.status(400).json({ error: 'Signature requise (nom complet du parent)' });
+    }
+
+    const reportCard = await prisma.reportCard.findFirst({
+      where: { id: reportCardId, studentId, published: true },
+    });
+    if (!reportCard) {
+      return res.status(404).json({ error: 'Bulletin introuvable ou non publié' });
+    }
+    if (reportCard.parentAcknowledgedAt) {
+      return res.status(409).json({ error: 'Bulletin déjà accusé de réception' });
+    }
+
+    const ip =
+      (typeof req.headers['x-forwarded-for'] === 'string'
+        ? req.headers['x-forwarded-for'].split(',')[0]?.trim()
+        : null) ||
+      req.socket.remoteAddress ||
+      null;
+
+    const updated = await prisma.reportCard.update({
+      where: { id: reportCard.id },
+      data: {
+        parentAcknowledgedAt: new Date(),
+        parentAcknowledgedByUserId: req.user!.id,
+        parentAckSignature: signature,
+        parentAckIp: ip,
+      },
+    });
+    res.json(updated);
+  } catch (error: unknown) {
+    console.error('POST acknowledge report card:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // ========== CONDUITE ==========
 
 // Obtenir les évaluations de conduite d'un enfant

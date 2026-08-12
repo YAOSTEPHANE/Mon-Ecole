@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { staffApi } from '@/services/api/staff.api';
+import { adminApi } from '@/services/api';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -74,6 +75,19 @@ export default function StaffClassCouncilsPanel() {
                   {c.title ? ` · ${c.title}` : ''}
                 </p>
                 {c.summary && <p className="text-xs text-stone-600 mt-2">{c.summary}</p>}
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      adminApi
+                        .openClassCouncilMinutesHtml(c.id)
+                        .catch((e: Error) => toast.error(e.message))
+                    }
+                  >
+                    PV (HTML)
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

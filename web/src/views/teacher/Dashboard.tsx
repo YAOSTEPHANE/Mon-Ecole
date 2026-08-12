@@ -49,6 +49,7 @@ import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashbo
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import { TEACHER_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
 import MockExamsManagementPanel from '../../components/admin/MockExamsManagementPanel';
+import TeacherLessonLogsPanel from '../../components/teacher/TeacherLessonLogsPanel';
 
 const VALID_TAB_IDS = [
   'overview',
@@ -68,6 +69,7 @@ const VALID_TAB_IDS = [
   'digital-library',
   'elearning',
   'mock-exams',
+  'lesson-logs',
 ] as const;
 
 type TabId = (typeof VALID_TAB_IDS)[number];
@@ -117,6 +119,13 @@ const TeacherDashboard = () => {
         icon: FiTarget,
         color: 'from-fuchsia-500 to-rose-600',
         description: 'Créer des examens blancs pour les classes d’examen (3ème, Terminale)',
+      },
+      {
+        id: 'lesson-logs',
+        label: 'Cahier de texte',
+        icon: FiBook,
+        color: 'from-orange-500 to-amber-600',
+        description: 'Compte-rendu de séance et devoirs pour les familles',
       },
     ],
     []
@@ -288,6 +297,7 @@ const TeacherDashboard = () => {
                 {activeTab === 'digital-library' && <DigitalLibraryBrowser />}
                 {activeTab === 'elearning' && <ElearningHub mode="teacher" />}
                 {activeTab === 'mock-exams' && <MockExamsManagementPanel mode="teacher" />}
+                {activeTab === 'lesson-logs' && <TeacherLessonLogsPanel />}
               </div>
             </div>
           </main>

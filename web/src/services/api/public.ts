@@ -2,6 +2,29 @@ import api from './client';
 
 /** Formulaire public de pré-inscription et suivi de dossier (sans compte) */
 export const publicApi = {
+  /** Enregistre une page vue (visiteur anonyme via cookie). */
+  trackPublicPageView: async (data: {
+    pageUrl: string;
+    referrerUrl?: string | null;
+    language?: string | null;
+    timezone?: string | null;
+    screen?: string | null;
+    userAgent?: string | null;
+  }) => {
+    const response = await api.post("/public/visitors/page-view", data);
+    return response.data;
+  },
+  /** Soumission du formulaire Contact (lead anonyme). */
+  submitContactLead: async (data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+    phone?: string | null;
+  }) => {
+    const response = await api.post("/public/leads/contact", data);
+    return response.data;
+  },
   submitAdmission: async (data: FormData | Record<string, unknown>, schoolSlug?: string) => {
     const response = await api.post('/public/admissions', data, {
       params: schoolSlug?.trim() ? { school: schoolSlug.trim() } : undefined,
@@ -43,6 +66,36 @@ export const publicApi = {
     etablissement?: string;
   }) => {
     const response = await api.post('/public/fne-lookup', data);
+    return response.data;
+  },
+  createPublicChatThread: async () => {
+    const response = await api.post<{ threadId: string }>('/public/chat/threads');
+    return response.data;
+  },
+  getPublicChatMessages: async (threadId: string, limit = 50) => {
+    const response = await api.get<{ messages: Array<{
+      id: string;
+      senderType: string;
+      senderVisitorId: string | null;
+      content: string;
+      createdAt: string;
+    }> }>(
+      `/public/chat/threads/${encodeURIComponent(threadId)}/messages`,
+      { params: { limit } },
+    );
+    return response.data;
+  },
+  sendPublicChatMessage: async (threadId: string, content: string) => {
+    const response = await api.post<{
+      message: { id: string; content: string; createdAt: string; senderType: string };
+    }>(`/public/chat/threads/${encodeURIComponent(threadId)}/messages`, { content });
+    return response.data;
+  },
+  submitPublicRecommendationRequest: async (data: {
+    criteria: Record<string, unknown>;
+    result?: Record<string, unknown> | null;
+  }) => {
+    const response = await api.post<{ requestId: string }>('/public/recommendations/requests', data);
     return response.data;
   },
 };

@@ -67,7 +67,9 @@ import adminClassesRoutes from './admin-classes.routes';
 import adminTeachersRoutes from './admin-teachers.routes';
 import adminEducatorsRoutes from './admin-educators.routes';
 import adminAdmissionsRoutes from './admin-admissions.routes';
+import adminPublicVisitorsRoutes from './admin-public-visitors.routes';
 import adminPayrollRoutes from './admin-payroll.routes';
+import adminSchoolFeaturesRoutes from './admin-school-features.routes';
 import adminIntegrationsSettingsRoutes from './admin-integrations-settings.routes';
 import { attachSchoolContext } from '../middleware/school-context.middleware';
 import { guardAdminStudentRoute } from '../middleware/school-resource-guard.middleware';
@@ -214,7 +216,9 @@ router.use(adminClassesRoutes);
 router.use(adminTeachersRoutes);
 router.use(adminEducatorsRoutes);
 router.use(adminAdmissionsRoutes);
+router.use(adminPublicVisitorsRoutes);
 router.use(adminPayrollRoutes);
+router.use(adminSchoolFeaturesRoutes);
 router.use(adminIntegrationsSettingsRoutes);
 
 
@@ -5805,6 +5809,8 @@ router.put('/class-councils/:id', async (req, res) => {
       summary,
       decisions,
       recommendations,
+      studentOpinions,
+      status,
     } = req.body;
 
     const updated = await prisma.classCouncilSession.update({
@@ -5815,6 +5821,8 @@ router.put('/class-councils/:id', async (req, res) => {
         ...(summary !== undefined && { summary: summary?.trim() || null }),
         ...(decisions !== undefined && { decisions: decisions?.trim() || null }),
         ...(recommendations !== undefined && { recommendations: recommendations?.trim() || null }),
+        ...(studentOpinions !== undefined && { studentOpinions }),
+        ...(status === 'DRAFT' || status === 'FINALIZED' ? { status } : {}),
       },
       include: { class: { select: { id: true, name: true, level: true } } },
     });

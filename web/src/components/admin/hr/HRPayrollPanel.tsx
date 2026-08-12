@@ -444,6 +444,7 @@ const HRPayrollPanel: React.FC = () => {
                         <th className="py-2 px-3 font-semibold text-right">Retenues</th>
                         <th className="py-2 px-3 font-semibold text-right">Net</th>
                         <th className="py-2 px-3 font-semibold text-center">Inclus</th>
+                        <th className="py-2 px-3 font-semibold text-center">Bulletin</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -547,6 +548,15 @@ const HRPayrollPanel: React.FC = () => {
                               }
                               aria-label={`Inclure ${l.displayName}`}
                             />
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <button
+                              type="button"
+                              className="text-xs text-indigo-700 hover:underline"
+                              onClick={() => void adminApi.openPayrollPayslipHtml(selected.id, l.id)}
+                            >
+                              PDF
+                            </button>
                           </td>
                         </tr>
                       ))}

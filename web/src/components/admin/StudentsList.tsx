@@ -9,6 +9,7 @@ import FilterDropdown from '../ui/FilterDropdown';
 import Badge from '../ui/Badge';
 import Avatar from '../ui/Avatar';
 import AddStudentModal from './AddStudentModal';
+import ImportStudentsModal from './ImportStudentsModal';
 import StudentDetailsModal from './StudentDetailsModal';
 import EditStudentModal from './EditStudentModal';
 import {
@@ -17,6 +18,7 @@ import {
   FiTrash2,
   FiEye,
   FiDownload,
+  FiUpload,
   FiUsers,
   FiChevronDown,
   FiChevronUp,
@@ -80,6 +82,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
   const [stateAssignmentFilter, setStateAssignmentFilter] = useState('all');
   const [classFilter, setClassFilter] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -557,7 +560,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
         <p className="text-xs text-stone-500 mt-1.5 max-w-3xl leading-relaxed">
           {showClassFilter
             ? 'Filtrez par classe et modifiez la classe d’un élève via « Modifier » (onglet scolarité).'
-            : 'Gérez les élèves, leurs classes et leur statut. Recherchez, filtrez et exportez la liste.'}
+            : 'Gérez les élèves, leurs classes et leur statut. Recherchez, filtrez, exportez ou importez une liste CSV pour inscrire plusieurs élèves.'}
         </p>
       </div>
 
@@ -789,6 +792,15 @@ const StudentsList: React.FC<StudentsListProps> = ({
               PDF
             </Button>
           </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setIsImportModalOpen(true)}
+            className="!py-2 shrink-0"
+          >
+            <FiUpload className="w-4 h-4 mr-1.5 inline" aria-hidden />
+            Import CSV
+          </Button>
           <Button size="sm" onClick={() => setIsAddModalOpen(true)} className="!py-2 shrink-0">
             <FiPlus className="w-4 h-4 mr-1.5 inline" aria-hidden />
             Ajouter un élève
@@ -1059,6 +1071,10 @@ const StudentsList: React.FC<StudentsListProps> = ({
       </Card>
 
       <AddStudentModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      <ImportStudentsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
 
       {selectedStudentId && (
         <StudentDetailsModal

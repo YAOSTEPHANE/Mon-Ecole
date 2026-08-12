@@ -1873,6 +1873,11 @@ model ReportCard {
   comments    String?
   published   Boolean  @default(false)
   publishedAt DateTime?
+  /// Accusé de réception parent (signature électronique simple)
+  parentAcknowledgedAt DateTime?
+  parentAcknowledgedByUserId String? @db.ObjectId
+  parentAckSignature String?
+  parentAckIp String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -1942,6 +1947,11 @@ model StudentGamificationEvent {
   @@map("student_gamification_events")
 }
 
+enum ClassCouncilStatus {
+  DRAFT
+  FINALIZED
+}
+
 model ClassCouncilSession {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   classId        String   @db.ObjectId
@@ -1952,6 +1962,10 @@ model ClassCouncilSession {
   summary        String?
   decisions      String?
   recommendations String?
+  /// Avis par élève : [{ studentId, subjectOpinion?, conductOpinion?, councilDecision?, average? }]
+  studentOpinions Json?
+  status         ClassCouncilStatus @default(DRAFT)
+  minutesGeneratedAt DateTime?
   createdById    String?  @db.ObjectId
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -3356,10 +3370,51 @@ model CanteenMealPlan {
   updatedAt     DateTime @updatedAt
 
   subscriptions CanteenSubscription[]
+  dailyMenus    CanteenDailyMenu[]
 
   @@index([academicYear, isPublished, isActive])
   @@index([schoolId])
   @@map("canteen_meal_plans")
+}
+
+model CanteenDailyMenu {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  planId       String?  @db.ObjectId
+  plan         CanteenMealPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  menuDate     String   // YYYY-MM-DD
+  mainCourse   String
+  sideDish     String?
+  dessert      String?
+  notes        String?
+  schoolId     String?  @db.ObjectId
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([menuDate, schoolId])
+  @@index([planId, menuDate])
+  @@map("canteen_daily_menus")
+}
+
+enum CanteenMealType {
+  BREAKFAST
+  LUNCH
+  SNACK
+}
+
+model CanteenMealCheckIn {
+  id                 String          @id @default(auto()) @map("_id") @db.ObjectId
+  studentId          String          @db.ObjectId
+  menuDate           String          // YYYY-MM-DD
+  mealType           CanteenMealType @default(LUNCH)
+  checkedInAt        DateTime        @default(now())
+  checkedInByUserId  String?         @db.ObjectId
+  planId             String?         @db.ObjectId
+  notes              String?
+  createdAt          DateTime        @default(now())
+
+  @@unique([studentId, menuDate, mealType])
+  @@index([menuDate, mealType])
+  @@map("canteen_meal_check_ins")
 }
 
 model CanteenSubscription {
@@ -3403,10 +3458,35 @@ model TransportRoute {
 
   subscriptions TransportSubscription[]
   vehiclePings  TransportVehiclePing[]
+  checkIns      TransportCheckIn[]
 
   @@index([academicYear, isPublished, isActive])
   @@index([schoolId])
   @@map("transport_routes")
+}
+
+enum TransportCheckInType {
+  BOARD
+  DROPOFF
+}
+
+model TransportCheckIn {
+  id                String               @id @default(auto()) @map("_id") @db.ObjectId
+  routeId           String               @db.ObjectId
+  route             TransportRoute       @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  studentId         String               @db.ObjectId
+  checkInType       TransportCheckInType @default(BOARD)
+  checkedInAt       DateTime             @default(now())
+  stopLabel         String?
+  recordedByUserId  String?              @db.ObjectId
+  latitude          Float?
+  longitude         Float?
+  notes             String?
+  createdAt         DateTime             @default(now())
+
+  @@index([routeId, checkedInAt])
+  @@index([studentId, checkedInAt])
+  @@map("transport_check_ins")
 }
 
 /// Position GPS d’un bus / véhicule sur une ligne (pings périodiques)
@@ -3598,5 +3678,187 @@ model PayrollLine {
   @@index([payrollRunId])
   @@index([personKind, personId])
   @@map("payroll_lines")
+}
+
+// =========================
+// = Visitors (public site)
+// =========================
+
+enum PublicVisitorEventType {
+  PAGE_VIEW
+  CONTACT_LEAD_SUBMIT
+  ADMISSION_SUBMIT
+  ADMISSION_TRACK
+  RECOMMENDATION_REQUEST
+  CHAT_THREAD_CREATE
+  CHAT_MESSAGE_SUBMIT
+}
+
+model PublicVisitor {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  visitorId     String    @unique
+  // userId est optionnel (quand un visiteur crée ensuite un compte)
+  // On ne déclare pas de relation Prisma ici pour éviter d’ajouter des champs opposés
+  // côté modèle `User`.
+  userId        String?   @db.ObjectId
+  schoolId      String?   @db.ObjectId
+  firstSeenAt   DateTime  @default(now())
+  lastSeenAt    DateTime  @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Contexte technique / géo (approximatif via IP — pas de GPS)
+  lastIp         String?
+  countryCode    String?
+  country        String?
+  region         String?
+  city           String?
+  userAgent      String?
+  deviceType     String?   // desktop | mobile | tablet | bot | unknown
+  browser        String?
+  os             String?
+  language       String?
+  timezone       String?
+
+  events        PublicVisitorEvent[]
+  contactLeads  PublicContactLead[]
+  chatThreads   PublicChatThread[]
+
+  @@index([lastSeenAt])
+  @@map("public_visitors")
+}
+
+model PublicVisitorEvent {
+  id                String                @id @default(auto()) @map("_id") @db.ObjectId
+  publicVisitorId  String                @db.ObjectId
+  publicVisitor    PublicVisitor        @relation(fields: [publicVisitorId], references: [id], onDelete: Cascade)
+  eventType         PublicVisitorEventType
+  schoolId          String?              @db.ObjectId
+  pageUrl           String?
+  referrerUrl       String?
+  admissionReference String?
+  chatThreadId      String?             @db.ObjectId
+  metadata          Json?
+  createdAt         DateTime            @default(now())
+
+  @@index([publicVisitorId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("public_visitor_events")
+}
+
+model PublicContactLead {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  publicVisitorId String?           @db.ObjectId
+  publicVisitor   PublicVisitor?   @relation(fields: [publicVisitorId], references: [id], onDelete: SetNull)
+  schoolId         String?          @db.ObjectId
+
+  name             String
+  email            String
+  phone            String?
+  subject          String?
+  message          String
+
+  admissionReference String?
+  createdAt        DateTime         @default(now())
+
+  @@index([schoolId, createdAt])
+  @@map("public_contact_leads")
+}
+
+enum PublicChatThreadStatus {
+  OPEN
+  CLOSED
+}
+
+model PublicChatThread {
+  id               String                   @id @default(auto()) @map("_id") @db.ObjectId
+  publicVisitorId String?                  @db.ObjectId
+  publicVisitor   PublicVisitor?         @relation(fields: [publicVisitorId], references: [id], onDelete: SetNull)
+  schoolId         String?
+  status           PublicChatThreadStatus @default(OPEN)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  messages         PublicChatMessage[]
+
+  @@index([publicVisitorId])
+  @@index([status, createdAt])
+  @@map("public_chat_threads")
+}
+
+model PublicChatMessage {
+  id            String            @id @default(auto()) @map("_id") @db.ObjectId
+  threadId      String            @db.ObjectId
+  thread        PublicChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Auth simple : pour l’instant uniquement “VISITOR”. On peut étendre “STAFF” plus tard.
+  senderType    String            @default("VISITOR") // "VISITOR" | "STAFF"
+  senderVisitorId String?        @db.ObjectId
+  content       String
+  createdAt     DateTime         @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("public_chat_messages")
+}
+
+model PublicRecommendationRequest {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  publicVisitorId  String?  @db.ObjectId
+  schoolId         String?
+
+  criteria         Json
+  result            Json?
+  createdAt        DateTime @default(now())
+
+  @@index([schoolId, createdAt])
+  @@map("public_recommendation_requests")
+}
+
+/// Cahier de texte numérique — séance de cours (distinct des devoirs Assignment)
+model LessonLog {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  scheduleId     String?  @db.ObjectId
+  courseId       String   @db.ObjectId
+  teacherId      String   @db.ObjectId
+  classId        String   @db.ObjectId
+  lessonDate     DateTime
+  title          String?
+  content        String
+  objectives     String?
+  homeworkNotes  String?
+  attachments    String[] @default([])
+  published      Boolean  @default(true)
+  schoolId       String?  @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([courseId, lessonDate])
+  @@index([classId, lessonDate])
+  @@index([teacherId, lessonDate])
+  @@map("lesson_logs")
+}
+
+/// Examens physiques officiels (BEPC, BAC, contrôles…) — distinct des examens blancs MockExam
+model PhysicalExamSession {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  examKind       String   // BEPC, BAC, CONTROLE, AUTRE
+  subject        String?
+  academicYear   String
+  examDate       DateTime
+  startTime      String   // HH:MM
+  endTime        String   // HH:MM
+  room           String?
+  supervisorIds  String[] @default([])
+  classIds       String[] @default([])
+  schoolId       String?  @db.ObjectId
+  notes          String?
+  isPublished    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([academicYear, examDate])
+  @@index([schoolId, examDate])
+  @@map("physical_exam_sessions")
 }
 

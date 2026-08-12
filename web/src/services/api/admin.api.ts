@@ -10,6 +10,28 @@ export const adminApi = {
     const response = await api.post('/admin/students', data);
     return response.data;
   },
+  downloadStudentImportCsvTemplate: async () => {
+    const response = await api.get('/admin/students/import/csv-template', {
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+  importStudentsCsv: async (data: { csv: string; defaultPassword?: string }) => {
+    const response = await api.post('/admin/students/import-csv', data);
+    return response.data as {
+      total: number;
+      created: number;
+      failed: number;
+      results: Array<{
+        line: number;
+        studentId: string;
+        ok: boolean;
+        error?: string;
+        loginIdentifier?: string;
+        passwordSetupEmailSent?: boolean;
+      }>;
+    };
+  },
   getStudent: async (id: string) => {
     const response = await api.get(`/admin/students/${id}`);
     return response.data;
@@ -2356,5 +2378,218 @@ export const adminApi = {
   seedSchoolStaffMetiersDefaults: async () => {
     const response = await api.post('/admin/school-staff-metiers/seed-defaults');
     return response.data;
+  },
+
+  getPublicVisitorStats: async () => {
+    const response = await api.get('/admin/public-visitors/stats');
+    return response.data as {
+      visitorsCount: number;
+      pageViewsCount: number;
+      contactLeadsCount: number;
+      openThreadsCount: number;
+      recommendationsCount: number;
+    };
+  },
+  getPublicVisitors: async (params?: { limit?: number }) => {
+    const response = await api.get('/admin/public-visitors', { params });
+    return response.data as Array<{
+      id: string;
+      visitorId: string;
+      firstSeenAt: string;
+      lastSeenAt: string;
+      createdAt: string;
+      lastIp: string | null;
+      countryCode: string | null;
+      country: string | null;
+      region: string | null;
+      city: string | null;
+      userAgent: string | null;
+      deviceType: string | null;
+      browser: string | null;
+      os: string | null;
+      language: string | null;
+      timezone: string | null;
+      _count: { events: number; contactLeads: number; chatThreads: number };
+    }>;
+  },
+  getPublicVisitorDetail: async (id: string) => {
+    const response = await api.get(`/admin/public-visitors/${id}`);
+    return response.data as {
+      visitor: {
+        id: string;
+        visitorId: string;
+        firstSeenAt: string;
+        lastSeenAt: string;
+        lastIp: string | null;
+        countryCode: string | null;
+        country: string | null;
+        region: string | null;
+        city: string | null;
+        userAgent: string | null;
+        deviceType: string | null;
+        browser: string | null;
+        os: string | null;
+        language: string | null;
+        timezone: string | null;
+        contactLeads: Array<{
+          id: string;
+          name: string;
+          email: string;
+          phone: string | null;
+          subject: string | null;
+          createdAt: string;
+        }>;
+        chatThreads: Array<{
+          id: string;
+          status: string;
+          updatedAt: string;
+          _count: { messages: number };
+        }>;
+      };
+      events: Array<{
+        id: string;
+        eventType: string;
+        pageUrl: string | null;
+        referrerUrl: string | null;
+        createdAt: string;
+        metadata: Record<string, unknown> | null;
+      }>;
+    };
+  },
+  getPublicContactLeads: async (params?: { limit?: number }) => {
+    const response = await api.get('/admin/public-contact-leads', { params });
+    return response.data;
+  },
+  getPublicRecommendations: async (params?: { limit?: number }) => {
+    const response = await api.get('/admin/public-recommendations', { params });
+    return response.data;
+  },
+  getPublicChatThreads: async (params?: { status?: 'OPEN' | 'CLOSED'; limit?: number }) => {
+    const response = await api.get('/admin/public-chat/threads', { params });
+    return response.data;
+  },
+  getPublicChatThreadMessages: async (threadId: string) => {
+    const response = await api.get(`/admin/public-chat/threads/${threadId}/messages`);
+    return response.data as {
+      thread: {
+        id: string;
+        status: 'OPEN' | 'CLOSED';
+        createdAt: string;
+        publicVisitor: { id: string; visitorId: string } | null;
+      };
+      messages: Array<{
+        id: string;
+        senderType: string;
+        content: string;
+        createdAt: string;
+      }>;
+    };
+  },
+  sendPublicChatStaffMessage: async (threadId: string, content: string) => {
+    const response = await api.post(`/admin/public-chat/threads/${threadId}/messages`, { content });
+    return response.data;
+  },
+  updatePublicChatThreadStatus: async (threadId: string, status: 'OPEN' | 'CLOSED') => {
+    const response = await api.patch(`/admin/public-chat/threads/${threadId}`, { status });
+    return response.data;
+  },
+
+  // ——— Opérations scolaires (lot 10 fonctionnalités) ———
+  auditTimetableConflicts: async (params?: { classId?: string }) => {
+    const response = await api.get('/admin/timetable/conflicts-audit', { params });
+    return response.data as {
+      conflicts: Array<{
+        kind: string;
+        dayOfWeek: number;
+        detail: string;
+        slotA: { label: string; startTime: string; endTime: string };
+        slotB: { label: string; startTime: string; endTime: string };
+      }>;
+      scheduleCount: number;
+    };
+  },
+  billCampusSubscriptions: async (data?: { academicYear?: string; dueDate?: string }) => {
+    const response = await api.post('/admin/campus/bill-subscriptions', data ?? {});
+    return response.data;
+  },
+  runAbsenceReminders: async () => {
+    const response = await api.post('/admin/attendance/run-absence-reminders');
+    return response.data as { studentsChecked: number; remindersSent: number; skippedAlreadyNotified: number };
+  },
+  getCanteenDailyMenus: async (params?: { menuDate?: string; planId?: string }) => {
+    const response = await api.get('/admin/campus/canteen/menus', { params });
+    return response.data;
+  },
+  createCanteenDailyMenu: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/campus/canteen/menus', data);
+    return response.data;
+  },
+  deleteCanteenDailyMenu: async (id: string) => {
+    const response = await api.delete(`/admin/campus/canteen/menus/${id}`);
+    return response.data;
+  },
+  getCanteenMealCheckIns: async (menuDate: string) => {
+    const response = await api.get('/admin/campus/canteen/check-ins', { params: { menuDate } });
+    return response.data;
+  },
+  postCanteenMealCheckIn: async (data: { studentId: string; menuDate?: string; mealType?: string }) => {
+    const response = await api.post('/admin/campus/canteen/check-ins', data);
+    return response.data;
+  },
+  getTransportCheckIns: async (params?: { routeId?: string; date?: string }) => {
+    const response = await api.get('/admin/campus/transport/check-ins', { params });
+    return response.data;
+  },
+  postTransportCheckIn: async (data: {
+    routeId: string;
+    studentId: string;
+    checkInType?: 'BOARD' | 'DROPOFF';
+    stopLabel?: string;
+  }) => {
+    const response = await api.post('/admin/campus/transport/check-ins', data);
+    return response.data;
+  },
+  getPhysicalExamSessions: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/admin/physical-exams', { params });
+    return response.data;
+  },
+  createPhysicalExamSession: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/physical-exams', data);
+    return response.data;
+  },
+  updatePhysicalExamSession: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/admin/physical-exams/${id}`, data);
+    return response.data;
+  },
+  deletePhysicalExamSession: async (id: string) => {
+    const response = await api.delete(`/admin/physical-exams/${id}`);
+    return response.data;
+  },
+  updateClassCouncilOpinions: async (id: string, studentOpinions: unknown[]) => {
+    const response = await api.put(`/admin/class-councils/${id}/opinions`, { studentOpinions });
+    return response.data;
+  },
+  finalizeClassCouncil: async (id: string) => {
+    const response = await api.post(`/admin/class-councils/${id}/finalize`);
+    return response.data;
+  },
+  getAdminLessonLogs: async (params?: { classId?: string; courseId?: string }) => {
+    const response = await api.get('/admin/lesson-logs', { params });
+    return response.data;
+  },
+  openClassCouncilMinutesHtml: async (id: string) => {
+    const response = await api.get(`/admin/class-councils/${id}/minutes-html`, {
+      responseType: 'text',
+    });
+    const blob = new Blob([response.data as string], { type: 'text/html;charset=utf-8' });
+    window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
+  },
+  openPayrollPayslipHtml: async (runId: string, lineId: string) => {
+    const response = await api.get(
+      `/admin/hr/payroll/runs/${runId}/lines/${lineId}/payslip-html`,
+      { responseType: 'text' }
+    );
+    const blob = new Blob([response.data as string], { type: 'text/html;charset=utf-8' });
+    window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
   },
 };

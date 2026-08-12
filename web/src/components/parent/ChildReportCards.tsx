@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parentApi } from '../../services/api';
+import toast from 'react-hot-toast';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -25,14 +26,29 @@ interface ChildReportCardsProps {
 }
 
 const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
+  const qc = useQueryClient();
   const [selectedReportCard, setSelectedReportCard] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [ackSignature, setAckSignature] = useState('');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
 
   const { data: reportPayload, isLoading } = useQuery({
     queryKey: ['parent-child-report-cards', studentId],
     queryFn: () => parentApi.getChildReportCards(studentId),
+  });
+
+  const acknowledgeMut = useMutation({
+    mutationFn: (reportCardId: string) =>
+      parentApi.acknowledgeReportCard(studentId, reportCardId, ackSignature.trim()),
+    onSuccess: () => {
+      toast.success('Accusé de réception enregistré');
+      setAckSignature('');
+      void qc.invalidateQueries({ queryKey: ['parent-child-report-cards', studentId] });
+      setShowDetailsModal(false);
+      setSelectedReportCard(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const legacyList = Array.isArray(reportPayload);
@@ -236,6 +252,16 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
                   <p className="text-sm text-gray-600 line-clamp-2">{reportCard.comments}</p>
                 )}
 
+                {reportCard.parentAcknowledgedAt ? (
+                  <p className="text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-1">
+                    Reçu le {format(new Date(reportCard.parentAcknowledgedAt), 'dd/MM/yyyy', { locale: fr })}
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+                    Accusé de réception en attente
+                  </p>
+                )}
+
                 <div className="flex items-center space-x-2 pt-2 border-t">
                   <Button
                     variant="secondary"
@@ -308,6 +334,36 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
             {selectedReportCard.publishedAt && (
               <div className="text-sm text-gray-600">
                 Publié le: {format(new Date(selectedReportCard.publishedAt), 'dd MMMM yyyy', { locale: fr })}
+              </div>
+            )}
+
+            {selectedReportCard.parentAcknowledgedAt ? (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-900">
+                Accusé de réception signé par <strong>{selectedReportCard.parentAckSignature}</strong> le{' '}
+                {format(new Date(selectedReportCard.parentAcknowledgedAt), 'dd MMMM yyyy à HH:mm', {
+                  locale: fr,
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 space-y-2">
+                <p className="text-sm font-medium text-amber-900">
+                  Confirmer la réception du bulletin (signature électronique)
+                </p>
+                <input
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  placeholder="Votre nom complet"
+                  value={ackSignature}
+                  onChange={(e) => setAckSignature(e.target.value)}
+                  aria-label="Signature parent"
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={ackSignature.trim().length < 2 || acknowledgeMut.isPending}
+                  onClick={() => acknowledgeMut.mutate(selectedReportCard.id)}
+                >
+                  Accuser réception
+                </Button>
               </div>
             )}
 

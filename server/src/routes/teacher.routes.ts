@@ -2226,5 +2226,120 @@ router.patch('/mock-exams/:id/publish', async (req: AuthRequest, res) => {
   }
 });
 
+// ——— Cahier de texte (séances de cours) ———
+
+router.get('/lesson-logs', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+
+    const courseId = typeof req.query.courseId === 'string' ? req.query.courseId.trim() : '';
+    const classId = typeof req.query.classId === 'string' ? req.query.classId.trim() : '';
+
+    const rows = await prisma.lessonLog.findMany({
+      where: {
+        teacherId,
+        ...(courseId ? { courseId } : {}),
+        ...(classId ? { classId } : {}),
+      },
+      orderBy: { lessonDate: 'desc' },
+      take: 100,
+    });
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/lesson-logs', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+
+    const b = req.body as Record<string, unknown>;
+    const courseId = typeof b.courseId === 'string' ? b.courseId.trim() : '';
+    const classId = typeof b.classId === 'string' ? b.classId.trim() : '';
+    const content = typeof b.content === 'string' ? b.content.trim() : '';
+    const lessonDate =
+      typeof b.lessonDate === 'string' && b.lessonDate ? new Date(b.lessonDate) : new Date();
+    if (!courseId || !classId || !content) {
+      return res.status(400).json({ error: 'courseId, classId et content requis' });
+    }
+
+    const course = await prisma.course.findFirst({
+      where: { id: courseId, teacherId },
+      select: { id: true, classId: true },
+    });
+    if (!course) return res.status(403).json({ error: 'Cours introuvable ou non autorisé' });
+    if (course.classId !== classId) {
+      return res.status(400).json({ error: 'La classe ne correspond pas au cours' });
+    }
+
+    const row = await prisma.lessonLog.create({
+      data: {
+        courseId,
+        classId,
+        teacherId,
+        lessonDate,
+        content,
+        title: typeof b.title === 'string' ? b.title.trim() || null : null,
+        objectives: typeof b.objectives === 'string' ? b.objectives.trim() || null : null,
+        homeworkNotes: typeof b.homeworkNotes === 'string' ? b.homeworkNotes.trim() || null : null,
+        scheduleId: typeof b.scheduleId === 'string' ? b.scheduleId.trim() || null : null,
+        attachments: Array.isArray(b.attachments) ? b.attachments.map(String) : [],
+        published: b.published !== false,
+      },
+    });
+    res.status(201).json(row);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.patch('/lesson-logs/:id', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+
+    const existing = await prisma.lessonLog.findFirst({
+      where: { id: req.params.id, teacherId },
+    });
+    if (!existing) return res.status(404).json({ error: 'Séance introuvable' });
+
+    const b = req.body as Record<string, unknown>;
+    const row = await prisma.lessonLog.update({
+      where: { id: existing.id },
+      data: {
+        ...(b.title !== undefined ? { title: b.title ? String(b.title).trim() : null } : {}),
+        ...(b.content !== undefined ? { content: String(b.content).trim() } : {}),
+        ...(b.objectives !== undefined ? { objectives: b.objectives ? String(b.objectives).trim() : null } : {}),
+        ...(b.homeworkNotes !== undefined
+          ? { homeworkNotes: b.homeworkNotes ? String(b.homeworkNotes).trim() : null }
+          : {}),
+        ...(b.lessonDate != null ? { lessonDate: new Date(String(b.lessonDate)) } : {}),
+        ...(b.published !== undefined ? { published: Boolean(b.published) } : {}),
+      },
+    });
+    res.json(row);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.delete('/lesson-logs/:id', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+    const existing = await prisma.lessonLog.findFirst({
+      where: { id: req.params.id, teacherId },
+    });
+    if (!existing) return res.status(404).json({ error: 'Séance introuvable' });
+    await prisma.lessonLog.delete({ where: { id: existing.id } });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
 export default router;
 

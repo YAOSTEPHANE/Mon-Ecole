@@ -94,6 +94,17 @@ export const parentApi = {
     const response = await api.get(`/parent/children/${studentId}/report-cards`);
     return response.data;
   },
+  acknowledgeReportCard: async (
+    studentId: string,
+    reportCardId: string,
+    signature: string
+  ) => {
+    const response = await api.post(
+      `/parent/children/${studentId}/report-cards/${reportCardId}/acknowledge`,
+      { signature }
+    );
+    return response.data;
+  },
   getChildConduct: async (studentId: string, params?: { period?: string; academicYear?: string }) => {
     const response = await api.get(`/parent/children/${studentId}/conduct`, { params });
     return response.data;

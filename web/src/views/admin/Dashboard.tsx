@@ -40,6 +40,7 @@ import MaterialManagementModule from '../../components/admin/material/MaterialMa
 import DisciplineAdminModule from '../../components/admin/DisciplineAdminModule';
 import ExtracurricularAdminModule from '../../components/admin/ExtracurricularAdminModule';
 import CampusServicesModule from '../../components/admin/CampusServicesModule';
+import SchoolOperationsHub from '../../components/admin/SchoolOperationsHub';
 import OrientationAdminModule from '../../components/admin/OrientationAdminModule';
 import ReportsStatisticsModule from '../../components/admin/reports/ReportsStatisticsModule';
 import AdminModulesHub from '../../components/admin/AdminModulesHub';
@@ -570,7 +571,12 @@ const AdminDashboard = () => {
               {activeTab === 'pedagogical' && <PedagogicalTracking />}
               {activeTab === 'discipline' && <DisciplineAdminModule />}
               {activeTab === 'extracurricular' && <ExtracurricularAdminModule />}
-              {activeTab === 'campus' && <CampusServicesModule />}
+              {activeTab === 'campus' && (
+                <div className="space-y-8">
+                  <CampusServicesModule />
+                  <SchoolOperationsHub />
+                </div>
+              )}
               {activeTab === 'orientation' && <OrientationAdminModule />}
               {activeTab === 'communication' && <CommunicationHubModule />}
               {activeTab === 'library' && <LibraryManagementModule />}

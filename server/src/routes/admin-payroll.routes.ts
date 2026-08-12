@@ -9,6 +9,7 @@ import {
   refreshPayrollRunTotals,
   summarizePayrollLines,
 } from '../utils/payroll.util';
+import { buildPayslipHtml } from '../utils/html-document.util';
 
 const router = express.Router();
 
@@ -359,6 +360,46 @@ router.post('/hr/payroll/runs/:id/cancel', async (req: SchoolContextRequest, res
     res.json({ ...updated, label: monthLabelFr(updated.year, updated.month) });
   } catch (e: unknown) {
     console.error('POST /admin/hr/payroll/runs/:id/cancel:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/** Bulletin de paie HTML (impression / PDF navigateur) pour une ligne. */
+router.get('/hr/payroll/runs/:runId/lines/:lineId/payslip-html', async (req: SchoolContextRequest, res) => {
+  try {
+    const schoolId = requireSchoolId(req, res);
+    if (!schoolId) return;
+
+    const line = await prisma.payrollLine.findFirst({
+      where: { id: req.params.lineId, payrollRunId: req.params.runId },
+      include: { payrollRun: true },
+    });
+    if (!line || line.payrollRun.schoolId !== schoolId) {
+      return res.status(404).json({ error: 'Ligne de paie introuvable' });
+    }
+
+    const html = buildPayslipHtml({
+      employeeName: line.displayName,
+      employeeId: line.employeeId,
+      personKind: line.personKind,
+      year: line.payrollRun.year,
+      month: line.payrollRun.month,
+      monthLabel: monthLabelFr(line.payrollRun.year, line.payrollRun.month),
+      baseSalary: line.baseSalary,
+      bonuses: line.bonuses,
+      deductions: line.deductions,
+      netPay: line.netAmount,
+      notes: line.notes,
+    });
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="bulletin-paie-${line.employeeId}.html"`
+    );
+    res.send(html);
+  } catch (e: unknown) {
+    console.error('GET payslip-html:', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });

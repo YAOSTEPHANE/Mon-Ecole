@@ -194,4 +194,20 @@ export const teacherApi = {
     const response = await api.patch(`/teacher/mock-exams/${id}/publish`, { isPublished });
     return response.data;
   },
+  getLessonLogs: async (params?: { courseId?: string; classId?: string }) => {
+    const response = await api.get('/teacher/lesson-logs', { params });
+    return response.data;
+  },
+  createLessonLog: async (data: Record<string, unknown>) => {
+    const response = await api.post('/teacher/lesson-logs', data);
+    return response.data;
+  },
+  updateLessonLog: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/teacher/lesson-logs/${id}`, data);
+    return response.data;
+  },
+  deleteLessonLog: async (id: string) => {
+    const response = await api.delete(`/teacher/lesson-logs/${id}`);
+    return response.data;
+  },
 };

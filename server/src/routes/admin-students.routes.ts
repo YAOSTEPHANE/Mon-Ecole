@@ -25,6 +25,12 @@ import {
   isSyntheticStudentEmail,
   resolveStudentAccountEmail,
 } from '../utils/student-login-identifier.util';
+import {
+  STUDENT_IMPORT_CSV_TEMPLATE,
+  importStudentsFromCsvRows,
+  parseStudentImportCsv,
+} from '../utils/student-csv-import.util';
+import type { AuthRequest } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
@@ -412,6 +418,53 @@ router.post(
     }
   }
 );
+
+/** Modèle CSV pour inscription en masse. */
+router.get('/students/import/csv-template', (_req, res) => {
+  res
+    .type('text/csv; charset=utf-8')
+    .setHeader('Content-Disposition', 'attachment; filename="modele-import-eleves.csv"')
+    .send('\ufeff' + STUDENT_IMPORT_CSV_TEMPLATE);
+});
+
+/**
+ * Import CSV d’élèves (séparateur ;).
+ * Body: { csv: string, defaultPassword?: string }
+ */
+router.post('/students/import-csv', async (req: SchoolContextRequest & AuthRequest, res) => {
+  try {
+    const csv = typeof req.body?.csv === 'string' ? req.body.csv : '';
+    if (!csv.trim()) {
+      return res.status(400).json({ error: 'CSV vide ou manquant (champ csv)' });
+    }
+
+    const defaultPassword =
+      typeof req.body?.defaultPassword === 'string' ? req.body.defaultPassword : null;
+
+    let rows;
+    try {
+      rows = parseStudentImportCsv(csv);
+    } catch (parseErr: unknown) {
+      return res.status(400).json({
+        error: parseErr instanceof Error ? parseErr.message : 'CSV invalide',
+      });
+    }
+
+    const report = await importStudentsFromCsvRows(rows, {
+      schoolId: req.schoolId,
+      defaultPassword,
+      actorUserId: req.user?.id ?? null,
+      ipAddress: req.ip || req.socket.remoteAddress || null,
+      userAgent: req.get('user-agent') || null,
+    });
+
+    res.json(report);
+  } catch (error: unknown) {
+    console.error('POST /admin/students/import-csv:', error);
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(500).json({ error: message });
+  }
+});
 
 // Obtenir un élève par ID
 router.get('/students/:id', async (req: SchoolContextRequest, res) => {

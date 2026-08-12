@@ -20,6 +20,8 @@ import PwaInstallBanner from "@/components/PwaInstallBanner";
 import { ensureStaffPedagogyApiInterceptor } from "@/lib/staffPedagogyApi";
 import { isOffline } from "@/lib/offline-api";
 import "@/utils/debug";
+import PublicVisitorBootstrap from "@/components/public/PublicVisitorBootstrap";
+import PublicVisitorPanel from "@/components/public/PublicVisitorPanel";
 
 if (typeof window !== 'undefined') {
   ensureStaffPedagogyApiInterceptor();
@@ -54,6 +56,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AppBrandingProvider>
         <AuthProvider>
+          <PublicVisitorBootstrap />
           <SchoolProvider>
           <ServiceWorkerDevCleanup />
           <ServiceWorkerBootstrap />
@@ -66,6 +69,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <PwaInstallBanner />
           {children}
           <AssistantPanel />
+          <PublicVisitorPanel />
           <Toaster
           position="top-right"
           gutter={12}

@@ -13,6 +13,7 @@ import menaPresenceRoutes from '../routes/mena-presence.routes';
 import pushRoutes from '../routes/push.routes';
 import admissionPublicRoutes from '../routes/admission.public.routes';
 import publicRoutes from '../routes/public.routes';
+import publicVisitorsRoutes from '../routes/public-visitors.routes';
 import staffRoutes from '../routes/staff.routes';
 import superAdminRoutes from '../routes/super-admin.routes';
 import academicValidationRoutes from '../routes/academic-validation.routes';
@@ -184,6 +185,7 @@ export function createApp(): express.Express {
   app.use(`${apiPrefix}/push`, pushRoutes);
   app.use(`${apiPrefix}/public/admissions`, admissionPublicRoutes);
   app.use(`${apiPrefix}/public`, publicRoutes);
+  app.use(`${apiPrefix}/public`, publicVisitorsRoutes);
   app.use(`${apiPrefix}/academic-validation`, academicValidationRoutes);
   app.use(`${apiPrefix}/digital-library`, digitalLibraryRoutes);
 

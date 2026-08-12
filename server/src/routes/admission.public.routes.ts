@@ -18,6 +18,7 @@ import {
 } from '../utils/school-context.util';
 import { ensureDefaultSchool } from '../utils/ensure-default-school.util';
 import { publicFormLimiter } from '../middleware/rate-limit.middleware';
+import { readPublicVisitorIdFromRequest } from '../utils/public-visitor-cookie.util';
 
 const router = express.Router();
 
@@ -213,6 +214,33 @@ router.post(
         },
       });
 
+      // Tracking conversion (visiteur anonyme => admission)
+      try {
+        const visitorId = readPublicVisitorIdFromRequest(req);
+        if (visitorId) {
+          const visitor = await prisma.publicVisitor.upsert({
+            where: { visitorId },
+            create: { visitorId, schoolId },
+            update: { schoolId },
+          });
+
+          await prisma.publicVisitorEvent.create({
+            data: {
+              publicVisitorId: visitor.id,
+              eventType: 'ADMISSION_SUBMIT',
+              schoolId,
+              admissionReference: admission.reference,
+              metadata: {
+                desiredLevel: admission.desiredLevel,
+                academicYear: admission.academicYear,
+              },
+            },
+          });
+        }
+      } catch {
+        /* Tracking best-effort : ne bloque pas le formulaire. */
+      }
+
       res.status(201).json({
         message: 'Demande enregistrée. Conservez votre numéro de dossier pour le suivi.',
         admission,
@@ -250,6 +278,7 @@ router.get('/track/:reference', async (req, res) => {
     const row = await prisma.admission.findUnique({
       where: { reference },
       select: {
+        schoolId: true,
         reference: true,
         status: true,
         firstName: true,
@@ -288,7 +317,32 @@ router.get('/track/:reference', async (req, res) => {
         })
       : null;
 
-    res.json({ ...rest, enrolledStudent });
+    const payload = { ...rest, enrolledStudent };
+
+    // Tracking consultation de suivi (best-effort)
+    try {
+      const visitorId = readPublicVisitorIdFromRequest(req);
+      if (visitorId) {
+        const visitor = await prisma.publicVisitor.upsert({
+          where: { visitorId },
+          create: { visitorId, schoolId: row.schoolId ?? undefined },
+          update: { schoolId: row.schoolId ?? undefined },
+        });
+
+        await prisma.publicVisitorEvent.create({
+          data: {
+            publicVisitorId: visitor.id,
+            eventType: 'ADMISSION_TRACK',
+            schoolId: row.schoolId ?? undefined,
+            admissionReference: row.reference,
+          },
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+
+    res.json(payload);
   } catch (error: unknown) {
     console.error('admission.public track:', error);
     res.status(500).json({ error: publicServerErrorMessage(error) });

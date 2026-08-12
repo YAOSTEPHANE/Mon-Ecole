@@ -13,10 +13,12 @@ import {
   FiRss,
   FiInbox,
   FiImage,
+  FiGlobe,
 } from 'react-icons/fi';
 import { ADM } from './adminModuleLayout';
+import PublicVisitorsAdminPanel from './PublicVisitorsAdminPanel';
 
-type HubTab = 'overview' | 'messaging' | 'alerts' | 'circulars' | 'news' | 'gallery' | 'requests';
+type HubTab = 'overview' | 'messaging' | 'alerts' | 'circulars' | 'news' | 'gallery' | 'requests' | 'publicVisitors';
 
 const CommunicationHubModule: React.FC = () => {
   const [tab, setTab] = useState<HubTab>('overview');
@@ -32,6 +34,11 @@ const CommunicationHubModule: React.FC = () => {
   const { data: notifications } = useQuery({
     queryKey: ['admin-notifications', 'unread'],
     queryFn: () => adminApi.getNotifications({ unread: true }),
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['admin-public-visitor-stats'],
+    queryFn: () => adminApi.getPublicVisitorStats(),
   });
 
   const unreadMessages = useMemo(
@@ -53,6 +60,7 @@ const CommunicationHubModule: React.FC = () => {
     { id: 'news', label: 'Actualités', icon: FiRss },
     { id: 'gallery', label: 'Galerie photos', icon: FiImage },
     { id: 'requests', label: 'Demandes & réclamations', icon: FiInbox },
+    { id: 'publicVisitors', label: 'Visiteurs site', icon: FiGlobe },
   ];
 
   return (
@@ -84,7 +92,7 @@ const CommunicationHubModule: React.FC = () => {
 
       {tab === 'overview' && (
         <div className={ADM.section}>
-          <div className={ADM.grid4}>
+          <div className={ADM.grid5}>
             <Card className={`${ADM.statCard} border border-gray-200`}>
               <p className={ADM.statLabel}>Messages (non lus)</p>
               <p className={ADM.statVal}>{unreadMessages}</p>
@@ -114,6 +122,15 @@ const CommunicationHubModule: React.FC = () => {
               </p>
               <p className={`${ADM.statValTone} text-violet-900`}>{publishedNews}</p>
               <p className={ADM.statHint}>Hors circulaires (titre)</p>
+            </Card>
+            <Card className={`${ADM.statCard} border border-teal-100 bg-teal-50/40`}>
+              <p className="text-[10px] font-medium text-teal-900 uppercase tracking-wide leading-tight">
+                Chats visiteurs ouverts
+              </p>
+              <p className={`${ADM.statValTone} text-teal-900`}>
+                {(stats as { openThreadsCount?: number } | undefined)?.openThreadsCount ?? 0}
+              </p>
+              <p className={ADM.statHint}>Site public (non connectés)</p>
             </Card>
           </div>
           <Card className={ADM.helpCard}>
@@ -194,6 +211,18 @@ const CommunicationHubModule: React.FC = () => {
             embeddedTab="messages"
             messagesMode="requests"
           />
+        </div>
+      )}
+      {tab === 'publicVisitors' && (
+        <div className="space-y-3">
+          <Card className="p-4 border border-teal-100 bg-teal-50/40">
+            <p className="text-xs text-gray-700 leading-relaxed">
+              Visiteurs <strong>non connectés</strong> du site : pages vues, formulaire contact,
+              chat anonyme et demandes d’orientation. Répondez aux messages depuis l’onglet Chat site
+              public — les réponses s’affichent dans le widget flottant du site.
+            </p>
+          </Card>
+          <PublicVisitorsAdminPanel />
         </div>
       )}
     </div>

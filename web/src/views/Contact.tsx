@@ -9,6 +9,7 @@ import UltraPremiumPageShell from '../components/public/UltraPremiumPageShell';
 import { useAppBranding } from '@/contexts/AppBrandingContext';
 import { resolveSchoolContactInfo } from '@/lib/schoolContact';
 import toast from 'react-hot-toast';
+import { publicApi } from '@/services/api/public';
 import {
   FiMail,
   FiPhone,
@@ -38,12 +39,23 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    setTimeout(() => {
+    try {
+      await publicApi.submitContactLead({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+      });
       toast.success('Message envoyé avec succès ! Nous vous répondrons dans les plus brefs délais.');
       setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (err: unknown) {
+      const axiosErr = err as {
+        response?: { data?: { error?: string } };
+      };
+      toast.error(axiosErr.response?.data?.error || "Envoi impossible. Réessayez plus tard.");
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
