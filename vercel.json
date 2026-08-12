@@ -14,7 +14,7 @@
     },
     "api": {
       "root": "server",
-      "entrypoint": "src/index.ts",
+      "entrypoint": "vercel-handler.mjs",
       "routePrefix": "/api",
       "framework": "express",
       "buildCommand": "npm run build"
