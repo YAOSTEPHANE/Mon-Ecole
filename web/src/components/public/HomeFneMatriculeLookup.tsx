@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { publicApi } from '@/services/api';
 import { FNE_MATRICULE_SEARCH_URL } from '@/lib/fneMatricule';
 import Button from '../ui/Button';
+import FneAcademicYearCalendar from '../shared/FneAcademicYearCalendar';
 
 type FneResult = {
   fullName: string;
@@ -145,19 +146,12 @@ export default function HomeFneMatriculeLookup() {
             </label>
             <label className="block text-xs font-semibold text-stone-700">
               Fichier année
-              <select
-                className="mt-1.5 w-full rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2.5 text-sm"
+              <FneAcademicYearCalendar
                 value={annee}
+                onChange={setAnnee}
+                years={options?.years || []}
                 disabled={loadingOptions}
-                onChange={(e) => setAnnee(e.target.value)}
-              >
-                <option value="">Choisir…</option>
-                {(options?.years || []).map((y) => (
-                  <option key={y.value} value={y.value}>
-                    {y.label}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
             <label className="block text-xs font-semibold text-stone-700">
               Nom

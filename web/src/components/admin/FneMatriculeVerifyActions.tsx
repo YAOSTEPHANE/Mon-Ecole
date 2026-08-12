@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { adminApi } from '@/services/api';
 import { FNE_MATRICULE_SEARCH_URL, openFneMatriculeSearch } from '@/lib/fneMatricule';
 import Button from '../ui/Button';
+import FneAcademicYearCalendar from '../shared/FneAcademicYearCalendar';
 
 export type FneLookupPrefill = {
   lastName?: string;
@@ -155,19 +156,13 @@ export default function FneMatriculeVerifyActions({
             </label>
             <label className="block text-[11px] font-medium text-stone-700">
               Fichier année
-              <select
-                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-sm"
+              <FneAcademicYearCalendar
                 value={annee}
+                onChange={setAnnee}
+                years={options?.years || []}
                 disabled={loadingOptions}
-                onChange={(e) => setAnnee(e.target.value)}
-              >
-                <option value="">Choisir…</option>
-                {(options?.years || []).map((y) => (
-                  <option key={y.value} value={y.value}>
-                    {y.label}
-                  </option>
-                ))}
-              </select>
+                inputClassName="mt-1 flex w-full items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-left text-sm disabled:opacity-60"
+              />
             </label>
             <label className="block text-[11px] font-medium text-stone-700">
               Nom

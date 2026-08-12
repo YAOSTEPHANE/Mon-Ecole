@@ -14,13 +14,14 @@ describe('fne-matricule-search.util', () => {
     assert.equal(toFneDateFormat('12/05/2010'), '12-05-2010');
   });
 
-  it('builds all academic years from 2010 through current+1', () => {
-    const years = buildFneYearOptions(2010, 2025);
-    assert.equal(years[0]?.value, '1011');
-    assert.equal(years[0]?.label, 'Fichier 2010-2011');
+  it('builds all academic years from 1990 through current+1', () => {
+    const years = buildFneYearOptions(1990, 2025);
+    assert.equal(years[0]?.value, '9091');
+    assert.equal(years[0]?.label, 'Fichier 1990-1991');
+    assert.ok(years.some((y) => y.value === '1011'));
     assert.ok(years.some((y) => y.value === '2425'));
     assert.equal(years[years.length - 1]?.value, '2526');
-    assert.ok(years.length >= 16);
+    assert.ok(years.length >= 36);
   });
 
   it('merges scraped portal years with the full range', () => {

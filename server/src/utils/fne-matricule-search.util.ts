@@ -49,7 +49,7 @@ const PRIMARY = {
 const insecureTlsAgent = new Agent({ connect: { rejectUnauthorized: false } });
 
 /** Première année scolaire proposée (début civil). */
-const FNE_YEAR_RANGE_START = 2010;
+const FNE_YEAR_RANGE_START = 1990;
 
 /**
  * Construit les codes FNE `YYZZ` (ex. 2425 = 2024-2025) jusqu’à l’année scolaire
