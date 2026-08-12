@@ -14,10 +14,11 @@
     },
     "api": {
       "root": "server",
-      "entrypoint": "vercel-handler.mjs",
+      "entrypoint": "index.mjs",
       "routePrefix": "/api",
       "framework": "express",
-      "buildCommand": "npm run build"
+      "buildCommand": "npm run build",
+      "includeFiles": ["dist/**"]
     }
   }
 }
