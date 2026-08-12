@@ -49,10 +49,8 @@ export default function HomeFneMatriculeLookup() {
   useEffect(() => {
     if (!options) return;
     if (!annee && options.years.length > 0) {
-      const preferred =
-        options.years.find((y) => y.value === '2425') ||
-        options.years.find((y) => y.value === '1819') ||
-        options.years[options.years.length - 1];
+      // Plus récente année d’abord (liste triée croissant)
+      const preferred = options.years[options.years.length - 1];
       if (preferred) setAnnee(preferred.value);
     }
     if (!etablissement && options.defaultEtablissementId) {

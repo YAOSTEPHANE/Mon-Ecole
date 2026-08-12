@@ -72,10 +72,7 @@ export default function FneMatriculeVerifyActions({
   useEffect(() => {
     if (!options) return;
     if (!annee && options.years.length > 0) {
-      const preferred =
-        options.years.find((y) => y.value === '2425') ||
-        options.years.find((y) => y.value === '1819') ||
-        options.years[options.years.length - 1];
+      const preferred = options.years[options.years.length - 1];
       if (preferred) setAnnee(preferred.value);
     }
     if (!etablissement && options.defaultEtablissementId) {

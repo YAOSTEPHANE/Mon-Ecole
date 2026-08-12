@@ -48,22 +48,48 @@ const PRIMARY = {
 /** Certificat du portail primaire souvent invalide côté Node. */
 const insecureTlsAgent = new Agent({ connect: { rejectUnauthorized: false } });
 
-const DEFAULT_SECONDARY_YEARS: FneYearOption[] = [
-  { value: '1617', label: 'Fichier 2016-2017' },
-  { value: '1718', label: 'Fichier 2017-2018' },
-  { value: '1819', label: 'Fichier 2018-2019' },
-];
+/** Première année scolaire proposée (début civil). */
+const FNE_YEAR_RANGE_START = 2010;
 
-const DEFAULT_PRIMARY_YEARS: FneYearOption[] = [
-  { value: '1617', label: 'Fichier 2016-2017' },
-  { value: '1718', label: 'Fichier 2017-2018' },
-  { value: '1819', label: 'Fichier 2018-2019' },
-  { value: '1920', label: 'Fichier 2019-2020' },
-  { value: '2021', label: 'Fichier 2020-2021' },
-  { value: '2122', label: 'Fichier 2021-2022' },
-  { value: '2223', label: 'Fichier 2022-2023' },
-  { value: '2425', label: 'Fichier 2024-2025' },
-];
+/**
+ * Construit les codes FNE `YYZZ` (ex. 2425 = 2024-2025) jusqu’à l’année scolaire
+ * en cours (+1 pour anticiper l’ouverture du prochain fichier).
+ */
+export function buildFneYearOptions(
+  startYear: number = FNE_YEAR_RANGE_START,
+  endStartYear?: number
+): FneYearOption[] {
+  const now = new Date();
+  const utcYear = now.getUTCFullYear();
+  const utcMonth = now.getUTCMonth() + 1;
+  // Même logique que l’année scolaire app : sept.–déc. = année en cours → suivante
+  const currentStart = utcMonth >= 9 ? utcYear : utcYear - 1;
+  const lastStart = endStartYear ?? currentStart + 1;
+  const years: FneYearOption[] = [];
+  for (let y = startYear; y <= lastStart; y += 1) {
+    const a = String(y).slice(-2);
+    const b = String(y + 1).slice(-2);
+    years.push({ value: `${a}${b}`, label: `Fichier ${y}-${y + 1}` });
+  }
+  return years;
+}
+
+/** Fusionne options portail + plage complète (le SIGFNE secondaire n’expose souvent que 3 années). */
+export function mergeFneYearOptions(
+  scraped: FneYearOption[],
+  fallback: FneYearOption[]
+): FneYearOption[] {
+  const byValue = new Map<string, FneYearOption>();
+  for (const y of fallback) byValue.set(y.value, y);
+  for (const y of scraped) {
+    if (!y.value) continue;
+    byValue.set(y.value, y);
+  }
+  return [...byValue.values()].sort((a, b) => a.value.localeCompare(b.value));
+}
+
+const DEFAULT_SECONDARY_YEARS: FneYearOption[] = buildFneYearOptions();
+const DEFAULT_PRIMARY_YEARS: FneYearOption[] = buildFneYearOptions();
 
 function decodeHtml(s: string): string {
   return s
@@ -222,9 +248,10 @@ export async function getFneFormOptions(cycle: FneCycle = 'secondary'): Promise<
     if (page.status >= 400) {
       return { cycle, years: fallbackYears, schools: [], formUrl };
     }
+    const scraped = parseYearOptions(page.text, []);
     return {
       cycle,
-      years: parseYearOptions(page.text, fallbackYears),
+      years: mergeFneYearOptions(scraped, fallbackYears),
       schools: parseSchoolOptions(page.text),
       formUrl,
     };
