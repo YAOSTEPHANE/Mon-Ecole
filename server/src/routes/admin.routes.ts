@@ -6058,7 +6058,7 @@ router.get('/tuition-fees', async (req: SchoolContextRequest, res) => {
             amount: true,
             status: true,
             paidAt: true,
-            method: true,
+            paymentMethod: true,
             createdAt: true,
           },
           orderBy: {
