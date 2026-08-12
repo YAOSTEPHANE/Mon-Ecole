@@ -28,6 +28,7 @@ import { autoExcuseAbsenceRecords } from '../utils/student-absence-permission.ut
 import {
   resolveTeacherRollcallAccess,
   rollcallCourseListInclude,
+  leanCourseListInclude,
 } from '../utils/attendance-rollcall-access.util';
 
 const router = express.Router();
@@ -1176,6 +1177,47 @@ router.post(
   }
 );
 
+// Devoirs à venir (vue overview — une requête au lieu de N par cours)
+router.get('/assignments/upcoming', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) {
+      return res.status(404).json({ error: 'Profil enseignant non trouvé' });
+    }
+
+    const limit = Math.min(Math.max(Number(req.query.limit) || 5, 1), 20);
+    const now = new Date();
+
+    const [upcoming, total] = await Promise.all([
+      prisma.assignment.findMany({
+        where: {
+          teacherId,
+          dueDate: { gte: now },
+        },
+        select: {
+          id: true,
+          title: true,
+          dueDate: true,
+          course: {
+            select: {
+              id: true,
+              name: true,
+              class: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: { dueDate: 'asc' },
+        take: limit,
+      }),
+      prisma.assignment.count({ where: { teacherId } }),
+    ]);
+
+    res.json({ upcoming, total });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Lister les devoirs d'un cours
 router.get('/courses/:courseId/assignments', async (req: AuthRequest, res) => {
   try {
@@ -1231,6 +1273,7 @@ router.get('/courses', async (req: AuthRequest, res) => {
     }
 
     const scope = String(req.query.scope || 'mine').toLowerCase();
+    const lean = req.query.lean === '1' || req.query.lean === 'true';
     const where =
       scope === 'substitute'
         ? { teacherId: { not: teacherId } }
@@ -1241,7 +1284,7 @@ router.get('/courses', async (req: AuthRequest, res) => {
     const courses = await prisma.course.findMany({
       where,
       include: {
-        ...rollcallCourseListInclude,
+        ...(lean ? leanCourseListInclude : rollcallCourseListInclude),
         _count: {
           select: {
             grades: true,

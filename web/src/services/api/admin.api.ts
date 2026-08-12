@@ -2,8 +2,17 @@ import api from './client';
 import type { AppBrandingUploadSlot } from '@/lib/appBrandingUpload';
 
 export const adminApi = {
-  getStudents: async () => {
-    const response = await api.get('/admin/students');
+  getStudents: async (
+    params?: { includeParents?: boolean } | { queryKey?: unknown; signal?: unknown }
+  ) => {
+    const includeParents =
+      !!params &&
+      typeof params === 'object' &&
+      'includeParents' in params &&
+      Boolean((params as { includeParents?: boolean }).includeParents);
+    const response = await api.get('/admin/students', {
+      params: includeParents ? { includeParents: '1' } : undefined,
+    });
     return response.data;
   },
   createStudent: async (data: any) => {

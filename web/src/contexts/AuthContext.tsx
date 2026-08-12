@@ -75,6 +75,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMemoryAccessToken(legacy);
         setToken(legacy);
       }
+
+      // Hydratation optimiste : débloquer l’UI avec le snapshot IndexedDB
+      try {
+        const snap = await loadUserSnapshot<User>();
+        if (snap?.id) {
+          setUser(snap);
+          setLoading(false);
+          const schoolId =
+            typeof window !== 'undefined' ? localStorage.getItem('activeSchoolId') || '' : '';
+          setOfflineCacheScope(snap.id, schoolId);
+        }
+      } catch {
+        /* ignore snapshot errors */
+      }
+
       try {
         await fetchUser();
       } finally {

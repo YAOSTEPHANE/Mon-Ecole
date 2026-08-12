@@ -29,7 +29,7 @@ const ParentAttendanceNotifyPanel: React.FC = () => {
 
   const { data: students, isLoading: studentsLoading } = useQuery({
     queryKey: ['admin-students-parent-notify'],
-    queryFn: adminApi.getStudents,
+    queryFn: () => adminApi.getStudents({ includeParents: true }),
   });
 
   const { data: absences, isLoading: absencesLoading } = useQuery({

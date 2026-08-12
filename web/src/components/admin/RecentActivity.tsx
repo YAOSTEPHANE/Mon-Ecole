@@ -72,20 +72,20 @@ const RecentActivity = () => {
   const { data: loginLogs = [], refetch: refetchLogs } = useQuery({
     queryKey: ['admin-login-logs'],
     queryFn: () => adminApi.getLoginLogs({ limit: 50 }),
-    refetchInterval: autoRefresh ? 30000 : false, // Refresh every 30 seconds if enabled
+    refetchInterval:
+      autoRefresh && typeof document !== 'undefined' && document.visibilityState === 'visible'
+        ? 60_000
+        : false,
   });
 
   // Fetch security events
   const { data: securityEvents = [], refetch: refetchEvents } = useQuery({
     queryKey: ['admin-security-events'],
     queryFn: () => adminApi.getSecurityEvents({ limit: 50 }),
-    refetchInterval: autoRefresh ? 30000 : false,
-  });
-
-  // Fetch students for activity tracking
-  const { data: students = [] } = useQuery({
-    queryKey: ['admin-students'],
-    queryFn: adminApi.getStudents,
+    refetchInterval:
+      autoRefresh && typeof document !== 'undefined' && document.visibilityState === 'visible'
+        ? 60_000
+        : false,
   });
 
   // Combine and transform data into activities

@@ -326,30 +326,68 @@ router.get('/teachers/attendance/summary', async (req, res) => {
 });
 
 // Lister tous les enseignants
-router.get('/teachers', async (req, res) => {
+router.get('/teachers', async (req: SchoolContextRequest, res) => {
   try {
     const engagementKindRaw = req.query.engagementKind;
-    const where =
+    const lean =
+      req.query.lean !== '0' &&
+      req.query.lean !== 'false' &&
+      req.query.full !== '1' &&
+      req.query.full !== 'true';
+    const schoolId = req.schoolId;
+
+    const engagementWhere =
       typeof engagementKindRaw === 'string' && isTeacherEngagementKind(engagementKindRaw)
         ? { engagementKind: engagementKindRaw }
+        : {};
+
+    const schoolWhere = schoolId
+      ? {
+          OR: [
+            { classes: { some: { schoolId } } },
+            { courses: { some: { class: { schoolId } } } },
+          ],
+        }
+      : {};
+
+    const where =
+      Object.keys(engagementWhere).length || Object.keys(schoolWhere).length
+        ? { AND: [engagementWhere, schoolWhere].filter((w) => Object.keys(w).length > 0) }
         : undefined;
 
     const teachers = await prisma.teacher.findMany({
       where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            avatar: true,
+      include: lean
+        ? {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                avatar: true,
+              },
+            },
+            classes: {
+              select: { id: true, name: true, level: true, schoolId: true },
+            },
+            _count: { select: { courses: true, classes: true } },
+          }
+        : {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                avatar: true,
+              },
+            },
+            classes: true,
+            courses: true,
           },
-        },
-        classes: true,
-        courses: true,
-      },
     });
 
     res.json(teachers);

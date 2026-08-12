@@ -41,10 +41,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 3 * 60_000,
+            staleTime: 5 * 60_000,
             gcTime: 24 * 60 * 60 * 1000,
             refetchOnWindowFocus: false,
-            refetchOnReconnect: true,
+            refetchOnReconnect: false,
             networkMode: "offlineFirst",
             retry: (failureCount, error) => {
               if (typeof window !== "undefined" && isOffline()) return false;

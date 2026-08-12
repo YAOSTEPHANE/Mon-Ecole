@@ -44,6 +44,38 @@ function readStoredSchoolId(): string | null {
   return localStorage.getItem(STORAGE_KEY);
 }
 
+/** Préfixes de cache métier à invalider lors d’un changement d’établissement. */
+const SCHOOL_SCOPED_QUERY_ROOTS = new Set([
+  'students',
+  'teachers',
+  'classes',
+  'admin-students',
+  'admin-classes',
+  'admin-dashboard',
+  'admin-dashboard-kpis',
+  'admin-tuition-fees',
+  'admin-tuition-fees-grouped',
+  'admin-parents',
+  'admin-courses',
+  'admin-schedules',
+  'admin-grades',
+  'admin-absences',
+  'admin-payments',
+  'admin-notifications',
+  'staff-workspace',
+  'staff-admissions',
+]);
+
+/** Invalide le cache métier lié à l’établissement (évite une cascade globale). */
+function invalidateSchoolScopedQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({
+    predicate: (query) => {
+      const root = query.queryKey[0];
+      return typeof root === 'string' && SCHOOL_SCOPED_QUERY_ROOTS.has(root);
+    },
+  });
+}
+
 export function SchoolProvider({ children }: { children: ReactNode }) {
   const { user, token } = useAuth();
   const queryClient = useQueryClient();
@@ -76,10 +108,14 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     const next = valid ? stored! : schools.find((s) => s.isDefault)?.id ?? schools[0].id;
 
     if (lastResolvedSchoolRef.current !== next) {
+      const schoolChanged = lastResolvedSchoolRef.current != null && lastResolvedSchoolRef.current !== next;
       lastResolvedSchoolRef.current = next;
       localStorage.setItem(STORAGE_KEY, next);
       setActiveSchoolIdState(next);
-      queryClient.invalidateQueries();
+      // Premier resolve : pas d’invalidation globale (les listes partent déjà avec le bon header).
+      if (schoolChanged) {
+        invalidateSchoolScopedQueries(queryClient);
+      }
     }
   }, [enabled, schools, queryClient]);
 
@@ -98,7 +134,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       } catch {
         /* préférence locale conservée */
       }
-      queryClient.invalidateQueries();
+      invalidateSchoolScopedQueries(queryClient);
     },
     [schools, queryClient, user?.role]
   );
@@ -119,7 +155,9 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const schoolReady =
     !enabled ||
     (isOffline() && !!activeSchoolId) ||
-    (enabled && !isLoading && !!activeSchoolId && schools.some((s) => s.id === activeSchoolId));
+    (enabled &&
+      !!activeSchoolId &&
+      (schools.length === 0 || schools.some((s) => s.id === activeSchoolId)));
 
   const value = useMemo<SchoolContextValue>(
     () => ({

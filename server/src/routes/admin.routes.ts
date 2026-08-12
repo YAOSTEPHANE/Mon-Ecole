@@ -5107,6 +5107,8 @@ router.get('/dashboard', async (req: SchoolContextRequest, res) => {
       activeStudents,
       totalParents,
       totalEducators,
+      classesWithCounts,
+      unassignedStudents,
     ] = await Promise.all([
       prisma.student.count({ where: studentWhere }),
       prisma.teacher.count({
@@ -5124,7 +5126,28 @@ router.get('/dashboard', async (req: SchoolContextRequest, res) => {
         },
       }),
       prisma.educator.count(),
+      prisma.class.findMany({
+        where: classScopeWhere(schoolId),
+        select: {
+          name: true,
+          _count: { select: { students: true } },
+        },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.student.count({
+        where: { AND: [studentWhere, { classId: null }] },
+      }),
     ]);
+
+    const classDistribution = [
+      ...classesWithCounts.map((c) => ({
+        name: c.name,
+        value: c._count.students,
+      })),
+      ...(unassignedStudents > 0
+        ? [{ name: 'Non assigné', value: unassignedStudents }]
+        : []),
+    ];
 
     res.json({
       totalStudents,
@@ -5133,6 +5156,7 @@ router.get('/dashboard', async (req: SchoolContextRequest, res) => {
       activeStudents,
       totalParents,
       totalEducators,
+      classDistribution,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -5159,6 +5183,7 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
       payments6m,
       saSubmitted,
       saTotal,
+      activeStudentIds,
     ] = await Promise.all([
       prisma.admission.count({ where: { ...admissionWhere, status: 'PENDING' } }),
       prisma.admission.count({ where: { ...admissionWhere, status: 'UNDER_REVIEW' } }),
@@ -5188,6 +5213,11 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
         where: { submitted: true, student: studentWhere },
       }),
       prisma.studentAssignment.count({ where: { student: studentWhere } }),
+      prisma.student.findMany({
+        where: { ...studentWhere, isActive: true, enrollmentStatus: 'ACTIVE' },
+        select: { id: true },
+        take: 800,
+      }),
     ]);
 
     const aggCount = (a: { _count?: number | { _all?: number } }) => {
@@ -5210,27 +5240,45 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
         return { month, label: `${mo}/${y}`, amount: Math.round(amount * 100) / 100 };
       });
 
-    const allStudents = await prisma.student.findMany({
-      where: { isActive: true, enrollmentStatus: 'ACTIVE' },
-      select: {
-        grades: { select: { score: true, maxScore: true, coefficient: true } },
-        absences: { select: { excused: true } },
-      },
-      take: 800,
-    });
+    const studentIds = activeStudentIds.map((s) => s.id);
     let h = 0;
     let m = 0;
-    for (const s of allStudents) {
-      const grades = s.grades || [];
-      const totalScore = grades.reduce(
-        (sum, g) => sum + (g.maxScore > 0 ? (g.score / g.maxScore) * 20 * g.coefficient : 0),
-        0
+    if (studentIds.length > 0) {
+      const [grades, absenceGroups] = await Promise.all([
+        prisma.grade.findMany({
+          where: {
+            studentId: { in: studentIds },
+            date: { gte: d180 },
+          },
+          select: { studentId: true, score: true, maxScore: true, coefficient: true },
+        }),
+        prisma.absence.groupBy({
+          by: ['studentId'],
+          where: { studentId: { in: studentIds }, excused: false },
+          _count: { _all: true },
+        }),
+      ]);
+
+      const byStudent = new Map<string, { score: number; coef: number }>();
+      for (const g of grades) {
+        const cur = byStudent.get(g.studentId) ?? { score: 0, coef: 0 };
+        if (g.maxScore > 0) {
+          cur.score += (g.score / g.maxScore) * 20 * g.coefficient;
+          cur.coef += g.coefficient;
+        }
+        byStudent.set(g.studentId, cur);
+      }
+      const unexcusedByStudent = new Map(
+        absenceGroups.map((a) => [a.studentId, a._count._all])
       );
-      const totalCoef = grades.reduce((sum, g) => sum + g.coefficient, 0);
-      const avg = totalCoef > 0 ? totalScore / totalCoef : 0;
-      const unexcused = s.absences?.filter((a) => !a.excused).length || 0;
-      if (avg < 10 || unexcused > 5) h++;
-      else if (avg < 12) m++;
+
+      for (const id of studentIds) {
+        const g = byStudent.get(id);
+        const avg = g && g.coef > 0 ? g.score / g.coef : 0;
+        const unexcused = unexcusedByStudent.get(id) ?? 0;
+        if (avg < 10 || unexcused > 5) h++;
+        else if (avg < 12) m++;
+      }
     }
 
     const submissionRate =
@@ -5882,26 +5930,16 @@ router.get('/tuition-fees', async (req: SchoolContextRequest, res) => {
                   level: true,
                 },
               },
-              parents: {
-                include: {
-                  parent: {
-                    include: {
-                      user: {
-                        select: {
-                          firstName: true,
-                          lastName: true,
-                          email: true,
-                          phone: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
             },
           },
           payments: {
-            include: {
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              paidAt: true,
+              createdAt: true,
+              payerId: true,
               payer: {
                 select: {
                   id: true,
@@ -5920,6 +5958,7 @@ router.get('/tuition-fees', async (req: SchoolContextRequest, res) => {
         orderBy: {
           createdAt: 'desc',
         },
+        take: Math.min(Math.max(Number(req.query.limit) || 2000, 1), 5000),
       });
 
       // Regrouper par élève
@@ -5992,7 +6031,7 @@ router.get('/tuition-fees', async (req: SchoolContextRequest, res) => {
       return res.json(result);
     }
 
-    // Sinon, retourner la liste simple
+    // Sinon, retourner la liste simple (payments allégés)
     const tuitionFees = await prisma.tuitionFee.findMany({
       where: scopedWhere,
       include: {
@@ -6014,6 +6053,14 @@ router.get('/tuition-fees', async (req: SchoolContextRequest, res) => {
           },
         },
         payments: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            paidAt: true,
+            method: true,
+            createdAt: true,
+          },
           orderBy: {
             createdAt: 'desc',
           },
@@ -6022,6 +6069,7 @@ router.get('/tuition-fees', async (req: SchoolContextRequest, res) => {
       orderBy: {
         dueDate: 'asc',
       },
+      take: Math.min(Math.max(Number(req.query.limit) || 2000, 1), 5000),
     });
 
     res.json(tuitionFees);

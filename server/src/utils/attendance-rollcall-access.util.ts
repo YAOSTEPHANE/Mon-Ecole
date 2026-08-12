@@ -131,3 +131,24 @@ export const rollcallCourseListInclude = {
     },
   },
 } as const;
+
+/** Include léger pour overview enseignant (pas de noms d’élèves). */
+export const leanCourseListInclude = {
+  class: {
+    select: {
+      id: true,
+      name: true,
+      students: { select: { id: true } },
+    },
+  },
+  teacher: {
+    include: {
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  },
+} as const;

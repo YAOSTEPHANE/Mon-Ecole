@@ -125,7 +125,7 @@ const TuitionFeesManagement: React.FC<TuitionFeesManagementProps> = ({
       adminApi.getTuitionFees({
         ...(filterFeeType !== 'all' && { feeType: filterFeeType }),
       }),
-    enabled: schoolReady,
+    enabled: !groupByStudent && schoolReady,
   });
 
   const { data: tuitionFeesGrouped, isLoading: isLoadingGrouped } = useQuery({
@@ -148,6 +148,7 @@ const TuitionFeesManagement: React.FC<TuitionFeesManagementProps> = ({
     queryKey: schoolQueryKey(['admin-students'], activeSchoolId),
     queryFn: () => adminApi.getStudents(),
     enabled: schoolReady,
+    staleTime: 5 * 60_000,
   });
 
   const { data: classes } = useQuery({

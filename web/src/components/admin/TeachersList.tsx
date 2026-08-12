@@ -27,6 +27,8 @@ import {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useSchool } from '@/contexts/SchoolContext';
+import { useSchoolReady, schoolQueryKey } from '@/hooks/useSchoolReady';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import 'jspdf-autotable';
@@ -62,9 +64,13 @@ const TeachersList: React.FC<TeachersListProps> = ({ searchQuery = '' }) => {
     if (searchQuery) setSearchTerm(searchQuery);
   }, [searchQuery]);
 
+  const { activeSchoolId } = useSchool();
+  const schoolReady = useSchoolReady();
+
   const { data: teachers, isLoading } = useQuery({
-    queryKey: ['teachers'],
+    queryKey: schoolQueryKey(['teachers'], activeSchoolId),
     queryFn: adminApi.getTeachers,
+    enabled: schoolReady,
   });
 
   const filteredTeachers = useMemo(() => {
@@ -343,7 +349,7 @@ const TeachersList: React.FC<TeachersListProps> = ({ searchQuery = '' }) => {
       render: (t: any) => (
         <div className="text-sm text-gray-600">
           <p>{t.classes?.length || 0} classe(s)</p>
-          <p>{t.courses?.length || 0} cours</p>
+          <p>{t._count?.courses ?? t.courses?.length ?? 0} cours</p>
         </div>
       ),
     },

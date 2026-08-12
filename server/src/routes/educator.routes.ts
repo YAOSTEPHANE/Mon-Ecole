@@ -679,26 +679,26 @@ router.get('/stats', async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Profil éducateur non trouvé' });
     }
 
-    const totalStudents = await prisma.student.count({
-      where: studentClassFilter(classIds),
-    });
-
-    const totalConducts = await prisma.conduct.count({
-      where: {
-        evaluatedByRole: 'EDUCATOR',
-        evaluatedById: req.user!.id,
-      },
-    });
-
-    const recentConducts = await prisma.conduct.count({
-      where: {
-        evaluatedByRole: 'EDUCATOR',
-        evaluatedById: req.user!.id,
-        createdAt: {
-          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 derniers jours
+    const [totalStudents, totalConducts, recentConducts] = await Promise.all([
+      prisma.student.count({
+        where: studentClassFilter(classIds),
+      }),
+      prisma.conduct.count({
+        where: {
+          evaluatedByRole: 'EDUCATOR',
+          evaluatedById: req.user!.id,
         },
-      },
-    });
+      }),
+      prisma.conduct.count({
+        where: {
+          evaluatedByRole: 'EDUCATOR',
+          evaluatedById: req.user!.id,
+          createdAt: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 derniers jours
+          },
+        },
+      }),
+    ]);
 
     res.json({
       totalStudents,

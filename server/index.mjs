@@ -1,14 +1,13 @@
 /**
- * Entrée Vercel Services (ESM) : "type":"module" valide le shim runtime.
- * Le handler applicatif est pré-bundlé en CommonJS (vercel-api.cjs).
+ * Ancien entry ESM — désactivé : @vercel/express privilégie index.cjs.
+ * Conservé pour ne pas casser d'anciens scripts locaux éventuels.
  */
 import express from 'express';
 import { createRequire } from 'node:module';
 
-// Détection framework @vercel/express
 void express;
 
 const require = createRequire(import.meta.url);
-const mod = require('./vercel-api.cjs');
+const mod = require('./vercel-api.bundle.cjs');
 
 export default mod?.default ?? mod;

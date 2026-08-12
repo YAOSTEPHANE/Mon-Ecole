@@ -30,13 +30,32 @@ export const teacherApi = {
     const response = await api.patch(`/teacher/leaves/${leaveId}/cancel`);
     return response.data;
   },
-  getCourses: async (params?: { scope?: 'mine' | 'substitute' | 'all' }) => {
-    const response = await api.get('/teacher/courses', { params });
+  getCourses: async (params?: { scope?: 'mine' | 'substitute' | 'all'; lean?: boolean }) => {
+    const response = await api.get('/teacher/courses', {
+      params: {
+        ...(params?.scope ? { scope: params.scope } : {}),
+        ...(params?.lean ? { lean: '1' } : {}),
+      },
+    });
     return response.data;
   },
   getDashboardKpis: async () => {
     const response = await api.get('/teacher/dashboard/kpis');
     return response.data;
+  },
+  getUpcomingAssignments: async (limit = 5) => {
+    const response = await api.get('/teacher/assignments/upcoming', {
+      params: { limit },
+    });
+    return response.data as {
+      upcoming: Array<{
+        id: string;
+        title: string;
+        dueDate: string;
+        course?: { id: string; name: string; class?: { id: string; name: string } };
+      }>;
+      total: number;
+    };
   },
   getMyAttendance: async (params?: { date?: string }) => {
     const response = await api.get('/teacher/my-attendance', { params });

@@ -79,29 +79,30 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
   onExportData,
   onSettings,
 }) => {
-  const { data: stats, isLoading, dataUpdatedAt, isFetching } = useQuery({
-    queryKey: ['admin-dashboard'],
+  const { activeSchoolId } = useSchool();
+  const schoolReady = useSchoolReady();
+
+  const { data: stats, isLoading, dataUpdatedAt, isFetching, isError: statsError } = useQuery({
+    queryKey: schoolQueryKey(['admin-dashboard'], activeSchoolId),
     queryFn: adminApi.getDashboard,
+    enabled: schoolReady,
   });
 
   const { data: kpis } = useQuery({
-    queryKey: ['admin-dashboard-kpis'],
+    queryKey: schoolQueryKey(['admin-dashboard-kpis'], activeSchoolId),
     queryFn: adminApi.getDashboardKpis,
     staleTime: 60_000,
-  });
-
-  const { data: students, isError: studentsError } = useQuery({
-    queryKey: ['students'],
-    queryFn: adminApi.getStudents,
-    retry: 1,
+    enabled: schoolReady,
   });
 
   const classDistribution =
-    students?.reduce((acc: Record<string, number>, student: any) => {
-      const name = student.class?.name || 'Non assigné';
-      acc[name] = (acc[name] || 0) + 1;
-      return acc;
-    }, {}) || {};
+    (stats?.classDistribution as Array<{ name: string; value: number }> | undefined)?.reduce(
+      (acc: Record<string, number>, row) => {
+        acc[row.name || 'Non assigné'] = (acc[row.name || 'Non assigné'] || 0) + Number(row.value || 0);
+        return acc;
+      },
+      {}
+    ) || {};
 
   const chartData = Object.entries(classDistribution).map(([name, value]) => ({
     name: name.length > 10 ? name.slice(0, 8) + '…' : name,
@@ -308,9 +309,9 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
                       </span>
                     )}
                   </div>
-                  {studentsError ? (
+                  {statsError ? (
                     <div className="flex h-[220px] flex-col items-center justify-center gap-2 px-3 text-center text-xs text-amber-700">
-                      <p className="font-medium">Impossible de charger les élèves</p>
+                      <p className="font-medium">Impossible de charger la répartition</p>
                       <p className="text-xs text-amber-600/90">
                         Vérifiez que le serveur API tourne et que vous êtes connecté (NEXT_PUBLIC_API_URL).
                       </p>
@@ -402,9 +403,9 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
                       <p className="text-[9px] text-slate-500">Volume par groupe</p>
                     </div>
                   </div>
-                  {studentsError ? (
+                  {statsError ? (
                     <div className="flex h-[220px] items-center justify-center px-3 text-center text-xs text-amber-700">
-                      Données élèves indisponibles
+                      Répartition par classe indisponible
                     </div>
                   ) : chartData.length > 0 ? (
                     <RechartsViewport height={220} className="relative z-[1]">
@@ -470,7 +471,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
               </Card>
             </div>
 
-            {chartData.length > 0 && !studentsError && (
+            {chartData.length > 0 && !statsError && (
               <Card
                 variant="premium"
                 hover={false}

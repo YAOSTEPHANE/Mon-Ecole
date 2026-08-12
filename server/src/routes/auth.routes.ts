@@ -355,11 +355,18 @@ router.put('/me', authenticate, async (req: any, res) => {
 });
 
 // Récupérer le profil de l'utilisateur connecté
+// Par défaut mode lite (session bootstrap) — passer ?full=1 pour le profil enrichi.
 router.get('/me', authenticate, async (req: any, res) => {
   try {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Utilisateur non authentifié' });
     }
+
+    const full =
+      req.query.full === '1' ||
+      req.query.full === 'true' ||
+      req.query.lite === '0' ||
+      req.query.lite === 'false';
 
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -378,76 +385,107 @@ router.get('/me', authenticate, async (req: any, res) => {
             id: true,
             employeeId: true,
             specialization: true,
-            hireDate: true,
-            contractType: true,
-            salary: true,
+            ...(full
+              ? {
+                  hireDate: true,
+                  contractType: true,
+                  salary: true,
+                }
+              : {}),
           },
         },
-        studentProfile: {
-          include: {
-            class: {
+        studentProfile: full
+          ? {
+              include: {
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    level: true,
+                  },
+                },
+                parents: {
+                  include: {
+                    parent: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            phone: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            }
+          : {
               select: {
                 id: true,
-                name: true,
-                level: true,
+                studentId: true,
+                enrollmentStatus: true,
+                classId: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    level: true,
+                  },
+                },
               },
             },
-            parents: {
+        parentProfile: full
+          ? {
               include: {
-                parent: {
+                contacts: { orderBy: { sortOrder: 'asc' } },
+                consents: { take: 50, orderBy: { updatedAt: 'desc' } },
+                students: {
                   include: {
-                    user: {
-                      select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                        phone: true,
+                    student: {
+                      include: {
+                        class: {
+                          select: {
+                            id: true,
+                            name: true,
+                            level: true,
+                          },
+                        },
+                        user: {
+                          select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                          },
+                        },
+                        pickupAuthorizations: { take: 15, orderBy: { createdAt: 'desc' } },
                       },
                     },
                   },
                 },
               },
-            },
-          },
-        },
-        parentProfile: {
-          include: {
-            contacts: { orderBy: { sortOrder: 'asc' } },
-            consents: { take: 50, orderBy: { updatedAt: 'desc' } },
-            students: {
-              include: {
-                student: {
-                  include: {
-                    class: {
-                      select: {
-                        id: true,
-                        name: true,
-                        level: true,
-                      },
-                    },
-                    user: {
-                      select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                      },
-                    },
-                    pickupAuthorizations: { take: 15, orderBy: { createdAt: 'desc' } },
-                  },
-                },
+            }
+          : {
+              select: {
+                id: true,
+                _count: { select: { students: true } },
               },
             },
-          },
-        },
         educatorProfile: {
           select: {
             id: true,
             employeeId: true,
             specialization: true,
-            hireDate: true,
-            contractType: true,
-            salary: true,
+            ...(full
+              ? {
+                  hireDate: true,
+                  contractType: true,
+                  salary: true,
+                }
+              : {}),
           },
         },
         staffProfile: {
@@ -458,10 +496,14 @@ router.get('/me', authenticate, async (req: any, res) => {
             supportKind: true,
             jobTitle: true,
             department: true,
-            hireDate: true,
-            contractType: true,
-            salary: true,
             visibleStaffModules: true,
+            ...(full
+              ? {
+                  hireDate: true,
+                  contractType: true,
+                  salary: true,
+                }
+              : {}),
           },
         },
       },

@@ -1,8 +1,12 @@
 node_modules/
 dist/
 compiled/
+runtime-deps/
+lambda-node_modules/
+prisma-bridge.cjs
 .env
 *.log
 .DS_Store
 uploads/
+vercel-api.bundle.cjs
 

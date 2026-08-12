@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { teacherApi } from '../../services/api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
-import { FiBook, FiUsers, FiClipboard, FiCalendar, FiTrendingUp, FiClock, FiFileText, FiAlertCircle } from 'react-icons/fi';
+import { FiBook, FiUsers, FiClipboard, FiTrendingUp, FiFileText, FiAlertCircle } from 'react-icons/fi';
 import {
   LineChart,
   Line,
@@ -30,23 +30,14 @@ import { fr } from 'date-fns/locale';
 
 const TeacherOverview = () => {
   const { data: courses, isLoading: coursesLoading } = useQuery({
-    queryKey: ['teacher-courses'],
-    queryFn: () => teacherApi.getCourses(),
+    queryKey: ['teacher-courses-lean'],
+    queryFn: () => teacherApi.getCourses({ lean: true }),
   });
 
-  // Fetch assignments for upcoming tasks
-  const { data: allAssignments } = useQuery({
-    queryKey: ['teacher-all-assignments'],
-    queryFn: async () => {
-      if (!courses) return [];
-      const assignments = await Promise.all(
-        courses.map((course: any) => 
-          teacherApi.getCourseAssignments(course.id).catch(() => [])
-        )
-      );
-      return assignments.flat();
-    },
-    enabled: !!courses && courses.length > 0,
+  const { data: assignmentsSummary } = useQuery({
+    queryKey: ['teacher-upcoming-assignments'],
+    queryFn: () => teacherApi.getUpcomingAssignments(5),
+    staleTime: 60_000,
   });
 
   const { data: teachKpi } = useQuery({
@@ -76,15 +67,8 @@ const TeacherOverview = () => {
     return sum + (course._count?.absences || 0);
   }, 0) || 0;
 
-  const totalAssignments = allAssignments?.length || 0;
-  const upcomingAssignments = useMemo(() => {
-    if (!allAssignments) return [];
-    const now = new Date();
-    return allAssignments
-      .filter((a: any) => new Date(a.dueDate) >= now)
-      .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      .slice(0, 3);
-  }, [allAssignments]);
+  const totalAssignments = assignmentsSummary?.total ?? 0;
+  const upcomingAssignments = assignmentsSummary?.upcoming ?? [];
 
   if (coursesLoading) {
     return (

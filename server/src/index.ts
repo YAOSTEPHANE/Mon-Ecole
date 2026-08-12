@@ -1,4 +1,3 @@
-import dotenv from 'dotenv';
 import { ensureJwtConfiguration } from './utils/jwt.util';
 import { useBlobStorage } from './utils/blob-storage.util';
 import { createApp } from './app/createApp';
@@ -16,7 +15,13 @@ import {
 import { requireSensitiveFieldEncryptionKey } from './utils/field-encryption.util';
 import { refreshIntegrationSettingsCache } from './utils/integration-settings.util';
 
-dotenv.config();
+// dotenv optionnel (absent sur le lambda Vercel ; env injecté par la plateforme)
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('dotenv').config();
+} catch {
+  /* ignore */
+}
 
 try {
   ensureJwtConfiguration();

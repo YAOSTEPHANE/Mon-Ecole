@@ -1,9 +1,14 @@
 import { useSchool } from '@/contexts/SchoolContext';
 
-/** true lorsque l’établissement actif est résolu — à utiliser dans `enabled` des requêtes admin/staff. */
+/**
+ * true lorsque l’établissement actif peut servir de scope aux requêtes admin/staff.
+ * Si un `activeSchoolId` est déjà en cache (localStorage), on n’attend pas la fin
+ * du chargement de la liste des écoles — le header API l’utilise déjà.
+ */
 export function useSchoolReady(): boolean {
-  const { isLoading, activeSchoolId, schools } = useSchool();
-  if (isLoading || !activeSchoolId) return false;
+  const { activeSchoolId, schools } = useSchool();
+  if (!activeSchoolId) return false;
+  if (schools.length === 0) return true;
   return schools.some((s) => s.id === activeSchoolId);
 }
 

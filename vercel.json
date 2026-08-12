@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "env": {
-    "NEXT_PUBLIC_EXPRESS_UPLOADS_VIA_API_PREFIX": "1"
+    "NEXT_PUBLIC_EXPRESS_UPLOADS_VIA_API_PREFIX": "1",
+    "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1"
   },
   "installCommand": "npm install && npm install --prefix web && npm install --prefix server",
   "experimentalServices": {
@@ -14,11 +15,17 @@
     },
     "api": {
       "root": "server",
-      "entrypoint": "vercel-api.cjs",
+      "entrypoint": "index.cjs",
       "routePrefix": "/api",
       "framework": "express",
       "buildCommand": "npm run build",
-      "includeFiles": ["dist/**", "node_modules/**", "prisma/**"]
+      "includeFiles": [
+        "prisma/**",
+        "prisma-bridge.cjs",
+        "lambda-node_modules/**",
+        "dist/prisma-bridge.cjs",
+        "dist/lambda-node_modules/**"
+      ]
     }
   }
 }

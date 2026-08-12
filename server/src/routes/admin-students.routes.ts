@@ -99,6 +99,7 @@ router.get('/students/nfc/:nfcId', async (req: SchoolContextRequest, res) => {
 });
 
 // Lister tous les élèves (pagination plafonnée pour éviter les réponses non bornées)
+// Par défaut liste « lean » (sans parents) — passer includeParents=1 si besoin.
 router.get('/students', async (req: SchoolContextRequest, res) => {
   try {
     const { classId, isActive, enrollmentStatus } = req.query;
@@ -106,6 +107,11 @@ router.get('/students', async (req: SchoolContextRequest, res) => {
     const pageSize = Math.min(Math.max(Number(req.query.limit) || 200, 1), 500);
     const page = Math.max(Number(req.query.page) || 1, 1);
     const skip = (page - 1) * pageSize;
+    const includeParents =
+      req.query.includeParents === '1' ||
+      req.query.includeParents === 'true' ||
+      req.query.lean === '0' ||
+      req.query.lean === 'false';
 
     const students = await prisma.student.findMany({
       where: {
@@ -139,23 +145,27 @@ router.get('/students', async (req: SchoolContextRequest, res) => {
             level: true,
           },
         },
-        parents: {
-          include: {
-            parent: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                    phone: true,
+        ...(includeParents
+          ? {
+              parents: {
+                include: {
+                  parent: {
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          firstName: true,
+                          lastName: true,
+                          email: true,
+                          phone: true,
+                        },
+                      },
+                    },
                   },
                 },
               },
-            },
-          },
-        },
+            }
+          : {}),
       },
       orderBy: { createdAt: 'desc' },
       take: pageSize,

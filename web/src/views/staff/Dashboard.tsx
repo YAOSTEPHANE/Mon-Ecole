@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -18,10 +18,8 @@ import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import {
   getStaffTabsFromModules,
-  hasPedagogyStaffAccess,
   isStaffModuleTab,
   normalizeStaffModuleId,
-  PEDAGOGY_STAFF_MODULE_IDS,
   resolveVisibleStaffModules,
   staffModuleGrantsWriteUi,
   type StaffModuleId,
@@ -72,7 +70,6 @@ const StaffModulesHub = dynamic(() => import('../../components/staff/StaffModule
 
 const StaffDashboard = () => {
   const { user, logout } = useAuth();
-  const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
   const sp = (user as {
@@ -91,9 +88,7 @@ const StaffDashboard = () => {
   const { data: workspace } = useQuery({
     queryKey: ['staff-workspace'],
     queryFn: staffApi.getWorkspace,
-    staleTime: 15_000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
   });
 
   const visibleModules = useMemo(() => {
@@ -107,15 +102,8 @@ const StaffDashboard = () => {
     return resolveVisibleStaffModules(supportKind, sp?.visibleStaffModules, sp?.staffCategory);
   }, [workspace, supportKind, sp?.visibleStaffModules, sp?.staffCategory]);
 
-  const pedagogyApiEnabled = useMemo(() => hasPedagogyStaffAccess(visibleModules), [visibleModules]);
   const tabs = useMemo(() => getStaffTabsFromModules(visibleModules), [visibleModules]);
   const [activeTab, setActiveTab] = useState<StaffModuleId>('overview');
-
-  useEffect(() => {
-    if (!pedagogyApiEnabled) return;
-    if (!PEDAGOGY_STAFF_MODULE_IDS.includes(activeTab)) return;
-    void queryClient.invalidateQueries();
-  }, [activeTab, pedagogyApiEnabled, queryClient]);
 
   useEffect(() => {
     const fromUrl = searchParams.get('tab');
