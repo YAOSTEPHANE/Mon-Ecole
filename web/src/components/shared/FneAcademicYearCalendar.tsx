@@ -37,7 +37,7 @@ function rangeFromOptions(years: FneYearOption[]): { min: number; max: number } 
     const y = now.getUTCFullYear();
     const m = now.getUTCMonth() + 1;
     const currentStart = m >= 9 ? y : y - 1;
-    return { min: 1990, max: currentStart + 1 };
+    return { min: 1980, max: currentStart + 1 };
   }
   return { min: Math.min(...starts), max: Math.max(...starts) };
 }
