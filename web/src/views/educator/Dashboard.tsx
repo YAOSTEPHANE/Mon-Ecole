@@ -108,7 +108,7 @@ const EducatorDashboard = () => {
     <Layout user={user} onLogout={logout} role="EDUCATOR">
       <PremiumPortalShell variant="educator">
       <div className="min-h-screen flex">
-        <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky top-16 h-[calc(100vh-4rem)] bg-white/92 backdrop-blur-xl border-r border-stone-200/90 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)]">
+        <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky dash-sticky-under-header dash-h-under-header bg-white/92 backdrop-blur-xl border-r border-stone-200/90 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)]">
           <div className="p-2.5 flex flex-col flex-1 min-h-0">
             <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider px-2 py-1.5 shrink-0">
               Éducateur
@@ -142,7 +142,7 @@ const EducatorDashboard = () => {
         </aside>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-16 z-20 glass-nav shadow-[0_8px_30px_-12px_rgba(12,10,9,0.08)] shrink-0">
+          <header className="dash-command-bar sticky dash-sticky-under-header z-20 shrink-0">
             <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-2 sm:py-2.5">
               <div className="flex flex-col gap-2 sm:gap-3">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
@@ -150,10 +150,10 @@ const EducatorDashboard = () => {
                     <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight leading-snug">
                       {getGreeting()}, {user?.firstName}
                     </h1>
-                    <p className="text-stone-600 text-xs mt-0.5 line-clamp-2 sm:line-clamp-1 max-w-md">
+                    <p className="text-stone-600 text-xs mt-0.5 line-clamp-1 max-w-md">
                       Conduite et accompagnement
                     </p>
-                    <p className="text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
+                    <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
                       {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
                     </p>
                   </div>
@@ -163,7 +163,7 @@ const EducatorDashboard = () => {
                   </div>
                 </div>
 
-                <div className="lg:hidden flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1 snap-x snap-mandatory scroll-pl-2 touch-pan-x overscroll-x-contain">
+                <div className="dash-mobile-tabs scrollbar-hide">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -172,7 +172,9 @@ const EducatorDashboard = () => {
                         key={tab.id}
                         type="button"
                         onClick={() => changeTab(tab.id)}
-                        className={`shrink-0 snap-start inline-flex items-center gap-1.5 px-2.5 py-2 min-h-[40px] rounded-xl text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+                        aria-label={tab.label}
+                        title={tab.label}
+                        className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
                           isActive
                             ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
                             : 'bg-stone-100 text-stone-700'
@@ -183,7 +185,7 @@ const EducatorDashboard = () => {
                             isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
                           }`}
                         />
-                        {tab.label}
+                        <span className="dash-mobile-tab-label">{tab.label}</span>
                       </button>
                     );
                   })}
@@ -198,7 +200,7 @@ const EducatorDashboard = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Rechercher un élève, enseignant ou parent…"
-                    className="w-full pl-10 pr-3 py-2 sm:py-2.5 bg-white/95 border border-stone-200/90 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-amber-500/35 focus:border-amber-400/50 hover:border-stone-300"
+                className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
                     aria-label="Recherche dans l’espace éducateur"
                   />
                 </div>
@@ -206,7 +208,7 @@ const EducatorDashboard = () => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
+          <main className="dash-workspace flex-1 overflow-y-auto overflow-x-hidden px-2.5 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
             <div className="max-w-[1200px] mx-auto space-y-4 sm:space-y-5">
                             <PremiumModuleHeader
                 title={activeMeta.label}

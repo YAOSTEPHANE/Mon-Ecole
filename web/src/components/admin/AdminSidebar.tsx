@@ -55,10 +55,10 @@ const AdminSidebar = ({
         className={`dash-sidebar-rail relative z-50 shrink-0 border-r border-white/10
           transition-[transform,width] duration-300 ease-premium
           w-[min(16rem,calc(100vw-2rem))]
-          fixed top-16 left-0 h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)]
+          fixed left-0 dash-sticky-under-header dash-h-under-header
           ${collapsed ? 'lg:w-[4.25rem]' : 'lg:w-64'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:sticky lg:top-16 lg:left-auto lg:translate-x-0 lg:self-start`}
+          lg:sticky lg:left-auto lg:translate-x-0 lg:self-start`}
         aria-label="Navigation administration"
       >
         <div className="flex h-full min-h-0 flex-col">

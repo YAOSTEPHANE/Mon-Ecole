@@ -190,14 +190,14 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, role, staffRo
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40">
+      <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
         <div
           className={`h-0.5 w-full bg-gradient-to-r opacity-[0.98] shadow-[0_0_20px_-2px_rgba(201,162,39,0.45)] ${accent.bar}`}
           aria-hidden
         />
         <nav className="glass-nav glass-nav-v2">
           <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-10">
-            <div className="flex min-h-16 h-16 items-center justify-between gap-2 sm:gap-3">
+            <div className="flex min-h-16 h-16 items-center justify-between gap-1.5 sm:gap-3">
               <Link
                 href={getRolePath()}
                 className="flex items-center gap-2 sm:gap-2.5 min-w-0 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafaf9] -m-1 p-1"
@@ -273,7 +273,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, role, staffRo
                         size="md"
                       />
                     </span>
-                    <span className="hidden min-[420px]:inline max-w-[100px] sm:max-w-[140px] truncate text-left text-xs font-semibold text-stone-800 leading-tight">
+                    <span className="hidden sm:inline max-w-[140px] truncate text-left text-xs font-semibold text-stone-800 leading-tight">
                       {user?.firstName}
                     </span>
                     <FiChevronDown

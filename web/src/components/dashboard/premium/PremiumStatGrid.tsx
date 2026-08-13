@@ -21,11 +21,11 @@ type PremiumStatGridProps = {
 };
 
 const COLS = {
-  2: 'grid-cols-2',
-  3: 'grid-cols-2 lg:grid-cols-3',
-  4: 'grid-cols-2 lg:grid-cols-4',
-  5: 'grid-cols-2 lg:grid-cols-5',
-  6: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6',
+  2: 'grid-cols-1 min-[380px]:grid-cols-2',
+  3: 'grid-cols-1 min-[380px]:grid-cols-2 lg:grid-cols-3',
+  4: 'grid-cols-1 min-[380px]:grid-cols-2 lg:grid-cols-4',
+  5: 'grid-cols-1 min-[380px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5',
+  6: 'grid-cols-1 min-[380px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-6',
 } as const;
 
 export default function PremiumStatGrid({ items, columns = 4, className = '' }: PremiumStatGridProps) {

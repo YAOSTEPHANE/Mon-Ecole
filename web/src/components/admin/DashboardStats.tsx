@@ -142,7 +142,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
     return (
       <div className="space-y-4">
         <div className="h-16 bg-gray-100 rounded-lg animate-pulse" />
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 min-[380px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i} className="p-3">
               <div className="h-3 w-16 bg-gray-200 rounded mb-2 animate-pulse" />

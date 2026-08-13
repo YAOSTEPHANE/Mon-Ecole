@@ -392,7 +392,7 @@ const AdminDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="ADMIN">
       <PremiumPortalShell variant="admin">
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-stretch">
+      <div className="flex dash-min-h-under-header w-full items-stretch">
         <AdminSidebar
           mainTabs={mainTabs}
           bottomTabs={bottomTabs}
@@ -406,8 +406,8 @@ const AdminDashboard = () => {
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Header */}
-          <header className="dash-command-bar sticky top-16 z-20">
-            <div className="px-2.5 sm:px-5 py-2.5 sm:py-3">
+          <header className="dash-command-bar sticky dash-sticky-under-header z-20">
+            <div className="px-2.5 sm:px-5 py-2 sm:py-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <button
@@ -473,7 +473,7 @@ const AdminDashboard = () => {
             </div>
           </header>
 
-          <main className="dash-workspace flex-1 px-3 sm:px-6 py-5 sm:py-6 overflow-y-auto overflow-x-hidden pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
+          <main className="dash-workspace flex-1 px-2.5 sm:px-6 py-4 sm:py-6 overflow-y-auto overflow-x-hidden pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
             <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6">
               <PremiumModuleHeader
                 title={activeTabMeta.label}

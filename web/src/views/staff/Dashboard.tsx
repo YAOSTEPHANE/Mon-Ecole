@@ -440,7 +440,7 @@ const StaffDashboard = () => {
     <Layout user={user} onLogout={logout} role="STAFF" staffRoleBadgeLabel={badgeLabel}>
       <PremiumPortalShell variant="staff">
       <div className="min-h-screen flex">
-        <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky top-16 h-[calc(100vh-4rem)] bg-white/92 backdrop-blur-xl border-r border-stone-200/90 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)]">
+        <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky dash-sticky-under-header dash-h-under-header bg-white/92 backdrop-blur-xl border-r border-stone-200/90 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)]">
           <div className="p-2.5 flex flex-col flex-1 min-h-0">
             <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider px-2 py-1.5 shrink-0">
               {badgeLabel}
@@ -474,7 +474,7 @@ const StaffDashboard = () => {
         </aside>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-16 z-20 glass-nav shadow-[0_8px_30px_-12px_rgba(12,10,9,0.08)] shrink-0">
+          <header className="dash-command-bar sticky dash-sticky-under-header z-20 shrink-0">
             <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-2 sm:py-2.5">
               <div className="flex flex-col gap-2 sm:gap-3">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
@@ -490,7 +490,7 @@ const StaffDashboard = () => {
                         {getGreeting()}, {user?.firstName}
                       </h1>
                       <p className="text-stone-600 text-xs mt-0.5">{badgeLabel}</p>
-                      <p className="text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
+                      <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
                         {format(new Date(), 'EEE d MMM yyyy', { locale: fr })}
                       </p>
                     </div>
@@ -503,7 +503,7 @@ const StaffDashboard = () => {
                     Aide
                   </Link>
                 </div>
-                <div className="lg:hidden flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+                <div className="dash-mobile-tabs scrollbar-hide">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -512,14 +512,16 @@ const StaffDashboard = () => {
                         key={tab.id}
                         type="button"
                         onClick={() => changeTab(tab.id)}
-                        className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-[40px] rounded-xl text-xs font-semibold ${
+                        aria-label={tab.label}
+                        title={tab.label}
+                        className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
                           isActive
                             ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
                             : 'bg-stone-100 text-stone-700'
                         }`}
                       >
                         <Icon className="w-3.5 h-3.5 shrink-0" />
-                        {tab.label}
+                        <span className="dash-mobile-tab-label">{tab.label}</span>
                       </button>
                     );
                   })}
@@ -528,7 +530,7 @@ const StaffDashboard = () => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6">
+          <main className="dash-workspace flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             <div className="max-w-[1200px] mx-auto space-y-4 sm:space-y-5">
               <div className={`rounded-2xl bg-gradient-to-r ${activeMeta.color} p-[1px] shadow-md`}>
                 <div className="rounded-[15px] bg-white/95 px-3 py-3 sm:px-5 sm:py-4 border border-white/60">

@@ -7,6 +7,7 @@ import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashbo
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import DashboardTabLoading from '../../components/dashboard/DashboardTabLoading';
 import { PARENT_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import ParentSidebar, { type ParentNavItem } from '../../components/parent/ParentSidebar';
 import Card from '../../components/ui/Card';
 import { parentApi } from '../../services/api';
@@ -228,7 +229,7 @@ const ParentDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="PARENT">
       <PremiumPortalShell variant="parent">
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-stretch">
+      <div className="flex dash-min-h-under-header w-full items-stretch">
         <ParentSidebar
           items={navItems}
           activeTab={activeTab}
@@ -239,8 +240,8 @@ const ParentDashboard = () => {
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="dash-command-bar sticky top-16 z-30 shrink-0">
-            <div className="px-3 sm:px-6 py-2.5 sm:py-3">
+          <header className="dash-command-bar sticky dash-sticky-under-header z-30 shrink-0">
+            <div className="px-3 sm:px-6 py-2 sm:py-3">
               <div className="flex flex-col gap-2 sm:gap-3">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
                   <div className="flex items-center gap-2 min-w-0">
@@ -256,10 +257,10 @@ const ParentDashboard = () => {
                       <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight leading-snug">
                         {getGreeting()}, {user?.firstName}
                       </h1>
-                      <p className="text-stone-600 text-xs mt-0.5 line-clamp-2 sm:line-clamp-1 max-w-md">
+                      <p className="text-stone-600 text-xs mt-0.5 line-clamp-1 max-w-md">
                         Scolarité de vos enfants
                       </p>
-                      <p className="text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
+                      <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
                         {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
                       </p>
                     </div>
@@ -268,6 +269,34 @@ const ParentDashboard = () => {
                     <FiHeart className="w-3.5 h-3.5 text-orange-700" aria-hidden />
                     Parent
                   </div>
+                </div>
+
+                <div className="dash-mobile-tabs scrollbar-hide">
+                  {navItems.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => changeTab(tab.id)}
+                        aria-label={tab.label}
+                        title={tab.label}
+                        className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+                          isActive
+                            ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
+                            : 'bg-stone-100 text-stone-700'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
+                          }`}
+                        />
+                        <span className="dash-mobile-tab-label">{tab.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="relative w-full max-w-xl">
@@ -287,7 +316,7 @@ const ParentDashboard = () => {
             </div>
           </header>
 
-          <main className="dash-workspace flex-1 px-3 sm:px-6 py-5 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-x-hidden overflow-y-auto scroll-smooth">
+          <main className="dash-workspace flex-1 px-3 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-x-hidden overflow-y-auto scroll-smooth">
             <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6">
                             <PremiumModuleHeader
                 title={activeMeta.label}

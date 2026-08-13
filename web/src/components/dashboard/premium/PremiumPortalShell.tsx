@@ -17,7 +17,7 @@ export default function PremiumPortalShell({
 }: PremiumPortalShellProps) {
   return (
     <PremiumDashboardShell variant={variant}>
-      <div className={`min-h-[calc(100vh-4rem)] ${className}`}>{children}</div>
+      <div className={`dash-min-h-under-header ${className}`}>{children}</div>
     </PremiumDashboardShell>
   );
 }

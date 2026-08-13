@@ -170,8 +170,8 @@ const TeacherDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="TEACHER">
       <PremiumPortalShell variant="teacher">
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-stretch">
-        <aside className="relative z-50 hidden shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl lg:sticky lg:top-16 lg:flex lg:h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-4rem)] lg:w-64 lg:self-start">
+      <div className="flex dash-min-h-under-header w-full items-stretch">
+        <aside className="relative z-50 hidden shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl lg:sticky dash-sticky-under-header lg:flex dash-h-under-header lg:w-64 lg:self-start">
           <div className="flex min-h-0 flex-1 flex-col p-2.5">
             <p className="shrink-0 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500">
               Enseignant
@@ -205,18 +205,18 @@ const TeacherDashboard = () => {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="dash-command-bar sticky top-16 z-20 shrink-0">
-            <div className="mx-auto max-w-[1240px] px-3 sm:px-6 py-2.5 sm:py-3">
+          <header className="dash-command-bar sticky dash-sticky-under-header z-20 shrink-0">
+            <div className="px-3 sm:px-6 py-2 sm:py-3">
               <div className="flex flex-col gap-2 sm:gap-3">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
                   <div className="min-w-0">
                     <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight leading-snug">
                       {getGreeting()}, {user?.firstName}
                     </h1>
-                    <p className="text-stone-600 text-xs mt-0.5 line-clamp-2 sm:line-clamp-1 max-w-md">
-                      Pédagogie, emploi du temps, RH
+                    <p className="text-stone-600 text-xs mt-0.5 line-clamp-1 max-w-md">
+                      Vos classes et votre journée
                     </p>
-                    <p className="text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
+                    <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
                       {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
                     </p>
                   </div>
@@ -226,7 +226,7 @@ const TeacherDashboard = () => {
                   </div>
                 </div>
 
-                <div className="lg:hidden flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1 snap-x snap-mandatory scroll-pl-2 touch-pan-x overscroll-x-contain">
+                <div className="dash-mobile-tabs scrollbar-hide">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -235,7 +235,9 @@ const TeacherDashboard = () => {
                         key={tab.id}
                         type="button"
                         onClick={() => changeTab(tab.id)}
-                        className={`shrink-0 snap-start inline-flex items-center gap-1.5 px-2.5 py-2 min-h-[40px] rounded-xl text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+                        aria-label={tab.label}
+                        title={tab.label}
+                        className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
                           isActive
                             ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
                             : 'bg-stone-100 text-stone-700'
@@ -246,7 +248,7 @@ const TeacherDashboard = () => {
                             isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
                           }`}
                         />
-                        {tab.label}
+                        <span className="dash-mobile-tab-label">{tab.label}</span>
                       </button>
                     );
                   })}

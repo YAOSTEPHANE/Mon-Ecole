@@ -85,28 +85,32 @@ export default function PremiumKpiCard({
         />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/35 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        <div className="relative p-4 sm:p-[1.15rem]">
-          <div className="flex items-start justify-between gap-3">
+        <div className="relative p-3 sm:p-[1.15rem]">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">{label}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-stone-500 line-clamp-2 sm:tracking-[0.18em]">
+                {label}
+              </p>
               <p
-                className={`mt-2 font-display text-2xl font-bold tabular-nums tracking-tight sm:text-[1.65rem] ${a.value}`}
+                className={`mt-1.5 break-words font-display text-xl font-bold tabular-nums tracking-tight sm:mt-2 sm:text-[1.65rem] ${a.value}`}
               >
                 {value}
               </p>
               {subtitle && (
-                <p className="mt-1.5 text-[11px] font-medium leading-snug text-stone-500">{subtitle}</p>
+                <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-stone-500 sm:mt-1.5">
+                  {subtitle}
+                </p>
               )}
               {trend && (
-                <p className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-200/80">
+                <p className="mt-1.5 inline-flex max-w-full items-center truncate rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-200/80 sm:mt-2 sm:px-2.5">
                   {trend}
                 </p>
               )}
             </div>
             <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${a.icon} text-white shadow-md ring-1 ring-white/35 transition-transform duration-300 ease-premium group-hover:scale-105 group-hover:rotate-2`}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${a.icon} text-white shadow-md ring-1 ring-white/35 transition-transform duration-300 ease-premium group-hover:scale-105 group-hover:rotate-2 sm:h-11 sm:w-11`}
             >
-              <Icon className="h-5 w-5" aria-hidden />
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
             </div>
           </div>
         </div>
