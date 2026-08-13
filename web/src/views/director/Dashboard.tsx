@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import Layout from '../../components/Layout';
-import { adminApi } from '../../services/api';
+import { adminApi, academicValidationApi } from '../../services/api';
 import PortalModulesHub from '../../components/dashboard/PortalModulesHub';
 import { DIRECTOR_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
 import { buildAdminModuleTabs } from '@/lib/adminModuleTabMeta';
@@ -26,7 +26,7 @@ import {
   PremiumStatGrid,
   PremiumSectionTitle,
 } from '../../components/dashboard/premium';
-import { FiArrowLeft, FiTrendingUp, FiUsers, FiBookOpen, FiDollarSign, FiAlertCircle, FiBarChart2, FiInbox, FiCheckCircle } from 'react-icons/fi';
+import { FiArrowLeft, FiTrendingUp, FiUsers, FiBookOpen, FiDollarSign, FiAlertCircle, FiBarChart2, FiInbox } from 'react-icons/fi';
 
 const fmt = (n: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n);
 
@@ -50,6 +50,11 @@ export default function DirectorDashboard() {
   const { data: permissionStats } = useQuery({
     queryKey: ['admin-absence-permission-request-stats'],
     queryFn: () => adminApi.getAbsencePermissionRequestStats(),
+    staleTime: 30_000,
+  });
+  const { data: pendingValidations = [] } = useQuery({
+    queryKey: ['director-pending-validations'],
+    queryFn: () => academicValidationApi.getPending(),
     staleTime: 30_000,
   });
 
@@ -108,7 +113,11 @@ export default function DirectorDashboard() {
                 <p className="mt-1 text-xl font-bold tabular-nums text-stone-900">
                   {(kpis?.cards?.admissionsPending ?? 0) + (kpis?.cards?.admissionsUnderReview ?? 0)}
                 </p>
-                <p className="text-xs text-stone-500">à traiter</p>
+                <p className="text-xs text-stone-500">
+                  {(kpis?.cards?.admissionsPending ?? 0) + (kpis?.cards?.admissionsUnderReview ?? 0) > 0
+                    ? 'Traiter maintenant →'
+                    : 'à traiter'}
+                </p>
               </Link>
               <Link
                 href="/admin?tab=payments"
@@ -116,7 +125,9 @@ export default function DirectorDashboard() {
               >
                 <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Mobile Money</p>
                 <p className="mt-1 text-xl font-bold tabular-nums text-stone-900">{pendingMm.length}</p>
-                <p className="text-xs text-stone-500">à confirmer</p>
+                <p className="text-xs text-stone-500">
+                  {pendingMm.length > 0 ? 'Confirmer les paiements →' : 'à confirmer'}
+                </p>
               </Link>
               <Link
                 href="/admin?tab=attendance&attendanceTab=permissions"
@@ -124,18 +135,35 @@ export default function DirectorDashboard() {
               >
                 <p className="text-[10px] font-bold uppercase tracking-wide text-teal-700">Permissions absences</p>
                 <p className="mt-1 text-xl font-bold tabular-nums text-stone-900">{permissionStats?.pending ?? 0}</p>
-                <p className="text-xs text-stone-500">en attente</p>
+                <p className="text-xs text-stone-500">
+                  {(permissionStats?.pending ?? 0) > 0 ? 'Valider les demandes →' : 'en attente'}
+                </p>
               </Link>
               <Link
                 href="/admin?tab=grading"
                 className="rounded-xl border border-emerald-200 bg-white/90 px-3 py-3 hover:bg-emerald-50"
               >
                 <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Validations notes</p>
-                <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-stone-800">
-                  <FiCheckCircle className="h-4 w-4 text-emerald-600" />
-                  Notation
+                <p className="mt-1 text-xl font-bold tabular-nums text-stone-900">
+                  {pendingValidations.length}
                 </p>
-                <p className="text-xs text-stone-500">ouvrir le module</p>
+                <p className="text-xs text-stone-500">
+                  {pendingValidations.length > 0 ? 'Ouvrir les validations →' : 'ouvrir le module'}
+                </p>
+              </Link>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                href="/admin?tab=fees&feesTab=reminders"
+                className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-semibold text-rose-900 hover:bg-rose-100"
+              >
+                Relances scolarité
+              </Link>
+              <Link
+                href="/admin?tab=campus"
+                className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
+              >
+                Cantine & transport
               </Link>
             </div>
           </section>

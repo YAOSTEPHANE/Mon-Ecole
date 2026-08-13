@@ -163,4 +163,16 @@ export const educatorApi = {
     const response = await api.get('/educator/discipline/records', { params });
     return response.data;
   },
+  createDisciplineRecord: async (data: {
+    studentId: string;
+    academicYear: string;
+    title: string;
+    category: string;
+    description?: string;
+    incidentDate?: string;
+    notifyParents?: boolean;
+  }) => {
+    const response = await api.post('/educator/discipline/records', data);
+    return response.data;
+  },
 };

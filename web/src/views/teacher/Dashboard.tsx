@@ -138,6 +138,18 @@ const TeacherDashboard = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const handleNavigateTab = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (detail && VALID_TAB_IDS.includes(detail as TabId)) {
+        setActiveTab(detail as TabId);
+        router.replace(`/teacher?tab=${encodeURIComponent(detail)}`);
+      }
+    };
+    window.addEventListener('navigate-tab', handleNavigateTab as EventListener);
+    return () => window.removeEventListener('navigate-tab', handleNavigateTab as EventListener);
+  }, [router]);
+
   const changeTab = (tabId: TabId) => {
     setActiveTab(tabId);
     const params = new URLSearchParams(searchParams?.toString() ?? '');

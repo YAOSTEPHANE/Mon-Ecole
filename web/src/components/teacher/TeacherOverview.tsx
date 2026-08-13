@@ -47,6 +47,29 @@ const TeacherOverview = () => {
     staleTime: 60_000,
   });
 
+  const { data: scheduleData } = useQuery({
+    queryKey: ['teacher-schedule-today'],
+    queryFn: () => teacherApi.getSchedule(),
+    staleTime: 60_000,
+  });
+
+  const todaySlots = useMemo(() => {
+    const slots = (scheduleData as { slots?: Array<{
+      id?: string;
+      dayOfWeek?: number;
+      startTime?: string;
+      endTime?: string;
+      courseName?: string;
+      className?: string;
+      room?: string | null;
+    }> })?.slots;
+    if (!Array.isArray(slots)) return [];
+    const dow = new Date().getDay();
+    return slots
+      .filter((s) => s.dayOfWeek === dow)
+      .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+  }, [scheduleData]);
+
   // Calculate unique students across all courses
   const uniqueStudents = useMemo(() => {
     if (!courses) return new Set();
@@ -136,6 +159,66 @@ const TeacherOverview = () => {
             );
           })}
         </div>
+        {todaySlots.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-stone-500">
+              Cours aujourd’hui ({todaySlots.length})
+            </p>
+            {todaySlots.map((slot, idx) => (
+              <div
+                key={slot.id || `${slot.startTime}-${idx}`}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-stone-900">
+                    {slot.courseName || 'Cours'}
+                    {slot.className ? (
+                      <span className="ml-2 font-normal text-stone-500">{slot.className}</span>
+                    ) : null}
+                  </p>
+                  <p className="text-xs text-stone-600">
+                    {slot.startTime}–{slot.endTime}
+                    {slot.room ? ` · ${slot.room}` : ''}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'attendance' }))
+                    }
+                  >
+                    Appel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'lesson-logs' }))
+                    }
+                  >
+                    Cahier
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'grades' }))
+                    }
+                  >
+                    Notes
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-stone-500">Aucun créneau planifié aujourd’hui.</p>
+        )}
       </section>
 
       <section className="dash-section-panel">

@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
-import { FiCopy, FiAlertTriangle, FiClock, FiMail, FiMessageCircle } from 'react-icons/fi';
+import { FiCopy, FiAlertTriangle, FiClock, FiMail, FiMessageCircle, FiSend } from 'react-icons/fi';
 import {
   format,
   differenceInCalendarDays,
@@ -110,6 +110,7 @@ interface PaymentRemindersPanelProps {
 }
 
 const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact = false }) => {
+  const qc = useQueryClient();
   const { data: tuitionFees, isLoading } = useQuery({
     queryKey: ['admin-tuition-fees-reminders'],
     queryFn: () => adminApi.getTuitionFees(),
@@ -135,17 +136,87 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
     return { overdue: od, upcoming: up };
   }, [tuitionFees, today, weekEnd]);
 
+  const autoRemindersMut = useMutation({
+    mutationFn: () => adminApi.runTuitionFeeAutoReminders(),
+    onSuccess: (data: { notified?: number; message?: string }) => {
+      toast.success(
+        data?.message ||
+          `Relances automatiques lancées${typeof data?.notified === 'number' ? ` (${data.notified})` : ''}`,
+      );
+      void qc.invalidateQueries({ queryKey: ['admin-tuition-fees-reminders'] });
+    },
+    onError: (e: Error) => toast.error(e.message || 'Échec des relances auto'),
+  });
+
+  const openOverdueWhatsApps = () => {
+    const targets = overdue.slice(0, 8);
+    if (targets.length === 0) {
+      toast.error('Aucun frais échu');
+      return;
+    }
+    if (
+      !window.confirm(
+        `Ouvrir WhatsApp pour les ${targets.length} premiers frais échus ? (votre navigateur peut bloquer les pop-ups)`,
+      )
+    ) {
+      return;
+    }
+    targets.forEach((fee, i) => {
+      window.setTimeout(() => openWhatsApp(fee, buildReminderText(fee)), i * 400);
+    });
+    toast.success(`${targets.length} fenêtre(s) WhatsApp demandée(s)`);
+  };
+
+  const copyAllOverdue = () => {
+    if (overdue.length === 0) {
+      toast.error('Aucun frais échu');
+      return;
+    }
+    const blob = overdue.map((fee) => buildReminderText(fee)).join('\n\n————\n\n');
+    copyText(blob);
+  };
+
   if (isLoading) {
     return <Card className="p-10 text-center text-gray-500">Chargement des échéances…</Card>;
   }
 
   return (
     <div className={compact ? ADM.root : 'space-y-6'}>
-      <div>
-        <h2 className={compact ? ADM.h2 : 'text-lg font-semibold text-gray-900'}>Rappels de paiement</h2>
-        <p className={compact ? ADM.intro : 'mt-0.5 text-sm text-gray-500'}>
-          Relance one-click : <strong>WhatsApp</strong>, <strong>e-mail</strong> ou copie du texte.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className={compact ? ADM.h2 : 'text-lg font-semibold text-gray-900'}>Rappels de paiement</h2>
+          <p className={compact ? ADM.intro : 'mt-0.5 text-sm text-gray-500'}>
+            Relance one-click ou actions groupées (WhatsApp / copie / auto serveur).
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={overdue.length === 0}
+            onClick={openOverdueWhatsApps}
+          >
+            <FiMessageCircle className="mr-1 inline h-4 w-4" />
+            WhatsApp (échus)
+          </Button>
+          <Button type="button" size="sm" variant="secondary" disabled={overdue.length === 0} onClick={copyAllOverdue}>
+            <FiCopy className="mr-1 inline h-4 w-4" />
+            Tout copier
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={autoRemindersMut.isPending}
+            onClick={() => {
+              if (!window.confirm('Lancer les relances automatiques (notifications / e-mail) ?')) return;
+              autoRemindersMut.mutate();
+            }}
+          >
+            <FiSend className="mr-1 inline h-4 w-4" />
+            Relances auto
+          </Button>
+        </div>
       </div>
 
       <Card className={compact ? 'border-amber-200 bg-amber-50/60 p-3' : 'border-amber-200 bg-amber-50/60 p-4'}>

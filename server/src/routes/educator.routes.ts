@@ -1544,4 +1544,107 @@ router.get('/discipline/records', async (req: AuthRequest, res) => {
   }
 });
 
+/** Créer un dossier disciplinaire (périmètre classes éducateur) */
+router.post('/discipline/records', async (req: AuthRequest, res) => {
+  try {
+    const classIds = await resolveEducatorClassScope(req.user!.id);
+    if (classIds === null) return res.status(404).json({ error: 'Profil éducateur non trouvé' });
+    if (classIds.length === 0) {
+      return res.status(403).json({ error: 'Aucune classe assignée.' });
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
+    const academicYear = typeof body.academicYear === 'string' ? body.academicYear.trim() : '';
+    const title = typeof body.title === 'string' ? body.title.trim() : '';
+    const categoryRaw = typeof body.category === 'string' ? body.category.trim() : '';
+    const allowed = [
+      'VERBAL_WARNING',
+      'WRITTEN_WARNING',
+      'REPRIMAND',
+      'TEMPORARY_EXCLUSION',
+      'DISCIPLINE_COUNCIL_HEARING',
+      'DISCIPLINE_COUNCIL_DECISION',
+      'BEHAVIOR_CONTRACT',
+      'OTHER',
+    ] as const;
+    const category = allowed.includes(categoryRaw as (typeof allowed)[number])
+      ? (categoryRaw as (typeof allowed)[number])
+      : null;
+
+    if (!studentId || !academicYear || !title || !category) {
+      return res.status(400).json({
+        error: 'studentId, academicYear, title et category (valide) sont requis.',
+      });
+    }
+
+    const student = await prisma.student.findFirst({
+      where: { id: studentId, ...studentClassFilter(classIds) },
+      select: {
+        id: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
+    });
+    if (!student) {
+      return res.status(403).json({ error: 'Élève hors de votre périmètre.' });
+    }
+
+    const description =
+      typeof body.description === 'string' && body.description.trim()
+        ? body.description.trim()
+        : null;
+    const incidentDate = body.incidentDate ? new Date(String(body.incidentDate)) : new Date();
+    if (Number.isNaN(incidentDate.getTime())) {
+      return res.status(400).json({ error: 'Date d’incident invalide.' });
+    }
+    const notifyParents = Boolean(body.notifyParents);
+
+    const row = await prisma.studentDisciplinaryRecord.create({
+      data: {
+        studentId,
+        academicYear,
+        category,
+        title,
+        description,
+        incidentDate,
+        parentNotifiedAt: notifyParents ? new Date() : null,
+        recordedById: req.user!.id,
+        behaviorContractStatus: category === 'BEHAVIOR_CONTRACT' ? 'ACTIVE' : null,
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            user: { select: { firstName: true, lastName: true } },
+            class: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    if (notifyParents) {
+      const links = await prisma.studentParent.findMany({
+        where: { studentId },
+        include: { parent: { select: { userId: true } } },
+      });
+      const uids = [...new Set(links.map((l) => l.parent.userId).filter(Boolean))];
+      if (uids.length > 0) {
+        const { notifyUsersImportant } = await import('../utils/notify-important.util');
+        const label = `${student.user.firstName} ${student.user.lastName}`.trim() || 'Votre enfant';
+        await notifyUsersImportant(uids, {
+          type: 'conduct',
+          title: 'Suivi disciplinaire',
+          content: `${label} — ${title}. Connectez-vous au portail famille pour le détail.`,
+          link: '/parent?tab=conduct',
+        });
+      }
+    }
+
+    res.status(201).json(row);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 export default router;

@@ -193,6 +193,20 @@ const ParentDashboard = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const handleNavigateTab = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (detail && VALID_PARENT_TABS.includes(detail as ParentTabId)) {
+        setActiveTab(detail);
+        const params = new URLSearchParams(searchParams?.toString() ?? '');
+        params.set('tab', detail);
+        router.replace(`/parent?${params.toString()}`);
+      }
+    };
+    window.addEventListener('navigate-tab', handleNavigateTab as EventListener);
+    return () => window.removeEventListener('navigate-tab', handleNavigateTab as EventListener);
+  }, [router, searchParams]);
+
   const changeTab = (tabId: string) => {
     setActiveTab(tabId);
     const params = new URLSearchParams(searchParams?.toString() ?? '');

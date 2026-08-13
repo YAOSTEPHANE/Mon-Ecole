@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Card from '../ui/Card';
@@ -36,8 +36,19 @@ type FeesTab =
   | 'receipts'
   | 'history';
 
+const VALID_FEES_TABS: FeesTab[] = [
+  'overview',
+  'service',
+  'billing',
+  'payments',
+  'reminders',
+  'receipts',
+  'history',
+];
+
 const FeesManagementModule: React.FC = () => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const pendingCashMode = pathname?.startsWith('/staff') ? 'staff' : 'admin';
   const [tab, setTab] = useState<FeesTab>('overview');
   const qc = useQueryClient();
@@ -46,6 +57,13 @@ const FeesManagementModule: React.FC = () => {
   const [counterAmount, setCounterAmount] = useState('');
   const [counterMethod, setCounterMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH');
   const [counterNotes, setCounterNotes] = useState('');
+
+  useEffect(() => {
+    const feesTab = searchParams?.get('feesTab');
+    if (feesTab && VALID_FEES_TABS.includes(feesTab as FeesTab)) {
+      setTab(feesTab as FeesTab);
+    }
+  }, [searchParams]);
 
   const { data: tuitionFees } = useQuery({
     queryKey: ['admin-tuition-fees'],

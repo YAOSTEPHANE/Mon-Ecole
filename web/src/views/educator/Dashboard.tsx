@@ -230,25 +230,46 @@ const EducatorDashboard = () => {
                         </div>
                         <ul className="max-h-40 space-y-1.5 overflow-y-auto text-sm">
                           {attendanceAlerts.slice(0, 8).map((a: any) => (
-                            <li key={a.id} className="flex justify-between gap-2 text-stone-700">
-                              <span className="min-w-0 truncate">
-                                {a.student?.user?.lastName} {a.student?.user?.firstName}
-                                {a.student?.class?.name ? ` · ${a.student.class.name}` : ''}
-                                {a.course?.name ? ` · ${a.course.name}` : ''}
-                              </span>
-                              <span className="shrink-0 text-xs text-stone-500">
-                                {a.date ? format(new Date(a.date), 'dd/MM', { locale: fr }) : ''}
-                              </span>
+                            <li key={a.id}>
+                              <button
+                                type="button"
+                                className="flex w-full justify-between gap-2 rounded-lg px-1 py-0.5 text-left text-stone-700 hover:bg-orange-100/80"
+                                onClick={() => {
+                                  const params = new URLSearchParams(searchParams?.toString() ?? '');
+                                  params.set('tab', 'discipline');
+                                  if (a.student?.id) params.set('studentId', a.student.id);
+                                  router.replace(`/educator?${params.toString()}`);
+                                  setActiveTab('discipline');
+                                }}
+                              >
+                                <span className="min-w-0 truncate">
+                                  {a.student?.user?.lastName} {a.student?.user?.firstName}
+                                  {a.student?.class?.name ? ` · ${a.student.class.name}` : ''}
+                                  {a.course?.name ? ` · ${a.course.name}` : ''}
+                                </span>
+                                <span className="shrink-0 text-xs text-stone-500">
+                                  {a.date ? format(new Date(a.date), 'dd/MM', { locale: fr }) : ''}
+                                </span>
+                              </button>
                             </li>
                           ))}
                         </ul>
-                        <button
-                          type="button"
-                          className="mt-3 text-xs font-semibold text-orange-800 hover:underline"
-                          onClick={() => changeTab('attendance')}
-                        >
-                          Ouvrir les appels →
-                        </button>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-orange-800 hover:underline"
+                            onClick={() => changeTab('attendance')}
+                          >
+                            Ouvrir les appels →
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-amber-900 hover:underline"
+                            onClick={() => changeTab('discipline')}
+                          >
+                            Créer un suivi discipline →
+                          </button>
+                        </div>
                       </Card>
                     )}
                     <EducatorOverview searchQuery={searchQuery} />

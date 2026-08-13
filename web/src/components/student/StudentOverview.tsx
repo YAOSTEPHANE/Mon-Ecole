@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { studentApi } from '../../services/api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
-import { FiBook, FiCalendar, FiClipboard, FiAward, FiAlertCircle, FiSearch } from 'react-icons/fi';
+import { FiBook, FiCalendar, FiClipboard, FiAward, FiAlertCircle, FiSearch, FiBookOpen, FiFileText, FiMessageSquare } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import PortalSchoolFeed from '../portal/PortalSchoolFeed';
 import StudentGamificationCard from './StudentGamificationCard';
 import { PremiumOverviewHero, PremiumStatGrid, PremiumSectionTitle } from '../dashboard/premium';
 import type { PremiumStatItem } from '../dashboard/premium/PremiumStatGrid';
+import Button from '../ui/Button';
 
 const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQuery?: string; searchCategory?: string }) => {
   const { data: grades, isLoading: gradesLoading } = useQuery({
@@ -87,6 +88,17 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
     return new Date(a.assignment.dueDate) < new Date();
   }).length;
 
+  const nextAssignments = useMemo(() => {
+    return filteredAssignments
+      .filter((a: any) => !a.submitted && a.assignment?.dueDate)
+      .slice()
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.assignment.dueDate).getTime() - new Date(b.assignment.dueDate).getTime()
+      )
+      .slice(0, 5);
+  }, [filteredAssignments]);
+
   const stats: PremiumStatItem[] = [
     {
       label: 'Moyenne générale',
@@ -158,6 +170,45 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
           <section className="dash-section-panel">
             <PortalSchoolFeed role="student" compact />
           </section>
+          <section className="dash-section-panel">
+            <PremiumSectionTitle
+              title="Accès rapides"
+              subtitle="Travail scolaire du jour"
+              icon={FiClipboard}
+            />
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {(
+                [
+                  { id: 'grades', label: 'Notes', icon: FiAward, color: 'from-violet-500 to-fuchsia-600' },
+                  { id: 'assignments', label: 'Devoirs', icon: FiFileText, color: 'from-blue-500 to-indigo-600' },
+                  { id: 'lesson-logs', label: 'Cahier', icon: FiBookOpen, color: 'from-amber-600 to-orange-700' },
+                  { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, color: 'from-teal-500 to-cyan-600' },
+                  { id: 'absences', label: 'Absences', icon: FiAlertCircle, color: 'from-orange-500 to-red-500' },
+                  { id: 'messages', label: 'Messages', icon: FiMessageSquare, color: 'from-stone-500 to-stone-700' },
+                ] as const
+              ).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.id}
+                    type="button"
+                    variant="secondary"
+                    className="flex h-auto flex-col items-start gap-2 rounded-2xl border border-stone-200/80 bg-white p-3 text-left shadow-sm hover:border-violet-300/60"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: item.id }));
+                    }}
+                  >
+                    <span
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${item.color} text-white`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-xs font-semibold text-stone-800">{item.label}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </section>
         </>
       )}
 
@@ -208,6 +259,32 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
               <div className="space-y-2 text-sm text-gray-700">
                 {overdueAssignments > 0 && <p>• {overdueAssignments} devoir(s) en retard</p>}
                 {unexcusedAbsences > 0 && <p>• {unexcusedAbsences} absence(s) non justifiée(s)</p>}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {overdueAssignments > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'assignments' }))
+                    }
+                  >
+                    Voir les devoirs
+                  </Button>
+                )}
+                {unexcusedAbsences > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'absences' }))
+                    }
+                  >
+                    Voir les absences
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -261,16 +338,39 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
       )}
 
       <section className="dash-section-panel">
-        <PremiumSectionTitle title="Prochaines évaluations" subtitle="Planning à venir" icon={FiCalendar} />
-        <div className="space-y-3">
-          {allGrades.length > 0 ? (
-            <div className="text-sm text-gray-600">
-              <p>Vos prochaines évaluations apparaîtront ici</p>
-            </div>
+        <PremiumSectionTitle title="Devoirs à rendre" subtitle="Prochaines échéances" icon={FiFileText} />
+        <div className="space-y-2">
+          {nextAssignments.length > 0 ? (
+            nextAssignments.map((row: any) => {
+              const due = new Date(row.assignment.dueDate);
+              const overdue = due < new Date() && !row.submitted;
+              return (
+                <button
+                  key={row.id || row.assignment?.id}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-stone-200/80 bg-white px-3 py-2.5 text-left hover:border-violet-300/70"
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'assignments' }))
+                  }
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-stone-900">
+                      {row.assignment?.title || 'Devoir'}
+                    </p>
+                    <p className="truncate text-xs text-stone-500">
+                      {row.assignment?.course?.name || 'Matière'}
+                    </p>
+                  </div>
+                  <Badge variant={overdue ? 'danger' : 'secondary'} size="sm">
+                    {format(due, 'dd MMM', { locale: fr })}
+                  </Badge>
+                </button>
+              );
+            })
           ) : (
             <div className="py-8 text-center text-gray-500">
-              <FiCalendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-              <p>Aucune évaluation prévue</p>
+              <FiFileText className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+              <p>Aucun devoir en attente</p>
             </div>
           )}
         </div>

@@ -155,6 +155,17 @@ const StudentDashboard = () => {
   };
 
   useEffect(() => {
+    const handleNavigateTab = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (detail && VALID_TAB_IDS.includes(detail as TabId)) {
+        changeTab(detail as TabId);
+      }
+    };
+    window.addEventListener('navigate-tab', handleNavigateTab as EventListener);
+    return () => window.removeEventListener('navigate-tab', handleNavigateTab as EventListener);
+  }, [router, searchParams]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();

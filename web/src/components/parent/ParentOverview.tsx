@@ -4,7 +4,8 @@ import { parentApi } from '../../services/api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Avatar from '../ui/Avatar';
-import { FiCalendar, FiClipboard, FiAward, FiUsers, FiAlertCircle, FiBell, FiClock, FiCreditCard } from 'react-icons/fi';
+import { FiCalendar, FiClipboard, FiAward, FiUsers, FiAlertCircle, FiBell, FiClock, FiCreditCard, FiBookOpen, FiFileText, FiShield } from 'react-icons/fi';
+import Button from '../ui/Button';
 import {
   BarChart,
   Bar,
@@ -48,6 +49,17 @@ const ParentOverview = () => {
     staleTime: 60_000,
     enabled: !!children && children.length > 0,
   });
+
+  const { data: recentLessonLogs = [] } = useQuery({
+    queryKey: ['parent-lesson-logs-preview', selectedChild],
+    queryFn: () => parentApi.getChildLessonLogs(selectedChild!),
+    enabled: !!selectedChild,
+    staleTime: 60_000,
+  });
+
+  const recentLogs = useMemo(() => {
+    return (Array.isArray(recentLessonLogs) ? recentLessonLogs : []).slice(0, 4);
+  }, [recentLessonLogs]);
 
   // Sélectionner automatiquement le premier enfant si aucun n'est sélectionné (TOUJOURS avant tout return)
   useEffect(() => {
@@ -138,6 +150,74 @@ const ParentOverview = () => {
       <section className="dash-section-panel">
         <PortalSchoolFeed role="parent" compact />
       </section>
+
+      <section className="dash-section-panel">
+        <PremiumSectionTitle
+          title="Accès rapides"
+          subtitle="Suivi quotidien de la scolarité"
+          icon={FiClipboard}
+        />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {(
+            [
+              { id: 'grades', label: 'Notes', icon: FiAward, color: 'from-amber-600 to-orange-600' },
+              { id: 'absences', label: 'Absences', icon: FiAlertCircle, color: 'from-orange-500 to-red-500' },
+              { id: 'lesson-logs', label: 'Cahier', icon: FiBookOpen, color: 'from-amber-600 to-orange-700' },
+              { id: 'assignments', label: 'Devoirs', icon: FiFileText, color: 'from-yellow-500 to-amber-600' },
+              { id: 'payments', label: 'Paiements', icon: FiCreditCard, color: 'from-emerald-600 to-amber-600' },
+              { id: 'conduct', label: 'Conduite', icon: FiShield, color: 'from-rose-500 to-orange-600' },
+            ] as const
+          ).map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                type="button"
+                variant="secondary"
+                className="flex h-auto flex-col items-start gap-2 rounded-2xl border border-stone-200/80 bg-white p-3 text-left shadow-sm hover:border-amber-300/60"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('navigate-tab', { detail: item.id }));
+                }}
+              >
+                <span
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${item.color} text-white`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="text-xs font-semibold text-stone-800">{item.label}</span>
+              </Button>
+            );
+          })}
+        </div>
+      </section>
+
+      {unexcusedAbsences > 0 && selectedChildData && (
+        <Card className="border-l-4 border-orange-500 bg-orange-50/80 ring-1 ring-orange-200/70">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <FiAlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-orange-700" />
+              <div className="text-sm text-orange-950">
+                <p className="font-semibold text-orange-900">
+                  {unexcusedAbsences} absence(s) non justifiée(s)
+                </p>
+                <p className="mt-0.5 text-orange-900/85">
+                  Déposez une demande de permission ou un justificatif pour {selectedChildData.user.firstName}.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'absences' }))
+              }
+            >
+              Justifier
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {selectedChildData && tuitionBlock?.active && (tuitionBlock.hiddenAcademicYears?.length ?? 0) > 0 && (
         <Card className="border-l-4 border-amber-500 bg-amber-50/90 ring-1 ring-amber-200/80">
@@ -231,6 +311,54 @@ const ParentOverview = () => {
               <PremiumKpiCard label="RDV en attente" value={parentKpi.cards.pendingAppointments} icon={FiClock} accent="amber" />
               <PremiumKpiCard label="Notifications" value={parentKpi.cards.unreadNotifications} subtitle="non lues" icon={FiBell} accent="indigo" />
               <PremiumKpiCard label="Moyennes" value="120 j." subtitle="Visualisation par enfant" icon={FiAward} accent="blue" />
+              </div>
+            </section>
+          )}
+
+          {recentLogs.length > 0 && (
+            <section className="dash-section-panel">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <PremiumSectionTitle
+                  title="Cahier de texte récent"
+                  subtitle={`Dernières séances — ${selectedChildData.user.firstName}`}
+                  icon={FiBookOpen}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'lesson-logs' }))
+                  }
+                >
+                  Tout voir
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {recentLogs.map((log: any) => (
+                  <button
+                    key={log.id}
+                    type="button"
+                    className="flex w-full flex-col gap-0.5 rounded-xl border border-amber-100 bg-amber-50/50 px-3 py-2.5 text-left hover:border-amber-300"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'lesson-logs' }))
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-sm font-semibold text-stone-900">
+                        {log.title || log.courseName || 'Séance'}
+                      </p>
+                      <span className="shrink-0 text-[11px] text-stone-500">
+                        {log.lessonDate
+                          ? format(new Date(log.lessonDate), 'dd MMM', { locale: fr })
+                          : ''}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 text-xs text-stone-600">
+                      {log.content || log.homeworkNotes || '—'}
+                    </p>
+                  </button>
+                ))}
               </div>
             </section>
           )}
