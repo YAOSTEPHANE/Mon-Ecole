@@ -44,7 +44,7 @@ export default function OfflineBanner() {
 
   return (
     <div
-      className="fixed z-[100] flex justify-center pointer-events-none animate-banner-enter left-3 right-3 bottom-[max(1rem,env(safe-area-inset-bottom))]"
+      className="fixed z-[100] flex justify-center pointer-events-none animate-banner-enter left-3 right-3 bottom-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.75rem))] sm:bottom-[max(1rem,env(safe-area-inset-bottom))]"
       role="status"
       aria-live="polite"
     >

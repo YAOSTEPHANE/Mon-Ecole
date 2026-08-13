@@ -159,7 +159,7 @@ export default function PublicVisitorPanel() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-[60] flex h-12 w-12 items-center justify-center rounded-2xl bg-tran-mauve-900 text-tran-mustard-100 shadow-lg ring-1 ring-tran-mustard-500/35 transition hover:bg-tran-mauve-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/50"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[60] flex h-12 w-12 items-center justify-center rounded-2xl bg-tran-mauve-900 text-tran-mustard-100 shadow-lg ring-1 ring-tran-mustard-500/35 transition hover:bg-tran-mauve-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/50"
         aria-label="Ouvrir chat et orientation"
         title="Chat & orientation"
       >
@@ -168,7 +168,7 @@ export default function PublicVisitorPanel() {
 
       {open ? (
         <div
-          className="fixed bottom-5 right-5 z-[70] flex w-[min(100vw-1.5rem,24rem)] flex-col overflow-hidden rounded-2xl border border-stone-200/90 bg-white/95 shadow-2xl backdrop-blur-xl sm:w-[min(100vw-2rem,26rem)]"
+          className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[70] flex w-[min(100vw-1.5rem,24rem)] max-h-[min(85dvh,34rem)] flex-col overflow-hidden rounded-2xl border border-stone-200/90 bg-white/95 shadow-2xl backdrop-blur-xl sm:w-[min(100vw-2rem,26rem)]"
           role="dialog"
           aria-label="Assistance visiteurs"
         >

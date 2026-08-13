@@ -261,14 +261,14 @@ export default function Home() {
 
   return (
     <div className="home-page home-page--v3 min-h-screen premium-body premium-body-v2 font-sans text-tran-mauve-950 antialiased">
-      <header className="home-header sticky top-0 z-50 glass-nav glass-nav-v2">
-        <div className="mx-auto flex h-14 min-h-14 max-w-7xl items-center justify-between px-3 sm:h-16 sm:px-6">
+      <header className="home-header sticky top-0 z-50 glass-nav glass-nav-v2 pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex h-14 min-h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-6">
           <Link
             href="/"
-            className="group flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45 focus-visible:ring-offset-2"
+            className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl sm:gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45 focus-visible:ring-offset-2"
           >
             <div
-              className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-tran-mustard-900/25 ring-2 ring-tran-mustard-400/45 transition-transform duration-300 group-hover:scale-[1.03] ${
+              className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-tran-mustard-900/25 ring-2 ring-tran-mustard-400/45 transition-transform duration-300 group-hover:scale-[1.03] sm:h-11 sm:w-11 ${
                 navigationLogoAbsolute
                   ? 'bg-white'
                   : 'bg-gradient-to-br from-tran-mauve-900 via-tran-mauve-800 to-tran-mauve-950 text-tran-mustard-100'
@@ -285,8 +285,8 @@ export default function Home() {
                 <FiBook className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" aria-hidden />
               )}
             </div>
-            <div className="leading-tight">
-              <span className="block font-display text-lg font-semibold tracking-tight text-stone-900">
+            <div className="min-w-0 leading-tight">
+              <span className="block truncate font-display text-base font-semibold tracking-tight text-stone-900 sm:text-lg">
                 {headerTitle}
               </span>
               <span className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-tran-mustard-800/80 sm:block">
@@ -317,7 +317,7 @@ export default function Home() {
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-stone-600 transition-colors hover:bg-stone-100/90 md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-stone-600 transition-colors hover:bg-stone-100/90 md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45"
             aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             onClick={() => setMenuOpen((o) => !o)}
           >
@@ -378,7 +378,7 @@ export default function Home() {
 
       <main>
         {/* Hero full-bleed — marque, promesse, CTA */}
-        <section className="home-hero-shell home-hero-shell--cinematic relative isolate min-h-[min(92vh,54rem)] overflow-hidden text-white">
+        <section className="home-hero-shell home-hero-shell--cinematic relative isolate min-h-[min(88vh,48rem)] overflow-hidden text-white sm:min-h-[min(92vh,54rem)]">
           <div className="absolute inset-0" aria-hidden>
             <HomePageImage
               slot="homeHeroPlatform"
@@ -402,21 +402,21 @@ export default function Home() {
             aria-hidden
           />
 
-          <div className="relative z-10 mx-auto flex min-h-[min(92vh,54rem)] max-w-7xl flex-col justify-end px-4 pb-20 pt-28 sm:px-6 sm:pb-24 lg:justify-center lg:pb-28 lg:pt-32">
+          <div className="relative z-10 mx-auto flex min-h-[min(88vh,48rem)] max-w-7xl flex-col justify-end px-4 pb-14 pt-24 sm:min-h-[min(92vh,54rem)] sm:px-6 sm:pb-24 sm:pt-28 lg:justify-center lg:pb-28 lg:pt-32">
             <div className="home-section-fade max-w-3xl">
-              <p className="home-hero-brand-mark mb-5 font-display text-2xl font-bold uppercase tracking-[0.22em] sm:text-3xl lg:text-4xl">
+              <p className="home-hero-brand-mark mb-3 font-display text-xl font-bold uppercase tracking-[0.18em] sm:mb-5 sm:text-3xl sm:tracking-[0.22em] lg:text-4xl">
                 {schoolShortName}
               </p>
-              <h1 className="home-hero-h1 home-hero-title-line font-display text-[2.6rem] font-black leading-[1.02] tracking-tight text-white sm:text-5xl lg:text-[4.1rem] lg:leading-[0.98]">
+              <h1 className="home-hero-h1 home-hero-title-line font-display text-[2.15rem] font-black leading-[1.05] tracking-tight text-white sm:text-5xl sm:leading-[1.02] lg:text-[4.1rem] lg:leading-[0.98]">
                 <span className="home-hero-h1__line">{schoolDisplayName}</span>
               </h1>
-              <p className="home-hero-sub-line mt-6 max-w-xl text-lg leading-relaxed text-stone-200/95 sm:text-xl">
+              <p className="home-hero-sub-line mt-4 max-w-xl text-base leading-relaxed text-stone-200/95 sm:mt-6 sm:text-xl">
                 {headerTagline || SCHOOL_DEFAULTS.tagline}
               </p>
 
               {!user ? (
-                <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Link href="/login">
+                <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center">
+                  <Link href="/login" className="w-full sm:w-auto">
                     <Button
                       size="lg"
                       variant="secondary"
@@ -434,12 +434,12 @@ export default function Home() {
                   />
                 </div>
               ) : (
-                <div className="mt-10">
+                <div className="mt-8 sm:mt-10">
                   <Link href={getRoleDashboardPath(user.role)}>
                     <Button
                       size="lg"
                       variant="secondary"
-                      className="home-hero-cta-primary border-0 bg-white px-9 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02]"
+                      className="home-hero-cta-primary w-full border-0 bg-white px-9 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02] sm:w-auto"
                     >
                       Ouvrir mon espace
                       <FiArrowRight className="ml-2 inline h-5 w-5" />

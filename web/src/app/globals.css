@@ -103,7 +103,7 @@
   .home-header::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: env(safe-area-inset-top, 0px);
     left: 0;
     right: 0;
     z-index: 60;
