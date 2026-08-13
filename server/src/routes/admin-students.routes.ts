@@ -31,6 +31,10 @@ import {
   parseStudentImportCsv,
 } from '../utils/student-csv-import.util';
 import type { AuthRequest } from '../middleware/auth.middleware';
+import {
+  isEducationSector,
+  resolveStudentEducationSector,
+} from '../utils/education-sector.util';
 
 const router = express.Router();
 
@@ -67,6 +71,7 @@ router.get('/students/nfc/:nfcId', async (req: SchoolContextRequest, res) => {
             id: true,
             name: true,
             level: true,
+            educationSector: true,
           },
         },
         parents: {
@@ -102,7 +107,7 @@ router.get('/students/nfc/:nfcId', async (req: SchoolContextRequest, res) => {
 // Par défaut liste « lean » (sans parents) — passer includeParents=1 si besoin.
 router.get('/students', async (req: SchoolContextRequest, res) => {
   try {
-    const { classId, isActive, enrollmentStatus } = req.query;
+    const { classId, isActive, enrollmentStatus, educationSector } = req.query;
     const schoolId = req.schoolId!;
     const pageSize = Math.min(Math.max(Number(req.query.limit) || 200, 1), 500);
     const page = Math.max(Number(req.query.page) || 1, 1);
@@ -126,6 +131,7 @@ router.get('/students', async (req: SchoolContextRequest, res) => {
               | 'GRADUATED'
               | 'ARCHIVED',
           }),
+        ...(isEducationSector(educationSector) && { educationSector }),
       },
       include: {
         user: {
@@ -143,6 +149,7 @@ router.get('/students', async (req: SchoolContextRequest, res) => {
             id: true,
             name: true,
             level: true,
+            educationSector: true,
           },
         },
         ...(includeParents
@@ -236,6 +243,7 @@ router.post(
         enrollmentStatus,
         stateAssignment,
         nationalMatricule,
+        educationSector: educationSectorRaw,
       } = req.body;
 
       const classId = typeof classIdRaw === 'string' && classIdRaw.trim() ? classIdRaw.trim() : undefined;
@@ -317,6 +325,11 @@ router.post(
         return res.status(400).json({ error: 'Ce numéro d\'élève existe déjà' });
       }
 
+      const educationSector = await resolveStudentEducationSector({
+        educationSector: educationSectorRaw,
+        classId,
+      });
+
       const { hashedPassword, shouldSendSetupEmail } = await resolveAdminProvidedOrInvitePassword(
         usesMatriculeLogin ? passwordRaw : password,
       );
@@ -354,6 +367,7 @@ router.post(
               classId,
               classGroupId,
               schoolId: schoolId ?? undefined,
+              educationSector,
               ...(enrollmentDate && { enrollmentDate: new Date(enrollmentDate) }),
               ...(typeof nationalMatricule === 'string' && nationalMatricule.trim()
                 ? { nationalMatricule: nationalMatricule.trim().slice(0, 64) }
@@ -993,6 +1007,7 @@ router.put('/students/:id', async (req, res) => {
       stateAssignment,
       nationalMatricule,
       subjectOptionIds,
+      educationSector: educationSectorRaw,
     } = body;
 
     const emptyToNull = (v: unknown): string | null | undefined => {
@@ -1080,6 +1095,18 @@ router.put('/students/:id', async (req, res) => {
     if (classId !== undefined) {
       studentData.classId =
         typeof classId === 'string' && classId.trim().length > 0 ? classId.trim() : null;
+    }
+
+    if (educationSectorRaw !== undefined) {
+      if (!isEducationSector(educationSectorRaw)) {
+        return res.status(400).json({ error: 'Voie d\'enseignement invalide (GENERAL ou TECHNICAL)' });
+      }
+      studentData.educationSector = educationSectorRaw;
+    } else if (classId !== undefined) {
+      const resolvedSector = await resolveStudentEducationSector({
+        classId: typeof classId === 'string' && classId.trim() ? classId.trim() : null,
+      });
+      studentData.educationSector = resolvedSector;
     }
     if (classGroupIdRaw !== undefined) {
       const classGroupId =

@@ -11,6 +11,7 @@ import {
   isSyntheticStudentEmail,
   resolveStudentAccountEmail,
 } from './student-login-identifier.util';
+import { resolveStudentEducationSector } from './education-sector.util';
 
 export const STUDENT_IMPORT_CSV_TEMPLATE = `N° élève;Nom;Prénom;Date naissance;Genre;Email;Mot de passe;Classe;Téléphone;Lieu naissance;Adresse;Contact urgence;Tél urgence;Matricule national
 ELV001;Dupont;Alice;15/03/2012;F;alice.dupont@exemple.com;MotDePasse1!;6ème A;0600000001;Abidjan;;;;
@@ -387,6 +388,8 @@ export async function importStudentsFromCsvRows(
         emergencyPhone: row.emergencyPhone,
       });
 
+      const educationSector = await resolveStudentEducationSector({ classId });
+
       const user = await prisma.user.create({
         data: {
           email: accountEmail,
@@ -405,6 +408,7 @@ export async function importStudentsFromCsvRows(
               digitalCardPublicId: generateDigitalCardPublicId(),
               classId,
               schoolId: options.schoolId,
+              educationSector,
               enrollmentStatus: 'ACTIVE',
               ...(row.nationalMatricule
                 ? { nationalMatricule: row.nationalMatricule.slice(0, 64) }

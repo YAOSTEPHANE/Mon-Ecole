@@ -42,6 +42,14 @@ import {
   stateAssignmentBadgeVariant,
 } from '../../lib/stateAssignment';
 import {
+  EDUCATION_SECTOR_FILTER_OPTIONS,
+  EDUCATION_SECTOR_LABELS,
+  EDUCATION_SECTOR_SHORT_LABELS,
+  educationSectorBadgeVariant,
+  normalizeEducationSector,
+  type EducationSectorValue,
+} from '../../lib/educationSector';
+import {
   buildClassMetaFromApi,
   downloadClassRosterCsv,
   downloadClassRosterPdf,
@@ -79,6 +87,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
   const allowStudentDelete = canDeleteStudentsOrClasses(user);
   const [searchTerm, setSearchTerm] = useState(searchQuery);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sectorFilter, setSectorFilter] = useState<'all' | EducationSectorValue>('all');
   const [stateAssignmentFilter, setStateAssignmentFilter] = useState('all');
   const [classFilter, setClassFilter] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -168,12 +177,17 @@ const StudentsList: React.FC<StudentsListProps> = ({
       stateAssignmentFilter === 'all' ||
       (stateAssignmentFilter === 'STATE_ASSIGNED' && sa === 'STATE_ASSIGNED') ||
       (stateAssignmentFilter === 'NOT_STATE_ASSIGNED' && sa === 'NOT_STATE_ASSIGNED');
+    const sector = normalizeEducationSector(student.educationSector);
+    const matchesSector =
+      sectorFilter === 'all' ||
+      (sectorFilter === 'GENERAL' && sector === 'GENERAL') ||
+      (sectorFilter === 'TECHNICAL' && sector === 'TECHNICAL');
     const matchesClass =
       !showClassFilter ||
       classFilter === 'all' ||
       (classFilter === 'unassigned' && !student.classId) ||
       (classFilter !== 'unassigned' && student.classId === classFilter);
-    return matchesSearch && matchesStatus && matchesStateAssignment && matchesClass;
+    return matchesSearch && matchesStatus && matchesStateAssignment && matchesSector && matchesClass;
   });
 
   const UNASSIGNED_CLASS_LABEL = 'Non assigné';
@@ -269,6 +283,8 @@ const StudentsList: React.FC<StudentsListProps> = ({
     const classesCount = new Set(list.map((s: any) => s.class?.name || 'Non assigné')).size;
     return {
       total: list.length,
+      general: list.filter((s: any) => normalizeEducationSector(s.educationSector) === 'GENERAL').length,
+      technical: list.filter((s: any) => normalizeEducationSector(s.educationSector) === 'TECHNICAL').length,
       enrollmentActive: enrollmentOf('ACTIVE'),
       suspended: enrollmentOf('SUSPENDED'),
       graduated: enrollmentOf('GRADUATED'),
@@ -438,6 +454,18 @@ const StudentsList: React.FC<StudentsListProps> = ({
       ),
     },
     {
+      key: 'educationSector',
+      header: 'Voie',
+      render: (student: any) => {
+        const sector = normalizeEducationSector(student.educationSector);
+        return (
+          <Badge variant={educationSectorBadgeVariant(sector)} className="text-[10px]">
+            {EDUCATION_SECTOR_SHORT_LABELS[sector]}
+          </Badge>
+        );
+      },
+    },
+    {
       key: 'class',
       header: 'Classe',
       render: (student: any) => (
@@ -562,6 +590,32 @@ const StudentsList: React.FC<StudentsListProps> = ({
             ? 'Filtrez par classe et modifiez la classe d’un élève via « Modifier » (onglet scolarité).'
             : 'Gérez les élèves, leurs classes et leur statut. Recherchez, filtrez, exportez ou importez une liste CSV pour inscrire plusieurs élèves.'}
         </p>
+      </div>
+
+      {/* Voies d'enseignement */}
+      <div className="flex flex-wrap gap-2">
+        {EDUCATION_SECTOR_FILTER_OPTIONS.map((opt) => (
+          <Button
+            key={opt.value}
+            variant={sectorFilter === opt.value ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setSectorFilter(opt.value as 'all' | EducationSectorValue)}
+            className="!py-2"
+          >
+            {opt.label}
+            {opt.value !== 'all' && students ? (
+              <span className="ml-1.5 tabular-nums opacity-80">
+                (
+                {students.filter(
+                  (s: any) => normalizeEducationSector(s.educationSector) === opt.value
+                ).length}
+                )
+              </span>
+            ) : opt.value === 'all' && students ? (
+              <span className="ml-1.5 tabular-nums opacity-80">({students.length})</span>
+            ) : null}
+          </Button>
+        ))}
       </div>
 
       {/* Indicateurs */}
@@ -705,6 +759,16 @@ const StudentsList: React.FC<StudentsListProps> = ({
               placeholder="Rechercher par nom, email ou ID..."
             />
           </div>
+          <FilterDropdown
+            compact
+            options={EDUCATION_SECTOR_FILTER_OPTIONS.map((o) => ({
+              label: o.label,
+              value: o.value,
+            }))}
+            selected={sectorFilter}
+            onChange={(v) => setSectorFilter(v as 'all' | EducationSectorValue)}
+            label="Voie"
+          />
           <FilterDropdown
             compact
             options={[

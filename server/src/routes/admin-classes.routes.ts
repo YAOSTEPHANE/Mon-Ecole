@@ -5,6 +5,7 @@ import prisma from '../utils/prisma';
 import type { SchoolContextRequest } from '../utils/school-context.util';
 import { classScopeWhere } from '../utils/school-context.util';
 import { deleteClassWithDependencies } from '../utils/delete-class.util';
+import { isEducationSector } from '../utils/education-sector.util';
 
 const router = express.Router();
 
@@ -69,8 +70,18 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { name, level, room, capacity, academicYear, teacherId, trackId } = req.body;
+      const { name, level, room, capacity, academicYear, teacherId, trackId, educationSector } =
+        req.body;
       const schoolId = req.schoolId!;
+
+      let resolvedSector = isEducationSector(educationSector) ? educationSector : undefined;
+      if (!resolvedSector && typeof trackId === 'string' && trackId.trim()) {
+        const track = await prisma.schoolTrack.findUnique({
+          where: { id: trackId.trim() },
+          select: { educationSector: true },
+        });
+        resolvedSector = track?.educationSector;
+      }
 
       const newClass = await prisma.class.create({
         data: {
@@ -82,6 +93,7 @@ router.post(
           schoolId,
           teacherId,
           trackId: typeof trackId === 'string' && trackId.trim() ? trackId.trim() : undefined,
+          educationSector: resolvedSector ?? 'GENERAL',
         },
         include: {
           track: {
@@ -128,6 +140,15 @@ router.patch('/classes/:id', async (req, res) => {
     if (b.trackId !== undefined) {
       data.trackId = typeof b.trackId === 'string' && b.trackId.trim() ? b.trackId.trim() : null;
     }
+    if (isEducationSector(b.educationSector)) {
+      data.educationSector = b.educationSector;
+    } else if (typeof b.trackId === 'string' && b.trackId.trim()) {
+      const track = await prisma.schoolTrack.findUnique({
+        where: { id: b.trackId.trim() },
+        select: { educationSector: true },
+      });
+      if (track?.educationSector) data.educationSector = track.educationSector;
+    }
     const updated = await prisma.class.update({
       where: { id: req.params.id },
       data,
@@ -140,6 +161,12 @@ router.patch('/classes/:id', async (req, res) => {
         },
       },
     });
+    if (data.educationSector) {
+      await prisma.student.updateMany({
+        where: { classId: updated.id },
+        data: { educationSector: data.educationSector },
+      });
+    }
     res.json(updated);
   } catch (error: unknown) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });

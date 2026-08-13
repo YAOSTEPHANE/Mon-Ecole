@@ -1,17 +1,27 @@
 import api from './client';
 import type { AppBrandingUploadSlot } from '@/lib/appBrandingUpload';
+import type { EducationSectorValue } from '@/lib/educationSector';
 
 export const adminApi = {
   getStudents: async (
-    params?: { includeParents?: boolean } | { queryKey?: unknown; signal?: unknown }
+    params?:
+      | { includeParents?: boolean; educationSector?: EducationSectorValue }
+      | { queryKey?: unknown; signal?: unknown }
   ) => {
-    const includeParents =
-      !!params &&
+    const isQueryOpts =
+      params &&
       typeof params === 'object' &&
-      'includeParents' in params &&
-      Boolean((params as { includeParents?: boolean }).includeParents);
+      ('queryKey' in params || 'signal' in params);
+    const opts = !isQueryOpts
+      ? (params as { includeParents?: boolean; educationSector?: EducationSectorValue } | undefined)
+      : undefined;
+    const includeParents = Boolean(opts?.includeParents);
+    const educationSector = opts?.educationSector;
     const response = await api.get('/admin/students', {
-      params: includeParents ? { includeParents: '1' } : undefined,
+      params: {
+        ...(includeParents ? { includeParents: '1' } : {}),
+        ...(educationSector ? { educationSector } : {}),
+      },
     });
     return response.data;
   },
@@ -465,6 +475,7 @@ export const adminApi = {
     academicYear?: string | null;
     levels?: string[];
     sortOrder?: number;
+    educationSector?: EducationSectorValue;
   }) => {
     const response = await api.post('/admin/school-tracks', data);
     return response.data;
@@ -478,6 +489,7 @@ export const adminApi = {
       academicYear: string | null;
       levels: string[];
       sortOrder: number;
+      educationSector: EducationSectorValue;
     }>
   ) => {
     const response = await api.patch(`/admin/school-tracks/${id}`, data);

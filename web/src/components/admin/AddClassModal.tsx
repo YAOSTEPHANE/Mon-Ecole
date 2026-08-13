@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
+import {
+  EDUCATION_SECTOR_LABELS,
+  normalizeEducationSector,
+  type EducationSectorValue,
+} from '@/lib/educationSector';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
@@ -34,6 +39,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose }) => {
     room: '',
     capacity: 30,
     teacherId: '',
+    educationSector: 'GENERAL' as EducationSectorValue,
     trackId: '',
     materialRoomId: '',
   });
@@ -56,6 +62,13 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose }) => {
     queryFn: () => adminApi.getMaterialRooms({ isActive: 'true' }),
     enabled: isOpen,
   });
+
+  const tracksForSector = useMemo(() => {
+    const list = (schoolTracks as { id: string; name: string; code: string; educationSector?: EducationSectorValue }[]) ?? [];
+    return list.filter(
+      (t) => normalizeEducationSector(t.educationSector) === formData.educationSector
+    );
+  }, [schoolTracks, formData.educationSector]);
 
   // Available levels
   const levels = [
@@ -103,10 +116,37 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose }) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: name === 'capacity' ? parseInt(value) || 0 : value 
-    }));
+    setFormData(prev => {
+      if (name === 'educationSector') {
+        const sector = value as EducationSectorValue;
+        const currentTrack = ((schoolTracks as { id: string; educationSector?: EducationSectorValue }[]) ?? []).find(
+          (t) => t.id === prev.trackId
+        );
+        const trackStillValid =
+          currentTrack && normalizeEducationSector(currentTrack.educationSector) === sector;
+        return {
+          ...prev,
+          educationSector: sector,
+          trackId: trackStillValid ? prev.trackId : '',
+        };
+      }
+      if (name === 'trackId') {
+        const track = ((schoolTracks as { id: string; educationSector?: EducationSectorValue }[]) ?? []).find(
+          (t) => t.id === value
+        );
+        return {
+          ...prev,
+          trackId: value,
+          ...(track?.educationSector
+            ? { educationSector: normalizeEducationSector(track.educationSector) }
+            : {}),
+        };
+      }
+      return {
+        ...prev,
+        [name]: name === 'capacity' ? parseInt(value) || 0 : value,
+      };
+    });
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => {
@@ -155,6 +195,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose }) => {
       room: formData.room.trim() || undefined,
       capacity: formData.capacity || 30,
       teacherId: formData.teacherId || undefined,
+      educationSector: formData.educationSector,
       trackId: formData.trackId.trim() || undefined,
       materialRoomId: formData.materialRoomId || undefined,
     };
@@ -171,6 +212,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose }) => {
       room: '',
       capacity: 30,
       teacherId: '',
+      educationSector: 'GENERAL',
       trackId: '',
       materialRoomId: '',
     });
@@ -344,23 +386,43 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-stone-700 mb-1">
-              Filière <span className="text-stone-400 font-normal">(optionnel)</span>
-            </label>
-            <select
-              name="trackId"
-              value={formData.trackId}
-              onChange={handleChange}
-              className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 appearance-none"
-            >
-              <option value="">Aucune</option>
-              {(schoolTracks as any[])?.map((t: any) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.code})
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div>
+              <label htmlFor="add-class-education-sector" className="block text-xs font-semibold text-stone-700 mb-1">
+                Voie d&apos;enseignement <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="add-class-education-sector"
+                name="educationSector"
+                value={formData.educationSector}
+                onChange={handleChange}
+                className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 appearance-none"
+              >
+                {(Object.keys(EDUCATION_SECTOR_LABELS) as EducationSectorValue[]).map((key) => (
+                  <option key={key} value={key}>
+                    {EDUCATION_SECTOR_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-stone-700 mb-1">
+                Filière <span className="text-stone-400 font-normal">(optionnel)</span>
+              </label>
+              <select
+                name="trackId"
+                value={formData.trackId}
+                onChange={handleChange}
+                className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 appearance-none"
+              >
+                <option value="">Aucune</option>
+                {tracksForSector.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.code})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>

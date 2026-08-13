@@ -23,6 +23,11 @@ import {
   FiLoader
 } from 'react-icons/fi';
 import FneMatriculeVerifyActions from './FneMatriculeVerifyActions';
+import {
+  EDUCATION_SECTOR_LABELS,
+  normalizeEducationSector,
+  type EducationSectorValue,
+} from '@/lib/educationSector';
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -48,6 +53,7 @@ type ClassOption = {
   level?: string | null;
   section?: string | null;
   academicYear?: string | null;
+  educationSector?: EducationSectorValue | null;
 };
 
 function formatLevelOption(cls: ClassOption): string {
@@ -83,6 +89,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
     
     // Informations académiques
     studentId: '',
+    educationSector: 'GENERAL' as EducationSectorValue,
     classId: '',
     classGroupId: '',
     enrollmentStatus: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'GRADUATED',
@@ -109,6 +116,13 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
   });
 
   const classOptions = classes as ClassOption[] | undefined;
+
+  const filteredClassOptions = useMemo(() => {
+    if (!classOptions) return [];
+    return classOptions.filter(
+      (cls) => normalizeEducationSector(cls.educationSector) === formData.educationSector
+    );
+  }, [classOptions, formData.educationSector]);
 
   const selectedClass = useMemo(
     () => classOptions?.find((c) => c.id === formData.classId),
@@ -177,7 +191,28 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'classId') {
-      setFormData((prev) => ({ ...prev, classId: value, classGroupId: '' }));
+      const cls = classOptions?.find((c) => c.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        classId: value,
+        classGroupId: '',
+        ...(cls?.educationSector
+          ? { educationSector: normalizeEducationSector(cls.educationSector) }
+          : {}),
+      }));
+    } else if (name === 'educationSector') {
+      const sector = value as EducationSectorValue;
+      setFormData((prev) => ({
+        ...prev,
+        educationSector: sector,
+        classId: prev.classId &&
+          normalizeEducationSector(
+            classOptions?.find((c) => c.id === prev.classId)?.educationSector
+          ) === sector
+          ? prev.classId
+          : '',
+        classGroupId: '',
+      }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -328,6 +363,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
       allergies: formData.allergies || undefined,
       specialNeeds: formData.specialNeeds || undefined,
       classId: formData.classId || undefined,
+      educationSector: formData.educationSector,
       ...(formData.classGroupId ? { classGroupId: formData.classGroupId } : {}),
       enrollmentDate: formData.enrollmentDate,
       enrollmentStatus: formData.enrollmentStatus,
@@ -352,6 +388,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
       isRepeating: false,
       gender: 'MALE',
       studentId: '',
+      educationSector: 'GENERAL',
       classId: '',
       classGroupId: '',
       enrollmentStatus: 'ACTIVE',
@@ -773,6 +810,25 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
+                  <label htmlFor="add-student-education-sector" className="block text-xs font-semibold text-stone-700 mb-1">
+                    Voie d&apos;enseignement <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="add-student-education-sector"
+                    name="educationSector"
+                    value={formData.educationSector}
+                    onChange={handleChange}
+                    className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all"
+                  >
+                    {(Object.keys(EDUCATION_SECTOR_LABELS) as EducationSectorValue[]).map((key) => (
+                      <option key={key} value={key}>
+                        {EDUCATION_SECTOR_LABELS[key]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label htmlFor="add-student-class-id" className="block text-xs font-semibold text-stone-700 mb-1">
                     Niveau <span className="text-red-500">*</span>
                   </label>
@@ -786,7 +842,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
                     }`}
                   >
                     <option value="">Sélectionner un niveau</option>
-                    {classOptions?.map((cls) => (
+                    {filteredClassOptions.map((cls) => (
                       <option key={cls.id} value={cls.id}>
                         {formatLevelOption(cls)}
                       </option>

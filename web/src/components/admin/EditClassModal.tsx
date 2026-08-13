@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
+import {
+  EDUCATION_SECTOR_LABELS,
+  normalizeEducationSector,
+  type EducationSectorValue,
+} from '@/lib/educationSector';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
@@ -28,6 +33,7 @@ export interface AdminClassRow {
   academicYear: string;
   teacherId?: string | null;
   trackId?: string | null;
+  educationSector?: EducationSectorValue | null;
   _count?: { students?: number };
 }
 
@@ -60,6 +66,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({
     room: '',
     capacity: 30,
     teacherId: '',
+    educationSector: 'GENERAL' as EducationSectorValue,
     trackId: '',
     materialRoomId: '',
   });
@@ -92,6 +99,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({
         room: classItem.room || '',
         capacity: classItem.capacity ?? 30,
         teacherId: classItem.teacherId || '',
+        educationSector: normalizeEducationSector(classItem.educationSector),
         trackId: classItem.trackId || '',
         materialRoomId: classItem.materialRoomId || classItem.materialRoom?.id || '',
       });
@@ -104,6 +112,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({
       adminApi.updateClass(classItem!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
       toast.success('Classe mise à jour');
       onClose();
@@ -113,12 +122,47 @@ const EditClassModal: React.FC<EditClassModalProps> = ({
     },
   });
 
+  const tracksForSector = useMemo(() => {
+    const list =
+      (schoolTracks as { id: string; name: string; code: string; educationSector?: EducationSectorValue }[]) ?? [];
+    return list.filter(
+      (t) => normalizeEducationSector(t.educationSector) === formData.educationSector
+    );
+  }, [schoolTracks, formData.educationSector]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'capacity' ? parseInt(value, 10) || 0 : value,
-    }));
+    setFormData((prev) => {
+      if (name === 'educationSector') {
+        const sector = value as EducationSectorValue;
+        const currentTrack = (
+          (schoolTracks as { id: string; educationSector?: EducationSectorValue }[]) ?? []
+        ).find((t) => t.id === prev.trackId);
+        const trackStillValid =
+          currentTrack && normalizeEducationSector(currentTrack.educationSector) === sector;
+        return {
+          ...prev,
+          educationSector: sector,
+          trackId: trackStillValid ? prev.trackId : '',
+        };
+      }
+      if (name === 'trackId') {
+        const track = (
+          (schoolTracks as { id: string; educationSector?: EducationSectorValue }[]) ?? []
+        ).find((t) => t.id === value);
+        return {
+          ...prev,
+          trackId: value,
+          ...(track?.educationSector
+            ? { educationSector: normalizeEducationSector(track.educationSector) }
+            : {}),
+        };
+      }
+      return {
+        ...prev,
+        [name]: name === 'capacity' ? parseInt(value, 10) || 0 : value,
+      };
+    });
     if (errors[name]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -151,6 +195,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({
       materialRoomId: formData.materialRoomId || null,
       capacity: formData.capacity,
       teacherId: formData.teacherId || null,
+      educationSector: formData.educationSector,
       trackId: formData.trackId.trim() || null,
     });
   };
@@ -302,23 +347,46 @@ const EditClassModal: React.FC<EditClassModalProps> = ({
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-stone-700 mb-1">
-            Filière <span className="text-stone-400 font-normal">(optionnel)</span>
-          </label>
-          <select
-            name="trackId"
-            value={formData.trackId}
-            onChange={handleChange}
-            className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg appearance-none"
-          >
-            <option value="">Aucune</option>
-            {(schoolTracks as any[])?.map((t: any) => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.code})
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div>
+            <label htmlFor="edit-class-education-sector" className="block text-xs font-semibold text-stone-700 mb-1">
+              Voie d&apos;enseignement <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="edit-class-education-sector"
+              name="educationSector"
+              value={formData.educationSector}
+              onChange={handleChange}
+              className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg appearance-none"
+            >
+              {(Object.keys(EDUCATION_SECTOR_LABELS) as EducationSectorValue[]).map((key) => (
+                <option key={key} value={key}>
+                  {EDUCATION_SECTOR_LABELS[key]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-0.5 text-[10px] text-stone-500">
+              Les élèves de cette classe seront classés dans la même voie.
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-stone-700 mb-1">
+              Filière <span className="text-stone-400 font-normal">(optionnel)</span>
+            </label>
+            <select
+              name="trackId"
+              value={formData.trackId}
+              onChange={handleChange}
+              className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg appearance-none"
+            >
+              <option value="">Aucune</option>
+              {tracksForSector.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.code})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>

@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
+import { isEducationSector } from '../utils/education-sector.util';
 
 const router = express.Router();
 
@@ -44,6 +45,7 @@ router.post('/school-tracks', async (req, res) => {
         academicYear: typeof b.academicYear === 'string' ? b.academicYear.trim() || null : null,
         levels: Array.isArray(b.levels) ? b.levels.map(String) : [],
         sortOrder: typeof b.sortOrder === 'number' ? b.sortOrder : Number(b.sortOrder) || 0,
+        educationSector: isEducationSector(b.educationSector) ? b.educationSector : 'GENERAL',
       },
       include: trackInclude,
     });
@@ -73,6 +75,7 @@ router.patch('/school-tracks/:id', async (req, res) => {
     }
     if (Array.isArray(b.levels)) data.levels = b.levels.map(String);
     if (b.sortOrder !== undefined) data.sortOrder = Number(b.sortOrder) || 0;
+    if (isEducationSector(b.educationSector)) data.educationSector = b.educationSector;
 
     const row = await prisma.schoolTrack.update({
       where: { id: req.params.id },

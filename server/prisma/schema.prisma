@@ -181,6 +181,12 @@ enum EnrollmentStatus {
   ARCHIVED
 }
 
+/// Voie d'enseignement : général (MENA) ou technique (METFPA / lycée pro)
+enum EducationSector {
+  GENERAL
+  TECHNICAL
+}
+
 /// Changement de classe, réinscription, mutation ou départ
 enum StudentTransferType {
   CLASS_CHANGE
@@ -1022,6 +1028,8 @@ model Student {
   isActive           Boolean          @default(true)
   /// Établissement (collège) de rattachement — dénormalisé pour filtrage multi-sites
   schoolId           String?          @db.ObjectId
+  /// Voie d'enseignement (général ou technique)
+  educationSector    EducationSector  @default(GENERAL)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
@@ -1074,6 +1082,7 @@ model Student {
   @@index([schoolId])
   @@index([nationalMatricule])
   @@index([stateAssignment])
+  @@index([educationSector])
   @@map("students")
 }
 
@@ -1543,6 +1552,8 @@ model Class {
   capacity    Int       @default(30)
   academicYear String
   schoolId    String?   @db.ObjectId
+  /// Voie d'enseignement de la classe
+  educationSector EducationSector @default(GENERAL)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -1566,6 +1577,7 @@ model Class {
 
   @@index([schoolId])
   @@index([schoolId, academicYear])
+  @@index([educationSector])
   @@map("classes")
 }
 
@@ -1603,6 +1615,8 @@ model SchoolTrack {
   academicYear String?
   levels       String[]
   sortOrder    Int      @default(0)
+  /// Voie d'enseignement de la filière
+  educationSector EducationSector @default(GENERAL)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

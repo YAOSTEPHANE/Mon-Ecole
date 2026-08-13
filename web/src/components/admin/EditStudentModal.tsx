@@ -26,6 +26,11 @@ import AdminUserPasswordSection from './AdminUserPasswordSection';
 import { isSyntheticStudentEmail } from '@/lib/studentLoginIdentifier';
 import { useSchool } from '@/contexts/SchoolContext';
 import { useSchoolReady, schoolQueryKey } from '@/hooks/useSchoolReady';
+import {
+  EDUCATION_SECTOR_LABELS,
+  normalizeEducationSector,
+  type EducationSectorValue,
+} from '@/lib/educationSector';
 
 interface EditStudentModalProps {
   isOpen: boolean;
@@ -63,6 +68,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
     gender: 'MALE' as 'MALE' | 'FEMALE' | 'OTHER',
     
     // Informations académiques
+    educationSector: 'GENERAL' as EducationSectorValue,
     classId: '',
     classGroupId: '',
     enrollmentStatus: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ARCHIVED',
@@ -97,6 +103,9 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
         birthPlace: (student as { birthPlace?: string | null }).birthPlace || '',
         isRepeating: Boolean((student as { isRepeating?: boolean | null }).isRepeating),
         gender: student.gender || 'MALE',
+        educationSector: normalizeEducationSector(
+          (student as { educationSector?: EducationSectorValue }).educationSector
+        ),
         classId: student.classId || '',
         classGroupId: student.classGroup?.id || '',
         enrollmentStatus:
@@ -130,6 +139,13 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
     queryFn: () => adminApi.getSubjectOptions(),
     enabled: isOpen,
   });
+
+  const filteredClasses = useMemo(() => {
+    const list = (classes as any[]) || [];
+    return list.filter(
+      (cls) => normalizeEducationSector(cls.educationSector) === formData.educationSector
+    );
+  }, [classes, formData.educationSector]);
 
   const selectedClass = useMemo(
     () => (classes as any[])?.find((c: any) => c.id === formData.classId),
@@ -208,9 +224,27 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'classId') {
+      const cls = (classes as any[])?.find((c) => c.id === value);
       setFormData((prev) => ({
         ...prev,
         classId: value,
+        classGroupId: '',
+        ...(cls?.educationSector
+          ? { educationSector: normalizeEducationSector(cls.educationSector) }
+          : {}),
+      }));
+    } else if (name === 'educationSector') {
+      const sector = value as EducationSectorValue;
+      setFormData((prev) => ({
+        ...prev,
+        educationSector: sector,
+        classId:
+          prev.classId &&
+          normalizeEducationSector(
+            (classes as any[])?.find((c) => c.id === prev.classId)?.educationSector
+          ) === sector
+            ? prev.classId
+            : '',
         classGroupId: '',
       }));
     } else {
@@ -324,6 +358,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
       birthPlace: formData.birthPlace.trim() || undefined,
       isRepeating: formData.isRepeating,
       gender: formData.gender,
+      educationSector: formData.educationSector,
       classId: formData.classId || undefined,
       classGroupId: formData.classId
         ? formData.classGroupId
@@ -715,6 +750,25 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
+                  <label htmlFor="edit-student-education-sector" className="block text-xs font-semibold text-stone-700 mb-1">
+                    Voie d&apos;enseignement <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="edit-student-education-sector"
+                    name="educationSector"
+                    value={formData.educationSector}
+                    onChange={handleChange}
+                    className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all"
+                  >
+                    {(Object.keys(EDUCATION_SECTOR_LABELS) as EducationSectorValue[]).map((key) => (
+                      <option key={key} value={key}>
+                        {EDUCATION_SECTOR_LABELS[key]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
                     Classe <span className="text-red-500">*</span>
                   </label>
@@ -727,7 +781,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
                     }`}
                   >
                     <option value="">Sélectionner une classe</option>
-                    {classes?.map((cls: any) => (
+                    {filteredClasses.map((cls: any) => (
                       <option key={cls.id} value={cls.id}>
                         {cls.level}
                         {cls.section ? ` sect. ${cls.section}` : ''} — {cls.name}

@@ -27,6 +27,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { canDeleteStudentsOrClasses } from '@/lib/staffDeletionPolicy';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useSchoolReady, schoolQueryKey } from '../../hooks/useSchoolReady';
+import {
+  EDUCATION_SECTOR_FILTER_OPTIONS,
+  EDUCATION_SECTOR_SHORT_LABELS,
+  educationSectorBadgeVariant,
+  normalizeEducationSector,
+  type EducationSectorValue,
+} from '@/lib/educationSector';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -64,6 +71,7 @@ const levelColors: Record<string, string> = {
 
 const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = false }) => {
   const [searchTerm, setSearchTerm] = useState(searchQuery);
+  const [sectorFilter, setSectorFilter] = useState<'all' | EducationSectorValue>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editClass, setEditClass] = useState<AdminClassRow | null>(null);
   const [groupsForClass, setGroupsForClass] = useState<{
@@ -222,15 +230,18 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
   const filteredClasses = useMemo(() => {
     if (!classes) return [];
     const term = searchTerm.toLowerCase();
-    return classes.filter(
-      (c: any) =>
+    return classes.filter((c: any) => {
+      const matchesSearch =
         (c.name || '').toLowerCase().includes(term) ||
         (c.level || '').toLowerCase().includes(term) ||
         (c.section || '').toLowerCase().includes(term) ||
         (c.academicYear || '').toLowerCase().includes(term) ||
-        (c.room || '').toLowerCase().includes(term)
-    );
-  }, [classes, searchTerm]);
+        (c.room || '').toLowerCase().includes(term);
+      const sector = normalizeEducationSector(c.educationSector);
+      const matchesSector = sectorFilter === 'all' || sector === sectorFilter;
+      return matchesSearch && matchesSector;
+    });
+  }, [classes, searchTerm, sectorFilter]);
 
   const stats = useMemo(() => {
     const list = filteredClasses;
@@ -393,7 +404,7 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
           Classes
         </h1>
         <p className={compact ? 'text-xs text-gray-500 mt-1' : 'text-sm text-gray-500 mt-1'}>
-          Organisez par niveau, section et groupes ; gérez les effectifs et les professeurs principaux.
+          Organisez par niveau, section, voie (général / technique) et groupes ; gérez les effectifs et les professeurs principaux.
         </p>
       </div>
 
@@ -489,6 +500,16 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
             />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {EDUCATION_SECTOR_FILTER_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={sectorFilter === opt.value ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setSectorFilter(opt.value as 'all' | EducationSectorValue)}
+              >
+                {opt.label}
+              </Button>
+            ))}
             <Button variant="secondary" size="sm" onClick={exportToCSV}>
               <FiDownload className="w-4 h-4 mr-1" aria-hidden /> CSV
             </Button>
@@ -551,6 +572,18 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
                             Section {classItem.section}
                           </Badge>
                         ) : null}
+                        <Badge
+                          variant={educationSectorBadgeVariant(
+                            normalizeEducationSector(classItem.educationSector)
+                          )}
+                          size="sm"
+                        >
+                          {
+                            EDUCATION_SECTOR_SHORT_LABELS[
+                              normalizeEducationSector(classItem.educationSector)
+                            ]
+                          }
+                        </Badge>
                         {classItem.track?.name ? (
                           <Badge variant="default" size="sm" className="bg-violet-50 text-violet-800">
                             {classItem.track.name}
@@ -586,6 +619,7 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
                               academicYear: classItem.academicYear,
                               teacherId: classItem.teacherId ?? classItem.teacher?.id,
                               trackId: classItem.trackId ?? classItem.track?.id ?? null,
+                              educationSector: normalizeEducationSector(classItem.educationSector),
                               materialRoomId:
                                 classItem.materialRoomId ?? classItem.materialRoom?.id ?? null,
                               materialRoom: classItem.materialRoom ?? null,

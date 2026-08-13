@@ -6,6 +6,13 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
 import { FiGitBranch, FiLayers, FiPlus, FiTrash2, FiLink } from 'react-icons/fi';
+import {
+  EDUCATION_SECTOR_LABELS,
+  EDUCATION_SECTOR_SHORT_LABELS,
+  educationSectorBadgeVariant,
+  normalizeEducationSector,
+  type EducationSectorValue,
+} from '@/lib/educationSector';
 
 type TracksAndOptionsPanelProps = {
   compact?: boolean;
@@ -14,7 +21,13 @@ type TracksAndOptionsPanelProps = {
 const TracksAndOptionsPanel: React.FC<TracksAndOptionsPanelProps> = ({ compact = false }) => {
   const queryClient = useQueryClient();
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-  const [newTrack, setNewTrack] = useState({ name: '', code: '', academicYear: '', sortOrder: '0' });
+  const [newTrack, setNewTrack] = useState({
+    name: '',
+    code: '',
+    academicYear: '',
+    sortOrder: '0',
+    educationSector: 'GENERAL' as EducationSectorValue,
+  });
   const [newOption, setNewOption] = useState({ name: '', code: '' });
   const [linkOptionId, setLinkOptionId] = useState('');
 
@@ -52,10 +65,11 @@ const TracksAndOptionsPanel: React.FC<TracksAndOptionsPanelProps> = ({ compact =
         code: newTrack.code.trim(),
         academicYear: newTrack.academicYear.trim() || null,
         sortOrder: Number(newTrack.sortOrder) || 0,
+        educationSector: newTrack.educationSector,
       }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['school-tracks'] });
-      setNewTrack({ name: '', code: '', academicYear: '', sortOrder: '0' });
+      setNewTrack({ name: '', code: '', academicYear: '', sortOrder: '0', educationSector: 'GENERAL' });
       setSelectedTrackId(data.id);
       toast.success('Filière créée');
     },
@@ -156,9 +170,17 @@ const TracksAndOptionsPanel: React.FC<TracksAndOptionsPanelProps> = ({ compact =
                       }`}
                     >
                       <span className="font-medium text-gray-900 truncate">{t.name}</span>
-                      <Badge variant="default" size="sm">
-                        {t.code}
-                      </Badge>
+                      <span className="flex items-center gap-1 shrink-0">
+                        <Badge
+                          variant={educationSectorBadgeVariant(normalizeEducationSector(t.educationSector))}
+                          size="sm"
+                        >
+                          {EDUCATION_SECTOR_SHORT_LABELS[normalizeEducationSector(t.educationSector)]}
+                        </Badge>
+                        <Badge variant="default" size="sm">
+                          {t.code}
+                        </Badge>
+                      </span>
                     </button>
                   </li>
                 ))
@@ -185,12 +207,30 @@ const TracksAndOptionsPanel: React.FC<TracksAndOptionsPanelProps> = ({ compact =
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
+              <select
+                className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
+                value={newTrack.educationSector}
+                onChange={(e) =>
+                  setNewTrack((p) => ({
+                    ...p,
+                    educationSector: e.target.value as EducationSectorValue,
+                  }))
+                }
+              >
+                {(Object.keys(EDUCATION_SECTOR_LABELS) as EducationSectorValue[]).map((key) => (
+                  <option key={key} value={key}>
+                    {EDUCATION_SECTOR_LABELS[key]}
+                  </option>
+                ))}
+              </select>
               <input
                 className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
                 placeholder="Année (optionnel)"
                 value={newTrack.academicYear}
                 onChange={(e) => setNewTrack((p) => ({ ...p, academicYear: e.target.value }))}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <input
                 type="number"
                 className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
@@ -211,7 +251,29 @@ const TracksAndOptionsPanel: React.FC<TracksAndOptionsPanelProps> = ({ compact =
           </div>
 
           {selectedTrack && (
-            <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <select
+                className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
+                value={normalizeEducationSector(selectedTrack.educationSector)}
+                onChange={(e) => {
+                  const educationSector = e.target.value as EducationSectorValue;
+                  adminApi
+                    .updateSchoolTrack(selectedTrack.id, { educationSector })
+                    .then(() => {
+                      queryClient.invalidateQueries({ queryKey: ['school-tracks'] });
+                      toast.success('Voie de la filière mise à jour');
+                    })
+                    .catch((err: { response?: { data?: { error?: string } } }) =>
+                      toast.error(err.response?.data?.error || 'Erreur')
+                    );
+                }}
+              >
+                {(Object.keys(EDUCATION_SECTOR_LABELS) as EducationSectorValue[]).map((key) => (
+                  <option key={key} value={key}>
+                    {EDUCATION_SECTOR_LABELS[key]}
+                  </option>
+                ))}
+              </select>
               <Button
                 type="button"
                 variant="secondary"
