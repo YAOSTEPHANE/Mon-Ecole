@@ -197,10 +197,10 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, role, staffRo
         />
         <nav className="glass-nav glass-nav-v2">
           <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-10">
-            <div className="flex min-h-16 h-16 items-center justify-between gap-1.5 sm:gap-3">
+            <div className="flex min-h-14 h-14 sm:min-h-16 sm:h-16 items-center justify-between gap-1.5 sm:gap-3 min-w-0">
               <Link
                 href={getRolePath()}
-                className="flex items-center gap-2 sm:gap-2.5 min-w-0 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafaf9] -m-1 p-1"
+                className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafaf9] -m-1 p-1"
               >
                 <div
                   className={`relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${navigationLogoAbsolute ? 'bg-white ring-2 ring-amber-500/25' : `${accent.logo} text-amber-50`} shadow-lg shadow-black/25 ring-2 ring-amber-500/25 transition duration-300 group-hover:scale-[1.02] group-hover:shadow-xl`}
@@ -229,14 +229,14 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, role, staffRo
                 </div>
               </Link>
 
-              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 md:gap-4">
                 <span
                   className={`hidden sm:inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold shrink-0 ${accent.badge}`}
                 >
                   {roleBadgeText}
                 </span>
 
-                <div className="hidden sm:block text-right min-w-0 max-w-[min(220px,28vw)] lg:max-w-[260px]">
+                <div className="hidden md:block text-right min-w-0 max-w-[min(220px,28vw)] lg:max-w-[260px]">
                   <p className="text-xs font-semibold text-stone-900 truncate">{displayName}</p>
                   <p className="text-[9px] text-stone-500 truncate">{user?.email}</p>
                   {user?.phone ? (

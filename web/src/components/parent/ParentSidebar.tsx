@@ -26,7 +26,7 @@ const ParentSidebar = ({ items, activeTab, onTabChange, selectedChild, isOpen, o
       {isOpen && (
         <button
           type="button"
-          className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-40 lg:hidden cursor-default border-0 p-0"
+          className="fixed inset-0 z-[55] bg-stone-900/40 backdrop-blur-sm lg:hidden cursor-default border-0 p-0"
           onClick={onToggle}
           aria-label="Fermer la navigation"
         />
@@ -37,6 +37,7 @@ const ParentSidebar = ({ items, activeTab, onTabChange, selectedChild, isOpen, o
           transition-transform duration-300 ease-premium
           w-[min(16rem,calc(100vw-2rem))] lg:w-64
           fixed left-0 dash-sticky-under-header dash-h-under-header
+          max-lg:!top-0 max-lg:!h-dvh max-lg:!max-h-dvh max-lg:z-[60]
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:sticky lg:left-auto lg:translate-x-0 lg:self-start`}
         aria-label="Navigation espace parent"

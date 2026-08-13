@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 
@@ -40,25 +41,39 @@ const AdminSidebar = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 1023px)');
+    if (!mq.matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
   return (
     <>
       {isOpen && (
         <button
           type="button"
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden cursor-default border-0 p-0"
+          className="fixed inset-0 z-[55] bg-slate-900/40 backdrop-blur-sm lg:hidden cursor-default border-0 p-0"
           onClick={onToggle}
           aria-label="Fermer le menu"
         />
       )}
 
       <aside
-        className={`dash-sidebar-rail relative z-50 shrink-0 border-r border-white/10
+        className={`dash-sidebar-rail z-50 border-r border-white/10
           transition-[transform,width] duration-300 ease-premium
-          w-[min(16rem,calc(100vw-2rem))]
+          max-lg:w-[min(20rem,calc(100vw-1rem))]
           fixed left-0 dash-sticky-under-header dash-h-under-header
+          max-lg:!top-0 max-lg:!h-dvh max-lg:!max-h-dvh max-lg:z-[60]
+          max-lg:max-w-[calc(100vw-1rem)]
+          max-lg:shadow-[16px_0_48px_-12px_rgba(0,0,0,0.55)]
           ${collapsed ? 'lg:w-[4.25rem]' : 'lg:w-64'}
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:sticky lg:left-auto lg:translate-x-0 lg:self-start`}
+          ${isOpen ? 'translate-x-0' : 'max-lg:-translate-x-full max-lg:pointer-events-none'}
+          lg:sticky lg:left-auto lg:translate-x-0 lg:pointer-events-auto lg:shrink-0 lg:self-start lg:shadow-none lg:z-50`}
         aria-label="Navigation administration"
       >
         <div className="flex h-full min-h-0 flex-col">
@@ -91,7 +106,7 @@ const AdminSidebar = ({
             ) : null}
           </div>
 
-          <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-2 shrink-0 lg:hidden">
+          <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-2 shrink-0 pt-[max(0.5rem,env(safe-area-inset-top))] lg:hidden">
             <div>
               <p className="text-[8px] font-semibold text-white/45 uppercase tracking-[0.2em]">Navigation</p>
               <h2 className="text-sm font-display font-semibold tracking-wide text-white">Administration</h2>
@@ -106,9 +121,9 @@ const AdminSidebar = ({
             </button>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2 max-lg:pl-[max(0.5rem,env(safe-area-inset-left))]">
             <nav
-              className="dash-sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 text-[10px] leading-tight"
+              className="dash-sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 text-xs leading-snug max-lg:pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] lg:text-[10px] lg:leading-tight"
               aria-label="Modules administration"
             >
               {mainTabs.map((tab) => {
@@ -122,7 +137,7 @@ const AdminSidebar = ({
                     aria-label={tab.label}
                     aria-current={isActive ? 'page' : undefined}
                     onClick={() => closeOnNavigate(tab.id)}
-                    className={`flex w-full min-h-[36px] items-center gap-2 rounded-xl px-2 py-1.5 font-medium transition-all duration-300 ease-premium lg:min-h-0 lg:py-1.5 ${
+                    className={`flex w-full min-h-[44px] items-center gap-2.5 rounded-xl px-2.5 py-2 font-medium transition-all duration-300 ease-premium lg:min-h-0 lg:gap-2 lg:px-2 lg:py-1.5 ${
                       collapsed ? 'lg:justify-center lg:px-1.5 lg:gap-0' : ''
                     } ${
                       isActive
@@ -131,12 +146,12 @@ const AdminSidebar = ({
                     }`}
                   >
                     <Icon
-                      className={`h-3.5 w-3.5 shrink-0 ${
+                      className={`h-4 w-4 shrink-0 lg:h-3.5 lg:w-3.5 ${
                         isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
                       }`}
                     />
                     <span
-                      className={`min-w-0 truncate text-left ${collapsed ? 'lg:hidden' : ''}`}
+                      className={`min-w-0 text-left text-[13px] lg:truncate lg:text-[inherit] ${collapsed ? 'lg:hidden' : ''}`}
                     >
                       {tab.label}
                     </span>
@@ -157,7 +172,7 @@ const AdminSidebar = ({
                         aria-label={tab.label}
                         aria-current={isActive ? 'page' : undefined}
                         onClick={() => closeOnNavigate(tab.id)}
-                        className={`flex w-full min-h-[36px] items-center gap-2 rounded-xl px-2 py-1.5 font-medium transition-all duration-300 ease-premium lg:min-h-0 lg:py-1.5 ${
+                        className={`flex w-full min-h-[44px] items-center gap-2.5 rounded-xl px-2.5 py-2 font-medium transition-all duration-300 ease-premium lg:min-h-0 lg:gap-2 lg:px-2 lg:py-1.5 ${
                           collapsed ? 'lg:justify-center lg:px-1.5 lg:gap-0' : ''
                         } ${
                           isActive
@@ -166,12 +181,12 @@ const AdminSidebar = ({
                         }`}
                       >
                         <Icon
-                          className={`h-3.5 w-3.5 shrink-0 ${
+                          className={`h-4 w-4 shrink-0 lg:h-3.5 lg:w-3.5 ${
                             isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
                           }`}
                         />
                         <span
-                          className={`min-w-0 truncate text-left ${collapsed ? 'lg:hidden' : ''}`}
+                          className={`min-w-0 text-left text-[13px] lg:truncate lg:text-[inherit] ${collapsed ? 'lg:hidden' : ''}`}
                         >
                           {tab.label}
                         </span>

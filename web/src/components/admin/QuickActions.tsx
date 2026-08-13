@@ -109,11 +109,11 @@ const QuickActions: React.FC<QuickActionsProps> = ({
               >
                 <Icon className="h-5 w-5" aria-hidden />
               </div>
-              <div className="min-w-0 pt-0.5">
-                <span className="block text-sm font-bold text-stone-900 group-hover:text-stone-950">
+              <div className="min-w-0 flex-1 pt-0.5">
+                <span className="block truncate text-sm font-bold text-stone-900 group-hover:text-stone-950">
                   {action.label}
                 </span>
-                <span className="mt-0.5 block text-[11px] font-medium text-stone-500">
+                <span className="mt-0.5 block line-clamp-2 text-[11px] font-medium text-stone-500">
                   {action.description}
                 </span>
               </div>

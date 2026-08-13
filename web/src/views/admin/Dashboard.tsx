@@ -392,7 +392,7 @@ const AdminDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="ADMIN">
       <PremiumPortalShell variant="admin">
-      <div className="flex dash-min-h-under-header w-full items-stretch">
+      <div className="flex min-w-0 max-w-full dash-min-h-under-header w-full items-stretch overflow-x-clip">
         <AdminSidebar
           mainTabs={mainTabs}
           bottomTabs={bottomTabs}
@@ -404,12 +404,12 @@ const AdminDashboard = () => {
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 max-w-full flex-1 flex-col">
           {/* Header */}
           <header className="dash-command-bar sticky dash-sticky-under-header z-20">
-            <div className="px-2.5 sm:px-5 py-2 sm:py-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 min-w-0">
+            <div className="px-2.5 sm:px-5 py-1.5 sm:py-3">
+              <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <div className="flex min-w-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setSidebarOpen((o) => !o)}
@@ -433,23 +433,23 @@ const AdminDashboard = () => {
                       <FiChevronLeft className="h-4 w-4" aria-hidden />
                     )}
                   </button>
-                  <div className="min-w-0">
-                    <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight break-words leading-snug">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="font-display text-[15px] sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight break-words leading-snug">
                       {getGreeting()}, {user?.firstName}
                     </h1>
-                    <p className="text-xs text-stone-600 mt-0.5 line-clamp-2 sm:line-clamp-1 max-w-md">
+                    <p className="hidden sm:block text-xs text-stone-600 mt-0.5 line-clamp-1 max-w-md">
                       {isMultiSchool && activeSchool
                         ? `Établissement : ${activeSchool.name}`
                         : 'Pilotage — stratégique, opérationnel et conformité'}
                     </p>
-                    <p className="text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
+                    <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
                       {format(new Date(), "EEE d MMM yyyy • HH:mm", { locale: fr })}
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-                <SchoolSwitcher />
-                <div className="relative w-full sm:max-w-xs shrink-0">
+                <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:max-w-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <SchoolSwitcher className="w-full sm:w-auto" />
+                <div className="relative min-w-0 w-full sm:max-w-xs shrink">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
                     <FiSearch className="w-4 h-4" aria-hidden />
                   </div>
@@ -465,7 +465,7 @@ const AdminDashboard = () => {
                     placeholder="Recherche globale…"
                     aria-label="Recherche globale, valider avec Entrée"
                     autoComplete="off"
-                    className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
+                    className="dash-search-field w-full min-w-0 rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
                   />
                 </div>
                 </div>
@@ -473,8 +473,8 @@ const AdminDashboard = () => {
             </div>
           </header>
 
-          <main className="dash-workspace flex-1 px-2.5 sm:px-6 py-4 sm:py-6 overflow-y-auto overflow-x-hidden pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
-            <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6">
+          <main className="dash-workspace flex-1 min-w-0 px-2.5 sm:px-6 py-2.5 sm:py-6 overflow-y-auto overflow-x-hidden pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
+            <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6 min-w-0">
               <PremiumModuleHeader
                 title={activeTabMeta.label}
                 description={activeTabMeta.description}
@@ -482,19 +482,19 @@ const AdminDashboard = () => {
                 gradient={activeTabMeta.color}
                 badge="Admin"
                 actions={
-                  <div className="flex flex-wrap items-center gap-2">
+                  <>
                     {quickActions.slice(0, 2).map((qa) => (
                       <button
                         key={qa.label}
                         type="button"
                         onClick={qa.action}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-br from-stone-900 to-stone-800 text-amber-50 shadow-sm hover:from-stone-800 hover:to-stone-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2"
+                        className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-stone-900 to-stone-800 px-3 py-2 text-xs font-semibold text-amber-50 shadow-sm transition-colors hover:from-stone-800 hover:to-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 sm:w-auto sm:justify-start sm:py-1.5"
                       >
-                        {qa.label}
+                        <span className="truncate">{qa.label}</span>
                         <FiArrowRight className="w-3.5 h-3.5 shrink-0" aria-hidden />
                       </button>
                     ))}
-                  </div>
+                  </>
                 }
               />
 

@@ -50,6 +50,8 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -65,6 +67,8 @@
     text-rendering: optimizeLegibility;
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   ::selection {
@@ -306,23 +310,38 @@
       0 12px 32px -24px rgba(12, 10, 9, 0.12);
   }
 
-  /** Offset sous le header Layout (h-16 + safe-area) */
+  /** Offset sous le header Layout (h-14 mobile / h-16 + barre 2px + safe-area) */
   .dash-sticky-under-header {
-    top: calc(4rem + env(safe-area-inset-top, 0px));
+    top: calc(3.5rem + 2px + env(safe-area-inset-top, 0px));
   }
 
   .dash-h-under-header {
-    height: calc(100vh - 4rem - env(safe-area-inset-top, 0px));
-    max-height: calc(100vh - 4rem - env(safe-area-inset-top, 0px));
+    height: calc(100dvh - 3.5rem - 2px - env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 3.5rem - 2px - env(safe-area-inset-top, 0px));
   }
 
   .dash-min-h-under-header {
-    min-height: calc(100vh - 4rem - env(safe-area-inset-top, 0px));
+    min-height: calc(100dvh - 3.5rem - 2px - env(safe-area-inset-top, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .dash-sticky-under-header {
+      top: calc(4rem + 2px + env(safe-area-inset-top, 0px));
+    }
+
+    .dash-h-under-header {
+      height: calc(100dvh - 4rem - 2px - env(safe-area-inset-top, 0px));
+      max-height: calc(100dvh - 4rem - 2px - env(safe-area-inset-top, 0px));
+    }
+
+    .dash-min-h-under-header {
+      min-height: calc(100dvh - 4rem - 2px - env(safe-area-inset-top, 0px));
+    }
   }
 
   @media (max-width: 639px) {
     .dash-command-bar {
-      padding-bottom: 0.15rem;
+      padding-bottom: 0;
     }
 
     .dash-command-bar .dash-mobile-meta {

@@ -9,7 +9,7 @@ export default function SchoolSwitcher({ className = '' }: { className?: string 
   if (isLoading || schools.length === 0) return null;
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex min-w-0 max-w-full items-center gap-2 ${className}`}>
       <FiHome className="h-4 w-4 shrink-0 text-amber-800/70" aria-hidden />
       <label htmlFor="admin-school-switcher" className="sr-only">
         Établissement actif
@@ -18,7 +18,7 @@ export default function SchoolSwitcher({ className = '' }: { className?: string 
         id="admin-school-switcher"
         value={activeSchoolId ?? ''}
         onChange={(e) => void setActiveSchoolId(e.target.value)}
-        className="max-w-[220px] truncate rounded-lg border border-stone-200 bg-white/90 px-2.5 py-1.5 text-sm font-medium text-stone-800 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+        className="min-w-0 max-w-full flex-1 truncate rounded-lg border border-stone-200 bg-white/90 px-2.5 py-1.5 text-sm font-medium text-stone-800 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 sm:max-w-[220px] sm:flex-none"
         title={
           isMultiSchool
             ? 'Les listes affichent les données de l’établissement sélectionné'

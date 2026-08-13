@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.cjs",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx --watch src/index.ts",
     "build": "tsc && node ./scripts/write-dist-package-cjs.mjs && node ./scripts/prepare-vercel-runtime-deps.mjs",
     "start": "node dist/vercel-entry.js",
     "postinstall": "prisma generate",

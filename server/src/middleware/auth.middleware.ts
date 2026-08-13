@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import type { ParamsFlatDictionary } from 'express-serve-static-core';
-import { JsonWebTokenError, NotBeforeError, TokenExpiredError } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import {
   PrismaClientInitializationError,
   PrismaClientKnownRequestError,
@@ -57,10 +57,10 @@ export const authenticate = async (
 
     next();
   } catch (error) {
-    if (error instanceof TokenExpiredError) {
+    if (error instanceof jwt.TokenExpiredError) {
       return res.status(401).json({ error: 'Session expirée. Reconnectez-vous.' });
     }
-    if (error instanceof NotBeforeError || error instanceof JsonWebTokenError) {
+    if (error instanceof jwt.NotBeforeError || error instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({ error: 'Token invalide' });
     }
     if (error instanceof Error && error.message === 'Token invalide') {

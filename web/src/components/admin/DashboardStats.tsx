@@ -238,7 +238,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
           subtitle="Population scolaire et personnel"
           icon={FiUsers}
         />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 lg:grid-cols-5">
           {indicators.map((ind) => (
             <PremiumKpiCard
               key={ind.title}
@@ -255,7 +255,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
       {kpis?.cards && (
         <section className="dash-section-panel">
           <PremiumSectionTitle title="KPI — inscriptions, finances & pédagogie" subtitle="Suivi opérationnel et trésorerie" icon={FiDollarSign} />
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 lg:grid-cols-4">
             <PremiumKpiCard label="Dossiers admission" value={(kpis.cards.admissionsPending ?? 0) + (kpis.cards.admissionsUnderReview ?? 0)} subtitle={`${kpis.cards.admissionsPending} attente · ${kpis.cards.admissionsUnderReview} examen`} icon={FiInbox} accent="indigo" />
             <PremiumKpiCard label="Impayés scolarité" value={`${fmtFcfa(kpis.cards.tuitionUnpaidAmount)} FCFA`} subtitle={`${kpis.cards.tuitionUnpaidCount} ligne(s)`} icon={FiAlertCircle} accent="rose" />
             <PremiumKpiCard label="Encaissements (30 j.)" value={`${fmtFcfa(kpis.cards.paymentsCompleted30dAmount)} FCFA`} subtitle={`${kpis.cards.paymentsCompleted30dCount} paiement(s)`} icon={FiTrendingUp} accent="emerald" />
