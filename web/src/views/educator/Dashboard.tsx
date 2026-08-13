@@ -10,7 +10,7 @@ import EducatorParentsList from '../../components/educator/EducatorParentsList';
 import EducatorInternalMessaging from '../../components/educator/EducatorInternalMessaging';
 import EducatorScheduleTab from '../../components/educator/EducatorScheduleTab';
 import AcademicValidationPanel from '../../components/academic/AcademicValidationPanel';
-import { FiLayout, FiUsers, FiShield, FiSearch, FiTrendingUp, FiCommand, FiCheckCircle, FiBookOpen, FiHeart, FiMessageSquare, FiCalendar, FiUserCheck } from 'react-icons/fi';
+import { FiLayout, FiUsers, FiShield, FiSearch, FiTrendingUp, FiCommand, FiCheckCircle, FiBookOpen, FiHeart, FiMessageSquare, FiCalendar, FiUserCheck, FiAlertTriangle } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,8 +19,13 @@ import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashbo
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import { EDUCATOR_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
 import AttendanceManager from '../../components/teacher/AttendanceManager';
+import EducatorDisciplinePanel from '../../components/educator/EducatorDisciplinePanel';
+import { useQuery } from '@tanstack/react-query';
+import { educatorApi } from '../../services/api';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
 
-const VALID_TAB_IDS = ['overview', 'students', 'teachers', 'parents', 'messaging', 'schedule', 'attendance', 'conduct', 'validations'] as const;
+const VALID_TAB_IDS = ['overview', 'students', 'teachers', 'parents', 'messaging', 'schedule', 'attendance', 'conduct', 'discipline', 'validations'] as const;
 type TabId = (typeof VALID_TAB_IDS)[number];
 
 type TabDef = {
@@ -48,6 +53,7 @@ const EducatorDashboard = () => {
       { id: 'schedule', label: 'Emplois du temps', icon: FiCalendar, color: 'from-amber-500 to-orange-600', description: 'Plannings par classe et par enseignant' },
       { id: 'attendance', label: 'Appels', icon: FiUserCheck, color: 'from-cyan-500 to-teal-600', description: 'Appel de remplacement sur vos classes' },
       { id: 'conduct', label: 'Conduite', icon: FiShield, color: 'from-purple-500 to-fuchsia-600', description: 'Évaluations et historique comportemental' },
+      { id: 'discipline', label: 'Discipline', icon: FiAlertTriangle, color: 'from-amber-700 to-orange-800', description: 'Sanctions et suivis disciplinaires' },
       { id: 'validations', label: 'Validations', icon: FiCheckCircle, color: 'from-blue-600 to-indigo-600', description: 'Valider les notes et moyennes (2e étape)' },
     ],
     []
@@ -74,6 +80,12 @@ const EducatorDashboard = () => {
       setActiveTab(t as TabId);
     }
   }, [searchParams]);
+
+  const { data: attendanceAlerts = [] } = useQuery({
+    queryKey: ['educator-attendance-alerts'],
+    queryFn: () => educatorApi.getAttendanceAlerts(),
+    staleTime: 60_000,
+  });
 
   const changeTab = (tabId: TabId) => {
     setActiveTab(tabId);
@@ -207,6 +219,38 @@ const EducatorDashboard = () => {
               <div className="animate-slide-up">
                 {activeTab === 'overview' && (
                   <>
+                    {attendanceAlerts.length > 0 && (
+                      <Card className="mb-4 border border-orange-200 bg-orange-50/70 p-4">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
+                            <FiAlertTriangle className="h-4 w-4 text-orange-700" />
+                            Absences non justifiées (21 j.)
+                          </h3>
+                          <Badge variant="warning">{attendanceAlerts.length}</Badge>
+                        </div>
+                        <ul className="max-h-40 space-y-1.5 overflow-y-auto text-sm">
+                          {attendanceAlerts.slice(0, 8).map((a: any) => (
+                            <li key={a.id} className="flex justify-between gap-2 text-stone-700">
+                              <span className="min-w-0 truncate">
+                                {a.student?.user?.lastName} {a.student?.user?.firstName}
+                                {a.student?.class?.name ? ` · ${a.student.class.name}` : ''}
+                                {a.course?.name ? ` · ${a.course.name}` : ''}
+                              </span>
+                              <span className="shrink-0 text-xs text-stone-500">
+                                {a.date ? format(new Date(a.date), 'dd/MM', { locale: fr }) : ''}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          type="button"
+                          className="mt-3 text-xs font-semibold text-orange-800 hover:underline"
+                          onClick={() => changeTab('attendance')}
+                        >
+                          Ouvrir les appels →
+                        </button>
+                      </Card>
+                    )}
                     <EducatorOverview searchQuery={searchQuery} />
                     <PortalRoleModulesHub
                       tabs={tabs}
@@ -224,6 +268,7 @@ const EducatorDashboard = () => {
                   <AttendanceManager searchQuery={searchQuery} variant="educator" />
                 )}
                 {activeTab === 'conduct' && <ConductManager searchQuery={searchQuery} />}
+                {activeTab === 'discipline' && <EducatorDisciplinePanel />}
                 {activeTab === 'validations' && (
                   <AcademicValidationPanel title="Validations (éducateur)" />
                 )}

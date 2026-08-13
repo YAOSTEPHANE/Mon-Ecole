@@ -941,9 +941,66 @@ const TAB_META: Record<StaffModuleId, Omit<StaffTabMeta, 'id'>> = {
 
 
 
+/** Modules par défaut selon le métier (évite un menu surcharge pour chaque profil). */
+const STAFF_KIND_DEFAULT_MODULES: Record<SupportStaffKindKey, StaffModuleId[]> = {
+  SECRETARY: [
+    'overview',
+    'counter',
+    'admissions',
+    'appointments',
+    'student_registry',
+    'parents_mgmt',
+    'communication_mgmt',
+    'notifications_mgmt',
+    'schedule_mgmt',
+  ],
+  BURSAR: [
+    'overview',
+    'counter',
+    'treasury',
+    'fees_mgmt',
+    'tuition_fees_mgmt',
+    'payments_mgmt',
+    'accounting_mgmt',
+    'admissions',
+    'reports_mgmt',
+  ],
+  ACCOUNTANT: [
+    'overview',
+    'treasury',
+    'fees_mgmt',
+    'tuition_fees_mgmt',
+    'payments_mgmt',
+    'accounting_mgmt',
+    'reports_mgmt',
+    'analytics_mgmt',
+  ],
+  LIBRARIAN: ['overview', 'library', 'digital_library', 'library_mgmt', 'students_mgmt'],
+  NURSE: ['overview', 'health_log', 'students_mgmt', 'parents_mgmt', 'communication_mgmt'],
+  IT: ['overview', 'it_requests', 'digital_library', 'material_mgmt', 'notifications_mgmt'],
+  MAINTENANCE: ['overview', 'maintenance_requests', 'material_mgmt'],
+  STUDIES_DIRECTOR: [
+    'overview',
+    'validations',
+    'academic_overview',
+    'class_councils',
+    'students_mgmt',
+    'academic_mgmt',
+    'grading_mgmt',
+    'classes_mgmt',
+    'teachers_mgmt',
+    'pedagogical_tracking',
+    'discipline_mgmt',
+    'attendance_mgmt',
+    'schedule_mgmt',
+    'reports_mgmt',
+  ],
+  OTHER: ['overview', 'counter', 'appointments', 'notifications_mgmt', 'communication_mgmt'],
+};
+
 export function getEligibleModulesForSupportKind(kind: SupportStaffKindKey): StaffModuleId[] {
-  void kind;
-  return getAllStaffVisibleModules();
+  const preset = STAFF_KIND_DEFAULT_MODULES[kind] ?? STAFF_KIND_DEFAULT_MODULES.OTHER;
+  return [...new Set<StaffModuleId>(preset.filter((id) => STAFF_MODULE_SET.has(id)))];
 }
 
 

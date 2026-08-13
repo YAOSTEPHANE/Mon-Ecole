@@ -155,4 +155,12 @@ export const educatorApi = {
     const response = await api.post('/educator/absences/take-attendance', data);
     return response.data;
   },
+  getAttendanceAlerts: async () => {
+    const response = await api.get('/educator/attendance-alerts');
+    return response.data;
+  },
+  getDisciplineRecords: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/educator/discipline/records', { params });
+    return response.data;
+  },
 };

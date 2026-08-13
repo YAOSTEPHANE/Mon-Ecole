@@ -9,6 +9,7 @@ import DashboardTabLoading from '../../components/dashboard/DashboardTabLoading'
 import { PARENT_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
 import ParentSidebar, { type ParentNavItem } from '../../components/parent/ParentSidebar';
 import Card from '../../components/ui/Card';
+import { parentApi } from '../../services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -32,6 +33,10 @@ import {
   FiBell,
   FiCoffee,
   FiUserPlus,
+  FiBookOpen,
+  FiMonitor,
+  FiTarget,
+  FiCloud,
 } from 'react-icons/fi';
 
 const ParentOverview = dynamic(() => import('../../components/parent/ParentOverview'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -51,6 +56,10 @@ const ParentCampusPanel = dynamic(() => import('../../components/parent/ParentCa
 const ParentOrientationPanel = dynamic(() => import('../../components/parent/ParentOrientationPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ParentNotificationsPanel = dynamic(() => import('../../components/parent/ParentNotificationsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const SchoolCommunication = dynamic(() => import('../../components/portal/SchoolCommunication'), { loading: () => <DashboardTabLoading />, ssr: false });
+const LessonLogsBrowser = dynamic(() => import('../../components/shared/LessonLogsBrowser'), { loading: () => <DashboardTabLoading />, ssr: false });
+const DigitalLibraryBrowser = dynamic(() => import('../../components/digital-library/DigitalLibraryBrowser'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ElearningHub = dynamic(() => import('../../components/elearning/ElearningHub'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentMockExamsPanel = dynamic(() => import('../../components/student/StudentMockExamsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 
 const VALID_PARENT_TABS = [
   'overview',
@@ -63,6 +72,7 @@ const VALID_PARENT_TABS = [
   'absences',
   'reenrollment',
   'assignments',
+  'lesson-logs',
   'schedule',
   'report-cards',
   'conduct',
@@ -70,6 +80,9 @@ const VALID_PARENT_TABS = [
   'orientation',
   'payments',
   'campus',
+  'digital-library',
+  'elearning',
+  'mock-exams',
 ] as const;
 
 type ParentTabId = (typeof VALID_PARENT_TABS)[number];
@@ -101,6 +114,7 @@ const ParentDashboard = () => {
       { id: 'absences', label: 'Absences', icon: FiAlertCircle, requiresChild: true, color: 'from-orange-500 to-red-500' },
       { id: 'reenrollment', label: 'Réinscription', icon: FiUserPlus, requiresChild: true, color: 'from-violet-500 to-purple-600' },
       { id: 'assignments', label: 'Devoirs', icon: FiFileText, requiresChild: true, color: 'from-yellow-500 to-amber-600' },
+      { id: 'lesson-logs', label: 'Cahier de texte', icon: FiBookOpen, requiresChild: true, color: 'from-amber-600 to-orange-700' },
       { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, requiresChild: true, color: 'from-amber-500 to-orange-500' },
       { id: 'report-cards', label: 'Bulletins', icon: FiBook, requiresChild: true, color: 'from-orange-700 to-amber-700' },
       { id: 'conduct', label: 'Conduite', icon: FiShield, requiresChild: true, color: 'from-rose-500 to-orange-600' },
@@ -126,6 +140,9 @@ const ParentDashboard = () => {
         color: 'from-indigo-500 to-violet-600',
       },
       { id: 'payments', label: 'Paiements', icon: FiCreditCard, requiresChild: true, color: 'from-emerald-600 to-amber-600' },
+      { id: 'digital-library', label: 'Bibliothèque', icon: FiCloud, requiresChild: false, color: 'from-sky-500 to-indigo-600' },
+      { id: 'elearning', label: 'E-learning', icon: FiMonitor, requiresChild: false, color: 'from-violet-500 to-purple-600' },
+      { id: 'mock-exams', label: 'Examens blancs', icon: FiTarget, requiresChild: false, color: 'from-fuchsia-500 to-pink-600' },
     ],
     []
   );
@@ -142,6 +159,7 @@ const ParentDashboard = () => {
       absences: 'Assiduité et justifications',
       reenrollment: 'Demande de réinscription pour la prochaine année',
       assignments: 'Devoirs et travaux à rendre',
+      'lesson-logs': 'Séances publiées par les enseignants',
       schedule: 'Emploi du temps hebdomadaire',
       'report-cards': 'Bulletins et bilans',
       conduct: 'Appréciations et conduite',
@@ -149,6 +167,9 @@ const ParentDashboard = () => {
       campus: 'Cantine scolaire et lignes de transport',
       orientation: 'Filières, tests, conseils, partenariats et suivi de votre enfant',
       payments: 'Frais scolaires et règlements',
+      'digital-library': 'Catalogue numérique (lecture)',
+      elearning: 'Ressources e-learning (consultation)',
+      'mock-exams': 'Examens blancs et entraînements',
     }),
     []
   );
@@ -332,6 +353,20 @@ const ParentDashboard = () => {
                       </div>
                     </Card>
                   ))}
+                {activeTab === 'lesson-logs' &&
+                  (selectedChild ? (
+                    <LessonLogsBrowser
+                      queryKey={['parent-child-lesson-logs', selectedChild]}
+                      queryFn={() => parentApi.getChildLessonLogs(selectedChild)}
+                    />
+                  ) : (
+                    <Card>
+                      <div className="text-center py-12 text-stone-600">
+                        <p className="text-lg mb-2 font-semibold text-stone-900">Sélectionnez un enfant</p>
+                        <p className="text-sm leading-relaxed">Choisissez un enfant pour consulter le cahier de texte.</p>
+                      </div>
+                    </Card>
+                  ))}
                 {activeTab === 'schedule' &&
                   (selectedChild ? (
                     <ChildSchedule studentId={selectedChild} searchQuery={searchQuery} />
@@ -403,6 +438,9 @@ const ParentDashboard = () => {
                       </div>
                     </Card>
                   ))}
+                {activeTab === 'digital-library' && <DigitalLibraryBrowser />}
+                {activeTab === 'elearning' && <ElearningHub mode="student" />}
+                {activeTab === 'mock-exams' && <StudentMockExamsPanel />}
               </div>
             </div>
           </main>

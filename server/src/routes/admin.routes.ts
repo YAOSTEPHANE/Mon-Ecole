@@ -6042,12 +6042,30 @@ router.get('/tuition-fees', async (req: SchoolContextRequest, res) => {
                 firstName: true,
                 lastName: true,
                 email: true,
+                phone: true,
               },
             },
             class: {
               select: {
                 name: true,
                 level: true,
+              },
+            },
+            parents: {
+              take: 2,
+              include: {
+                parent: {
+                  include: {
+                    user: {
+                      select: {
+                        phone: true,
+                        email: true,
+                        firstName: true,
+                        lastName: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },

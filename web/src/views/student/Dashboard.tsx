@@ -35,6 +35,7 @@ import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
 import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import { STUDENT_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+import { studentApi } from '../../services/api';
 
 const StudentOverview = dynamic(() => import('../../components/student/StudentOverview'), { loading: () => <DashboardTabLoading />, ssr: false });
 const StudentProfile = dynamic(() => import('../../components/student/StudentProfile'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -52,6 +53,7 @@ const StudentOrientationPanel = dynamic(() => import('../../components/student/S
 const DigitalLibraryBrowser = dynamic(() => import('../../components/digital-library/DigitalLibraryBrowser'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ElearningHub = dynamic(() => import('../../components/elearning/ElearningHub'), { loading: () => <DashboardTabLoading />, ssr: false });
 const StudentMockExamsPanel = dynamic(() => import('../../components/student/StudentMockExamsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const LessonLogsBrowser = dynamic(() => import('../../components/shared/LessonLogsBrowser'), { loading: () => <DashboardTabLoading />, ssr: false });
 
 const VALID_TAB_IDS = [
   'overview',
@@ -62,6 +64,7 @@ const VALID_TAB_IDS = [
   'schedule',
   'absences',
   'assignments',
+  'lesson-logs',
   'conduct',
   'extracurricular',
   'orientation',
@@ -106,6 +109,7 @@ const StudentDashboard = () => {
       { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, color: 'from-pink-500 to-rose-600', description: 'Planning des cours' },
       { id: 'absences', label: 'Absences', icon: FiAlertCircle, color: 'from-amber-500 to-orange-600', description: 'Assiduité et justifications' },
       { id: 'assignments', label: 'Devoirs', icon: FiFileText, color: 'from-cyan-500 to-teal-600', description: 'Travaux à rendre et rendus' },
+      { id: 'lesson-logs', label: 'Cahier de texte', icon: FiBook, color: 'from-amber-600 to-orange-700', description: 'Séances publiées par les enseignants' },
       { id: 'conduct', label: 'Conduite', icon: FiStar, color: 'from-rose-500 to-pink-600', description: 'Comportement et appréciations' },
       {
         id: 'extracurricular',
@@ -444,6 +448,12 @@ const StudentDashboard = () => {
                       searchQuery={searchQuery}
                       searchCategory={searchCategory}
                       searchDateRange={searchDateRange}
+                    />
+                  )}
+                  {activeTab === 'lesson-logs' && (
+                    <LessonLogsBrowser
+                      queryKey={['student-lesson-logs']}
+                      queryFn={() => studentApi.getLessonLogs()}
                     />
                   )}
                   {activeTab === 'conduct' && <StudentConduct searchQuery={searchQuery} />}

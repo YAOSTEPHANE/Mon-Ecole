@@ -7,7 +7,7 @@ export const TEACHER_MODULE_CATEGORIES: PortalModuleCategory[] = [
   },
   {
     title: 'Pédagogie & classes',
-    moduleIds: ['courses', 'grades', 'assignments', 'attendance', 'conduct', 'validations'],
+    moduleIds: ['courses', 'grades', 'assignments', 'attendance', 'lesson-logs', 'conduct', 'validations'],
   },
   {
     title: 'Communication',
@@ -26,7 +26,7 @@ export const STUDENT_MODULE_CATEGORIES: PortalModuleCategory[] = [
   },
   {
     title: 'Scolarité',
-    moduleIds: ['grades', 'schedule', 'absences', 'assignments', 'conduct'],
+    moduleIds: ['grades', 'schedule', 'absences', 'assignments', 'lesson-logs', 'conduct'],
   },
   {
     title: 'Parcours & orientation',
@@ -46,11 +46,25 @@ export const PARENT_MODULE_CATEGORIES: PortalModuleCategory[] = [
   {
     title: 'Suivi de l’enfant',
     hint: 'Sélectionnez un enfant si nécessaire',
-    moduleIds: ['grades', 'absences', 'reenrollment', 'assignments', 'schedule', 'report-cards', 'conduct'],
+    moduleIds: [
+      'grades',
+      'absences',
+      'reenrollment',
+      'assignments',
+      'lesson-logs',
+      'schedule',
+      'report-cards',
+      'conduct',
+    ],
   },
   {
     title: 'Parcours & finances',
-    moduleIds: ['extracurricular', 'orientation', 'payments'],
+    moduleIds: ['extracurricular', 'campus', 'orientation', 'payments'],
+  },
+  {
+    title: 'Ressources numériques',
+    hint: 'Consultation (lecture)',
+    moduleIds: ['digital-library', 'elearning', 'mock-exams'],
   },
 ];
 
@@ -61,7 +75,7 @@ export const EDUCATOR_MODULE_CATEGORIES: PortalModuleCategory[] = [
   },
   {
     title: 'Vie scolaire',
-    moduleIds: ['schedule', 'attendance', 'conduct', 'validations'],
+    moduleIds: ['schedule', 'attendance', 'conduct', 'discipline', 'validations'],
   },
 ];
 

@@ -232,4 +232,8 @@ export const studentApi = {
     const response = await api.post(`/student/mock-exams/${id}/submit`, { answers });
     return response.data;
   },
+  getLessonLogs: async () => {
+    const response = await api.get('/student/lesson-logs');
+    return response.data;
+  },
 };

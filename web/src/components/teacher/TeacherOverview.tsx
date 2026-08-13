@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 import { teacherApi } from '../../services/api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
-import { FiBook, FiUsers, FiClipboard, FiTrendingUp, FiFileText, FiAlertCircle } from 'react-icons/fi';
+import { FiBook, FiUsers, FiClipboard, FiTrendingUp, FiFileText, FiAlertCircle, FiCheckSquare, FiEdit3, FiBookOpen, FiCalendar } from 'react-icons/fi';
+import Button from '../ui/Button';
 import {
   LineChart,
   Line,
@@ -97,6 +98,45 @@ const TeacherOverview = () => {
         gradient="from-emerald-600 via-teal-600 to-cyan-700"
         description="Agrégation de vos cours, effectifs suivis et charge documentaire."
       />
+
+      <section className="dash-section-panel">
+        <PremiumSectionTitle
+          title="Ma journée"
+          subtitle="Enchaînement recommandé : emploi du temps → appel → notes → cahier → devoirs"
+          icon={FiCalendar}
+        />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {(
+            [
+              { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, color: 'from-orange-500 to-amber-600' },
+              { id: 'attendance', label: 'Faire l’appel', icon: FiCheckSquare, color: 'from-teal-500 to-cyan-600' },
+              { id: 'grades', label: 'Saisir notes', icon: FiEdit3, color: 'from-violet-500 to-fuchsia-600' },
+              { id: 'lesson-logs', label: 'Cahier de texte', icon: FiBookOpen, color: 'from-amber-600 to-orange-700' },
+              { id: 'assignments', label: 'Devoirs', icon: FiFileText, color: 'from-blue-500 to-indigo-600' },
+            ] as const
+          ).map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                type="button"
+                variant="secondary"
+                className="flex h-auto flex-col items-start gap-2 rounded-2xl border border-stone-200/80 bg-white p-3 text-left shadow-sm hover:border-amber-300/60"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('navigate-tab', { detail: item.id }));
+                }}
+              >
+                <span
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.color} text-white`}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="text-xs font-semibold text-stone-800">{item.label}</span>
+              </Button>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="dash-section-panel">
         <PremiumSectionTitle title="Indicateurs clés" subtitle="Synthèse de votre activité" icon={FiBook} />

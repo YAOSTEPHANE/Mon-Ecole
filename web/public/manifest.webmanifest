@@ -2,7 +2,7 @@
   "name": "École à jour",
   "short_name": "École",
   "description": "Plateforme de gestion scolaire — cantine, transport, paiements, bulletins et suivi pédagogique.",
-  "start_url": "/login",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#fafaf9",
@@ -10,6 +10,7 @@
   "lang": "fr",
   "orientation": "any",
   "categories": ["education", "finance"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-192.svg",

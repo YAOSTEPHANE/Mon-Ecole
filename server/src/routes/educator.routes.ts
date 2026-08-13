@@ -1471,4 +1471,77 @@ router.post(
   }
 );
 
+/** Absences non justifiées récentes (alerte vie scolaire) */
+router.get('/attendance-alerts', async (req: AuthRequest, res) => {
+  try {
+    const classIds = await resolveEducatorClassScope(req.user!.id);
+    if (classIds === null) return res.status(404).json({ error: 'Profil éducateur non trouvé' });
+    if (classIds.length === 0) return res.json([]);
+
+    const since = new Date();
+    since.setDate(since.getDate() - 21);
+
+    const absences = await prisma.absence.findMany({
+      where: {
+        status: 'ABSENT',
+        excused: false,
+        date: { gte: since },
+        student: studentClassFilter(classIds),
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            user: { select: { firstName: true, lastName: true } },
+            class: { select: { name: true } },
+          },
+        },
+        course: { select: { name: true } },
+      },
+      orderBy: { date: 'desc' },
+      take: 40,
+    });
+
+    res.json(absences);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+/** Dossiers discipline (lecture / suivi sur le périmètre éducateur) */
+router.get('/discipline/records', async (req: AuthRequest, res) => {
+  try {
+    const classIds = await resolveEducatorClassScope(req.user!.id);
+    if (classIds === null) return res.status(404).json({ error: 'Profil éducateur non trouvé' });
+    if (classIds.length === 0) return res.json([]);
+
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+
+    const records = await prisma.studentDisciplinaryRecord.findMany({
+      where: {
+        student: studentClassFilter(classIds),
+        ...(academicYear ? { academicYear } : {}),
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            user: { select: { firstName: true, lastName: true } },
+            class: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { incidentDate: 'desc' },
+      take: 100,
+    });
+
+    res.json(records);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 export default router;

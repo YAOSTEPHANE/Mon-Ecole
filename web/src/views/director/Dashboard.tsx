@@ -26,7 +26,7 @@ import {
   PremiumStatGrid,
   PremiumSectionTitle,
 } from '../../components/dashboard/premium';
-import { FiArrowLeft, FiTrendingUp, FiUsers, FiBookOpen, FiDollarSign, FiAlertCircle, FiBarChart2 } from 'react-icons/fi';
+import { FiArrowLeft, FiTrendingUp, FiUsers, FiBookOpen, FiDollarSign, FiAlertCircle, FiBarChart2, FiInbox, FiCheckCircle } from 'react-icons/fi';
 
 const fmt = (n: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n);
 
@@ -93,6 +93,53 @@ export default function DirectorDashboard() {
           />
           <PremiumStatGrid items={primaryKpis} columns={4} />
           {secondaryKpis.length > 0 && <PremiumStatGrid items={secondaryKpis} columns={4} />}
+
+          <section className="rounded-2xl border border-indigo-200/80 bg-indigo-50/40 p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <FiInbox className="h-4 w-4 text-indigo-700" />
+              <h3 className="text-sm font-bold text-stone-900">File d’attente direction</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <Link
+                href="/admin?tab=admissions"
+                className="rounded-xl border border-violet-200 bg-white/90 px-3 py-3 hover:bg-violet-50"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Admissions</p>
+                <p className="mt-1 text-xl font-bold tabular-nums text-stone-900">
+                  {(kpis?.cards?.admissionsPending ?? 0) + (kpis?.cards?.admissionsUnderReview ?? 0)}
+                </p>
+                <p className="text-xs text-stone-500">à traiter</p>
+              </Link>
+              <Link
+                href="/admin?tab=payments"
+                className="rounded-xl border border-amber-200 bg-white/90 px-3 py-3 hover:bg-amber-50"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Mobile Money</p>
+                <p className="mt-1 text-xl font-bold tabular-nums text-stone-900">{pendingMm.length}</p>
+                <p className="text-xs text-stone-500">à confirmer</p>
+              </Link>
+              <Link
+                href="/admin?tab=attendance&attendanceTab=permissions"
+                className="rounded-xl border border-teal-200 bg-white/90 px-3 py-3 hover:bg-teal-50"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wide text-teal-700">Permissions absences</p>
+                <p className="mt-1 text-xl font-bold tabular-nums text-stone-900">{permissionStats?.pending ?? 0}</p>
+                <p className="text-xs text-stone-500">en attente</p>
+              </Link>
+              <Link
+                href="/admin?tab=grading"
+                className="rounded-xl border border-emerald-200 bg-white/90 px-3 py-3 hover:bg-emerald-50"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Validations notes</p>
+                <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-stone-800">
+                  <FiCheckCircle className="h-4 w-4 text-emerald-600" />
+                  Notation
+                </p>
+                <p className="text-xs text-stone-500">ouvrir le module</p>
+              </Link>
+            </div>
+          </section>
+
           {(topRisk.length > 0 || pendingMm.length > 0) && (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {topRisk.length > 0 && (

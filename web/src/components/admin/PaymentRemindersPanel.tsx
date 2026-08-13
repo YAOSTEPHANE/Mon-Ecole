@@ -5,7 +5,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
-import { FiBell, FiCopy, FiAlertTriangle, FiClock } from 'react-icons/fi';
+import { FiCopy, FiAlertTriangle, FiClock, FiMail, FiMessageCircle } from 'react-icons/fi';
 import {
   format,
   differenceInCalendarDays,
@@ -18,7 +18,17 @@ import { fr } from 'date-fns/locale';
 import { formatFCFA } from '../../utils/currency';
 import { ADM } from './adminModuleLayout';
 
-function buildReminderText(fee: any) {
+function buildReminderText(fee: {
+  student?: {
+    user?: { firstName?: string; lastName?: string; phone?: string; email?: string };
+    class?: { name?: string };
+    parents?: Array<{ parent?: { user?: { phone?: string; email?: string } } }>;
+  };
+  period?: string;
+  academicYear?: string;
+  amount?: number;
+  dueDate?: string;
+}) {
   const name = fee.student?.user
     ? `${fee.student.user.firstName} ${fee.student.user.lastName}`
     : 'Parent / élève';
@@ -27,10 +37,71 @@ function buildReminderText(fee: any) {
     `Bonjour,\n\n` +
     `Rappel : le règlement des frais de scolarité pour ${name}` +
     (className ? ` (${className})` : '') +
-    ` concernant la période « ${fee.period} » (${fee.academicYear}) d'un montant de ${formatFCFA(fee.amount)} ` +
-    `était attendu au plus tard le ${format(new Date(fee.dueDate), 'dd/MM/yyyy', { locale: fr })}.\n\n` +
+    ` concernant la période « ${fee.period} » (${fee.academicYear}) d'un montant de ${formatFCFA(fee.amount ?? 0)} ` +
+    `était attendu au plus tard le ${format(new Date(fee.dueDate ?? Date.now()), 'dd/MM/yyyy', { locale: fr })}.\n\n` +
     `Merci de régulariser votre situation ou de contacter l'administration.\n\n` +
     `Cordialement,\nL'administration`
+  );
+}
+
+function normalizePhoneForWhatsApp(raw?: string | null): string | null {
+  if (!raw) return null;
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.length < 8) return null;
+  return digits;
+}
+
+function copyText(text: string) {
+  navigator.clipboard.writeText(text).then(
+    () => toast.success('Texte copié'),
+    () => toast.error('Impossible de copier'),
+  );
+}
+
+function openWhatsApp(fee: Parameters<typeof buildReminderText>[0], text: string) {
+  const phone =
+    normalizePhoneForWhatsApp(fee.student?.user?.phone) ||
+    normalizePhoneForWhatsApp(fee.student?.parents?.[0]?.parent?.user?.phone);
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function openMailto(fee: Parameters<typeof buildReminderText>[0], text: string) {
+  const email =
+    fee.student?.parents?.[0]?.parent?.user?.email || fee.student?.user?.email || '';
+  const subject = encodeURIComponent(
+    `Rappel frais de scolarité — ${fee.period || ''} ${fee.academicYear || ''}`.trim(),
+  );
+  const body = encodeURIComponent(text);
+  window.location.href = email
+    ? `mailto:${email}?subject=${subject}&body=${body}`
+    : `mailto:?subject=${subject}&body=${body}`;
+}
+
+function ReminderActions({
+  fee,
+  text,
+}: {
+  fee: Parameters<typeof buildReminderText>[0];
+  text: string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 shrink-0">
+      <Button variant="secondary" size="sm" onClick={() => copyText(text)}>
+        <FiCopy className="mr-1 inline h-4 w-4" />
+        Copier
+      </Button>
+      <Button variant="secondary" size="sm" onClick={() => openWhatsApp(fee, text)}>
+        <FiMessageCircle className="mr-1 inline h-4 w-4" />
+        WhatsApp
+      </Button>
+      <Button variant="secondary" size="sm" onClick={() => openMailto(fee, text)}>
+        <FiMail className="mr-1 inline h-4 w-4" />
+        E-mail
+      </Button>
+    </div>
   );
 }
 
@@ -56,58 +127,44 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
     tuitionFees.forEach((fee: any) => {
       if (fee.isPaid) return;
       const due = startOfDay(new Date(fee.dueDate));
-      if (isBefore(due, today)) {
-        od.push(fee);
-      } else if (isWithinInterval(due, { start: today, end: weekEnd })) {
-        up.push(fee);
-      }
+      if (isBefore(due, today)) od.push(fee);
+      else if (isWithinInterval(due, { start: today, end: weekEnd })) up.push(fee);
     });
     od.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     up.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     return { overdue: od, upcoming: up };
   }, [tuitionFees, today, weekEnd]);
 
-  const copy = (text: string) => {
-    navigator.clipboard.writeText(text).then(
-      () => toast.success('Texte copié — à coller dans un e-mail ou SMS'),
-      () => toast.error('Impossible de copier')
-    );
-  };
-
   if (isLoading) {
-    return (
-      <Card className="p-10 text-center text-gray-500">Chargement des échéances…</Card>
-    );
+    return <Card className="p-10 text-center text-gray-500">Chargement des échéances…</Card>;
   }
 
   return (
     <div className={compact ? ADM.root : 'space-y-6'}>
       <div>
         <h2 className={compact ? ADM.h2 : 'text-lg font-semibold text-gray-900'}>Rappels de paiement</h2>
-        <p className={compact ? ADM.intro : 'text-sm text-gray-500 mt-0.5'}>
-          Frais non soldés : <strong>échus</strong> (date dépassée) ou <strong>à échéance sous 7 jours</strong>.
-          Copiez le texte type pour vos relances (e-mail, SMS, messagerie).
+        <p className={compact ? ADM.intro : 'mt-0.5 text-sm text-gray-500'}>
+          Relance one-click : <strong>WhatsApp</strong>, <strong>e-mail</strong> ou copie du texte.
         </p>
       </div>
 
-      <Card className={compact ? 'p-3 border-amber-200 bg-amber-50/60' : 'p-4 border-amber-200 bg-amber-50/60'}>
+      <Card className={compact ? 'border-amber-200 bg-amber-50/60 p-3' : 'border-amber-200 bg-amber-50/60 p-4'}>
         <div className="flex items-start gap-3">
-          <FiAlertTriangle className={`text-amber-700 shrink-0 mt-0.5 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
-          <p className={compact ? 'text-xs text-amber-900 leading-relaxed' : 'text-sm text-amber-900'}>
-            Les relances automatiques (notifications + e-mail si SMTP est configuré) peuvent être planifiées
-            côté serveur ou lancées à la demande depuis la vue d’ensemble « Gestion des frais ». Ce panneau sert
-            encore à copier un texte personnalisé pour un e-mail ou un SMS ponctuel.
+          <FiAlertTriangle className={`mt-0.5 shrink-0 text-amber-700 ${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
+          <p className={compact ? 'text-xs leading-relaxed text-amber-900' : 'text-sm text-amber-900'}>
+            Les relances automatiques restent disponibles depuis « Gestion des frais ». Ici, chaque ligne ouvre
+            directement WhatsApp ou le client mail avec le message prérempli.
           </p>
         </div>
       </Card>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
-          <FiAlertTriangle className="w-4 h-4 text-red-500" />
+        <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-800">
+          <FiAlertTriangle className="h-4 w-4 text-red-500" />
           Échus ({overdue.length})
         </h3>
         {overdue.length === 0 ? (
-          <Card className="p-6 text-center text-gray-500 text-sm">Aucun frais impayé en retard.</Card>
+          <Card className="p-6 text-center text-sm text-gray-500">Aucun frais impayé en retard.</Card>
         ) : (
           <div className="space-y-2">
             {overdue.map((fee: any) => {
@@ -116,16 +173,14 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
               return (
                 <Card
                   key={fee.id}
-                  className={`border border-red-100 flex flex-col sm:flex-row sm:items-center gap-3 justify-between ${
+                  className={`flex flex-col justify-between gap-3 border border-red-100 sm:flex-row sm:items-center ${
                     compact ? 'p-3' : 'p-4'
                   }`}
                 >
                   <div>
                     <p className="font-medium text-gray-900">
                       {fee.student?.user?.firstName} {fee.student?.user?.lastName}
-                      <span className="text-gray-500 font-normal text-sm ml-2">
-                        {fee.student?.class?.name}
-                      </span>
+                      <span className="ml-2 text-sm font-normal text-gray-500">{fee.student?.class?.name}</span>
                     </p>
                     <p className="text-sm text-gray-600">
                       {fee.period} — {fee.academicYear} · {formatFCFA(fee.amount)} · échéance{' '}
@@ -135,10 +190,7 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
                       Retard : {days} jour{days > 1 ? 's' : ''}
                     </Badge>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => copy(text)}>
-                    <FiCopy className="w-4 h-4 mr-1 inline" />
-                    Copier le rappel
-                  </Button>
+                  <ReminderActions fee={fee} text={text} />
                 </Card>
               );
             })}
@@ -147,12 +199,12 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
-          <FiClock className="w-4 h-4 text-amber-600" />
+        <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-800">
+          <FiClock className="h-4 w-4 text-amber-600" />
           Échéance dans les 7 jours ({upcoming.length})
         </h3>
         {upcoming.length === 0 ? (
-          <Card className="p-6 text-center text-gray-500 text-sm">
+          <Card className="p-6 text-center text-sm text-gray-500">
             Aucune échéance dans la fenêtre des 7 prochains jours.
           </Card>
         ) : (
@@ -162,7 +214,7 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
               return (
                 <Card
                   key={fee.id}
-                  className={`border border-amber-100 flex flex-col sm:flex-row sm:items-center gap-3 justify-between ${
+                  className={`flex flex-col justify-between gap-3 border border-amber-100 sm:flex-row sm:items-center ${
                     compact ? 'p-3' : 'p-4'
                   }`}
                 >
@@ -175,10 +227,7 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
                       {format(new Date(fee.dueDate), 'dd/MM/yyyy', { locale: fr })}
                     </p>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => copy(text)}>
-                    <FiBell className="w-4 h-4 mr-1 inline" />
-                    Copier le rappel
-                  </Button>
+                  <ReminderActions fee={fee} text={text} />
                 </Card>
               );
             })}

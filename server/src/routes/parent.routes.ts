@@ -1253,6 +1253,63 @@ router.get('/children/:studentId/assignments', async (req: AuthRequest, res) => 
   }
 });
 
+// Cahier de texte (séances publiées de la classe de l'enfant)
+router.get('/children/:studentId/lesson-logs', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = (
+      await prisma.parent.findFirst({
+        where: { userId: req.user!.id },
+        select: { id: true },
+      })
+    )?.id;
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { classId: true },
+    });
+    if (!student?.classId) return res.json([]);
+
+    const rows = await prisma.lessonLog.findMany({
+      where: { classId: student.classId, published: true },
+      orderBy: { lessonDate: 'desc' },
+      take: 80,
+    });
+
+    const courseIds = [...new Set(rows.map((r) => r.courseId))];
+    const teacherIds = [...new Set(rows.map((r) => r.teacherId))];
+    const [courses, teachers] = await Promise.all([
+      prisma.course.findMany({
+        where: { id: { in: courseIds } },
+        select: { id: true, name: true },
+      }),
+      prisma.teacher.findMany({
+        where: { id: { in: teacherIds } },
+        select: {
+          id: true,
+          user: { select: { firstName: true, lastName: true } },
+        },
+      }),
+    ]);
+    const courseMap = new Map(courses.map((c) => [c.id, c.name]));
+    const teacherMap = new Map(
+      teachers.map((t) => [t.id, `${t.user.firstName} ${t.user.lastName}`.trim()]),
+    );
+
+    res.json(
+      rows.map((r) => ({
+        ...r,
+        courseName: courseMap.get(r.courseId) ?? null,
+        teacherName: teacherMap.get(r.teacherId) ?? null,
+      })),
+    );
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // ========== GESTION DES PAIEMENTS ==========
 
 router.get('/payment-settings', async (_req: AuthRequest, res) => {

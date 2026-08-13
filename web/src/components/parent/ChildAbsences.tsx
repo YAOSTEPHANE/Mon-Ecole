@@ -89,6 +89,13 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
         fetchRequests={() => parentApi.getChildAbsencePermissionRequests(studentId)}
         createRequest={(data) => parentApi.createChildAbsencePermissionRequest(studentId, data)}
       />
+      <Card className="border border-teal-200/80 bg-teal-50/50 p-3">
+        <p className="text-xs leading-relaxed text-teal-950">
+          <strong>Justifier une absence :</strong> utilisez le formulaire ci-dessus pour demander une permission
+          (dates + motif). L’administration / vie scolaire traitera la demande. Les absences déjà enregistrées
+          apparaissent dans la liste ci-dessous.
+        </p>
+      </Card>
 
       {/* Indicateur de recherche */}
       {searchQuery && (
