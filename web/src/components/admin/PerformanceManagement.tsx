@@ -82,7 +82,7 @@ type PerformanceTab = 'overview' | 'metrics' | 'usage' | 'optimization' | 'monit
 
 const PerformanceManagement = () => {
   const [activeTab, setActiveTab] = useState<PerformanceTab>('overview');
-  const [refreshInterval, setRefreshInterval] = useState(5000); // 5 secondes par défaut
+  const [refreshInterval, setRefreshInterval] = useState(15000); // 15 s (évite le spam réseau)
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   // Simuler des métriques de performance (dans un vrai projet, cela viendrait de l'API)

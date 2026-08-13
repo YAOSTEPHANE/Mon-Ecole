@@ -120,8 +120,8 @@ function StudiesDirectorSpace({
 }) {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/80 p-5 sm:p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Espace personnel — pédagogie & examens</p>
+      <div className="rounded-2xl border border-cptb-gold/25 bg-gradient-to-br from-amber-50/80 via-white to-stone-50 p-5 sm:p-6 shadow-dash-card ring-1 ring-cptb-blue/8">
+        <p className="text-xs font-semibold uppercase tracking-wide text-cptb-blue">Espace personnel — pédagogie & examens</p>
         <h2 className="mt-1 text-lg sm:text-xl font-bold text-stone-900">Bonjour {displayName}</h2>
         <p className="mt-2 text-sm text-stone-700 max-w-3xl leading-relaxed">
           Pilotage des parcours, cohérence des évaluations, calendrier des contrôles et accompagnement des élèves en

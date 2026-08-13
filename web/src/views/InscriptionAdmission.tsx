@@ -386,8 +386,9 @@ const InscriptionAdmission = () => {
     'w-full rounded-xl border border-stone-200/90 bg-white/95 px-3 py-2.5 text-sm text-stone-900 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/50 placeholder:text-stone-400';
 
   return (
-    <div className="min-h-screen premium-body premium-body-v2">
-      <header className="sticky top-0 z-30 glass-nav glass-nav-v2 shadow-[0_8px_30px_-12px_rgba(12,10,9,0.08)]">
+    <div className="min-h-screen premium-body premium-body-v2 premium-body-v3">
+      <header className="sticky top-0 z-30 glass-nav glass-nav-v2">
+        <div className="h-0.5 w-full bg-gradient-to-r from-cptb-blue via-cptb-gold to-cptb-blue" aria-hidden />
         <div className="max-w-4xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <Link
             href="/home"

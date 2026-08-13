@@ -36,7 +36,7 @@ const Avatar: React.FC<AvatarProps> = ({ src, name, size = 'md', className = '' 
 
   return (
     <div
-      className={`${sizes[size]} rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold shadow-md ${className}`}
+      className={`${sizes[size]} rounded-full bg-gradient-to-br from-[#0018A8] via-[#001270] to-[#07081a] flex items-center justify-center text-amber-50 font-semibold shadow-md ring-1 ring-cptb-gold/35 ${className}`}
     >
       {name ? getInitials(name) : '?'}
     </div>

@@ -10,10 +10,11 @@ export const ADM = {
   tabRow:
     'flex flex-nowrap sm:flex-wrap gap-1.5 overflow-x-auto sm:overflow-visible scrollbar-hide rounded-2xl bg-gradient-to-b from-stone-100/95 to-stone-50/90 p-1.5 ring-1 ring-stone-200/70 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85)] backdrop-blur-sm',
   tabIcon: 'w-3.5 h-3.5 shrink-0 opacity-90',
-  tabBtn: (active: boolean, activeClass: string) =>
-    `inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ease-premium ${
+  /** `activeClass` conservé pour compatibilité — l’état actif est toujours navy/or (contraste lisible). */
+  tabBtn: (active: boolean, _activeClass?: string) =>
+    `inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold transition-all duration-300 ease-premium ${
       active
-        ? `${activeClass} text-white shadow-md shadow-black/10 ring-1 ring-white/25`
+        ? 'bg-gradient-to-r from-cptb-blue to-cptb-blue-dark text-white shadow-md shadow-cptb-blue/30 ring-1 ring-cptb-gold/45'
         : 'text-stone-600 hover:bg-white/90 hover:text-stone-900 hover:shadow-sm'
     }`,
   grid3: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5',
@@ -38,10 +39,10 @@ export const ADM = {
   heroStatNum: 'font-display text-xl font-bold tabular-nums tracking-tight',
   heroStatLbl: 'text-[11px] font-semibold uppercase tracking-wider opacity-90',
   bigTabRow: 'flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-0.5 px-0.5 touch-pan-x overscroll-x-contain',
-  bigTabBtn: (active: boolean, activeGradient: string) =>
-    `relative flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-all duration-300 ease-premium whitespace-nowrap ${
+  bigTabBtn: (active: boolean, _activeGradient?: string) =>
+    `relative flex items-center gap-2 px-3.5 py-2.5 rounded-full font-semibold text-xs transition-all duration-300 ease-premium whitespace-nowrap ${
       active
-        ? `${activeGradient} text-white shadow-lg shadow-black/15 ring-1 ring-white/30`
+        ? 'bg-gradient-to-r from-cptb-blue to-cptb-blue-dark text-white shadow-lg shadow-cptb-blue/25 ring-1 ring-cptb-gold/40'
         : 'text-stone-600 hover:bg-white/90 hover:text-stone-900 ring-1 ring-transparent hover:ring-stone-200/80 hover:shadow-sm'
     }`,
   bigTabIcon: 'w-4 h-4 shrink-0',

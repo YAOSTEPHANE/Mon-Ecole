@@ -1412,7 +1412,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               {/* Change Password */}
               <div className="border-t border-gray-200 pt-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Changer le mot de passe</h3>
-                <div className="space-y-4">
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void handlePasswordChange();
+                  }}
+                >
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Mot de passe actuel
@@ -1423,6 +1429,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       </div>
                       <input
                         type={showCurrentPassword ? 'text' : 'password'}
+                        name="current-password"
+                        autoComplete="current-password"
                         value={passwordData.currentPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                         className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all"
@@ -1449,6 +1457,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         </div>
                         <input
                           type={showNewPassword ? 'text' : 'password'}
+                          name="new-password"
+                          autoComplete="new-password"
                           value={passwordData.newPassword}
                           onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                           className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all"
@@ -1474,6 +1484,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         </div>
                         <input
                           type={showConfirmPassword ? 'text' : 'password'}
+                          name="confirm-password"
+                          autoComplete="new-password"
                           value={passwordData.confirmPassword}
                           onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                           className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all"
@@ -1491,7 +1503,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                   </div>
 
                   <Button
-                    onClick={handlePasswordChange}
+                    type="submit"
                     disabled={isSaving || !passwordData.currentPassword || !passwordData.newPassword}
                     className="w-full md:w-auto"
                   >
@@ -1507,7 +1519,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       </>
                     )}
                   </Button>
-                </div>
+                </form>
               </div>
 
               <div className="border-t border-gray-200 pt-6">

@@ -51,7 +51,7 @@ export default function CarteEtudiantPage() {
 
   if (!publicId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
+      <div className="min-h-screen flex items-center justify-center bg-[#07081a] text-stone-300">
         Lien invalide.
       </div>
     );
@@ -59,15 +59,15 @@ export default function CarteEtudiantPage() {
 
   if (err) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-        <p className="text-center text-amber-200/90">{err}</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#07081a] px-4">
+        <p className="text-center text-cptb-gold/90">{err}</p>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
+      <div className="min-h-screen flex items-center justify-center bg-[#07081a] text-stone-400">
         Chargement…
       </div>
     );
@@ -76,8 +76,9 @@ export default function CarteEtudiantPage() {
   const es = (data.enrollmentStatus as EnrollmentStatusValue) || 'ACTIVE';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-md p-8 space-y-6">
+    <div className="min-h-screen premium-id-card-page relative overflow-hidden bg-[#07081a] text-amber-50 flex flex-col items-center justify-center p-6">
+      <div className="page-hero-v2__glow pointer-events-none absolute inset-0" aria-hidden />
+      <div className="premium-id-card relative w-full max-w-md overflow-hidden rounded-[1.75rem] border border-cptb-gold/30 p-8 space-y-6">
         <div className="text-center space-y-3">
           {navigationLogoAbsolute ? (
             <div className="flex justify-center">

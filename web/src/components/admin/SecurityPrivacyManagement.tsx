@@ -1556,7 +1556,13 @@ const SecurityPrivacyManagement = () => {
         title="Changer le mot de passe"
       >
         {selectedUser && (
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleChangePassword();
+            }}
+          >
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600 mb-1">Utilisateur</p>
               <p className="font-semibold text-gray-800">
@@ -1572,6 +1578,8 @@ const SecurityPrivacyManagement = () => {
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
+                  name="new-password"
+                  autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Minimum 6 caractères"
@@ -1592,6 +1600,7 @@ const SecurityPrivacyManagement = () => {
 
             <div className="flex items-center justify-end space-x-3 pt-4">
               <Button
+                type="button"
                 variant="secondary"
                 onClick={() => {
                   setIsPasswordModalOpen(false);
@@ -1602,7 +1611,7 @@ const SecurityPrivacyManagement = () => {
                 Annuler
               </Button>
               <Button
-                onClick={handleChangePassword}
+                type="submit"
                 disabled={changePasswordMutation.isPending || newPassword.length < 6}
                 className="bg-red-600 hover:bg-red-700"
               >
@@ -1619,7 +1628,7 @@ const SecurityPrivacyManagement = () => {
                 )}
               </Button>
             </div>
-          </div>
+          </form>
         )}
       </Modal>
 

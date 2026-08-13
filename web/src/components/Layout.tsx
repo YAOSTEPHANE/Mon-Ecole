@@ -366,9 +366,9 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, role, staffRo
                             href="/directeur"
                             role="menuitem"
                             onClick={() => setShowUserMenu(false)}
-                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-indigo-50/90"
+                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-amber-50/90"
                           >
-                            <FiPieChart className="h-4 w-4 shrink-0 text-indigo-700" aria-hidden />
+                            <FiPieChart className="h-4 w-4 shrink-0 text-cptb-blue" aria-hidden />
                             Vue direction (KPI)
                           </Link>
                           <Link
@@ -406,7 +406,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, role, staffRo
         </nav>
       </header>
 
-      <main className="animate-fade-in">{children}</main>
+      <main className="animate-dash-enter dash-workspace">{children}</main>
 
       {showUserMenu && (
         <button

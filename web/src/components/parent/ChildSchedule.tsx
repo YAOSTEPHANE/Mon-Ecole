@@ -180,7 +180,7 @@ const ChildSchedule = ({ studentId, searchQuery = '' }: ChildScheduleProps) => {
   return (
     <div className="space-y-4">
       {/* Header avec bouton d'export */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
+      <Card className="border border-cptb-gold/20 bg-gradient-to-r from-amber-50/80 to-stone-50">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Emploi du Temps</h2>
@@ -198,12 +198,12 @@ const ChildSchedule = ({ studentId, searchQuery = '' }: ChildScheduleProps) => {
       </Card>
 
       {searchQuery && (
-        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
+        <Card className="border border-cptb-gold/20 bg-gradient-to-r from-amber-50/70 to-stone-50">
           <div className="flex items-center space-x-3">
-            <FiSearch className="w-5 h-5 text-purple-600" />
+            <FiSearch className="w-5 h-5 text-cptb-blue" />
             <div>
-              <p className="font-semibold text-gray-900">
-                Recherche: <span className="text-purple-600">"{searchQuery}"</span>
+              <p className="font-semibold text-stone-900">
+                Recherche: <span className="text-cptb-blue">"{searchQuery}"</span>
               </p>
               <p className="text-sm text-gray-600">
                 {filteredSchedule.length} cours trouvé(s)

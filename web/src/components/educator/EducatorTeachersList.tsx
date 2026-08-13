@@ -43,7 +43,7 @@ const EducatorTeachersList = ({ searchQuery = '' }: EducatorTeachersListProps) =
     return (
       <Card>
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600" />
+          <div className="premium-spinner mx-auto" />
           <p className="mt-3 text-stone-600 text-sm">Chargement des enseignants…</p>
         </div>
       </Card>
@@ -53,7 +53,7 @@ const EducatorTeachersList = ({ searchQuery = '' }: EducatorTeachersListProps) =
   return (
     <div className="space-y-4">
       <Card className="flex items-center gap-2 text-stone-600 text-sm">
-        <FiUsers className="w-4 h-4 text-violet-600" />
+        <FiUsers className="w-4 h-4 text-cptb-blue" />
         <span className="font-medium">{filtered.length} enseignant(s)</span>
       </Card>
 
@@ -73,7 +73,7 @@ const EducatorTeachersList = ({ searchQuery = '' }: EducatorTeachersListProps) =
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-violet-50/40">
+                  <tr key={t.id} className="hover:bg-amber-50/40">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         <Avatar
@@ -106,7 +106,7 @@ const EducatorTeachersList = ({ searchQuery = '' }: EducatorTeachersListProps) =
                     </td>
                     <td className="py-3 px-4 text-stone-600">
                       <span className="inline-flex items-center gap-1">
-                        <FiBookOpen className="w-3.5 h-3.5 text-violet-600" />
+                        <FiBookOpen className="w-3.5 h-3.5 text-cptb-gold-dark" />
                         {(t.courses ?? []).length}
                       </span>
                     </td>

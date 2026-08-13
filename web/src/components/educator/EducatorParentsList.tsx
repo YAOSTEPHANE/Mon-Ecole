@@ -46,7 +46,7 @@ const EducatorParentsList = ({ searchQuery = '' }: EducatorParentsListProps) => 
     return (
       <Card>
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600" />
+          <div className="premium-spinner mx-auto" />
           <p className="mt-3 text-stone-600 text-sm">Chargement des parents…</p>
         </div>
       </Card>
@@ -57,7 +57,7 @@ const EducatorParentsList = ({ searchQuery = '' }: EducatorParentsListProps) => 
     <div className="space-y-4">
       <Card className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-2 text-stone-600 text-sm">
-          <FiUsers className="w-4 h-4 text-violet-600" />
+          <FiUsers className="w-4 h-4 text-cptb-blue" />
           <span className="font-medium">{filtered.length} parent(s)</span>
         </div>
         <select
@@ -89,7 +89,7 @@ const EducatorParentsList = ({ searchQuery = '' }: EducatorParentsListProps) => 
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-violet-50/40">
+                  <tr key={p.id} className="hover:bg-amber-50/40">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         <Avatar

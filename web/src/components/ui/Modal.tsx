@@ -44,7 +44,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 z-[9998] bg-stone-950/60 backdrop-blur-md transition-opacity"
+          className="fixed inset-0 z-[9998] bg-[#07081a]/70 backdrop-blur-md transition-opacity"
           onClick={onClose}
         />
 

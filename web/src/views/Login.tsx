@@ -148,7 +148,7 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen premium-body flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen premium-body premium-body-v2 premium-body-v3 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Illustration 3D en arrière-plan */}
       <LoginBackground />
       

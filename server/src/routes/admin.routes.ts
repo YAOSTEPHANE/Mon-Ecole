@@ -4606,6 +4606,90 @@ router.get('/security/login-logs', async (req, res) => {
   }
 });
 
+// Métriques runtime (monitoring / performance)
+router.get('/system/metrics', async (_req, res) => {
+  try {
+    const mem = process.memoryUsage();
+    const toMb = (bytes: number) => Math.round((bytes / (1024 * 1024)) * 10) / 10;
+    res.json({
+      uptimeSeconds: Math.floor(process.uptime()),
+      nodeVersion: process.version,
+      platform: process.platform,
+      env: process.env.NODE_ENV || 'development',
+      pid: process.pid,
+      memory: {
+        rssMb: toMb(mem.rss),
+        heapUsedMb: toMb(mem.heapUsed),
+        heapTotalMb: toMb(mem.heapTotal),
+        externalMb: toMb(mem.external || 0),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erreur serveur',
+    });
+  }
+});
+
+// Journal d'audit (trail de modifications)
+router.get('/audit-logs', async (req, res) => {
+  try {
+    const limitRaw = parseInt(String(req.query.limit ?? '50'), 10);
+    const skipRaw = parseInt(String(req.query.skip ?? '0'), 10);
+    const take = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 200) : 50;
+    const skip = Number.isFinite(skipRaw) && skipRaw >= 0 ? skipRaw : 0;
+
+    const entityType = typeof req.query.entityType === 'string' ? req.query.entityType : undefined;
+    const entityId = typeof req.query.entityId === 'string' ? req.query.entityId : undefined;
+    const action = typeof req.query.action === 'string' ? req.query.action : undefined;
+    const actorUserId =
+      typeof req.query.actorUserId === 'string' ? req.query.actorUserId : undefined;
+
+    const where = {
+      ...(entityType ? { entityType } : {}),
+      ...(entityId ? { entityId } : {}),
+      ...(action ? { action } : {}),
+      ...(actorUserId ? { actorUserId } : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
+
+    res.json({
+      items: rows.map((row) => ({
+        id: row.id,
+        actorUserId: row.actorUserId,
+        actorEmail: row.actorEmail,
+        actorRole: row.actorRole,
+        action: row.action,
+        entityType: row.entityType,
+        entityId: row.entityId,
+        summary: row.summary,
+        changes: (row.changes as Record<string, { before: unknown; after: unknown }> | null) ?? null,
+        ipAddress: row.ipAddress,
+        userAgent: row.userAgent,
+        createdAt: row.createdAt.toISOString(),
+      })),
+      total,
+      skip,
+      take,
+    });
+  } catch (error: unknown) {
+    console.error('GET /admin/audit-logs:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erreur serveur',
+    });
+  }
+});
+
 // Obtenir les événements de sécurité
 router.get('/security/events', async (req, res) => {
   try {

@@ -90,11 +90,11 @@ const EducatorScheduleTab = () => {
         </thead>
         <tbody className="divide-y divide-stone-100">
           {list.map((s) => (
-            <tr key={s.id} className="hover:bg-violet-50/40">
+            <tr key={s.id} className="hover:bg-amber-50/40">
               <td className="py-3 px-4 font-medium">{s.dayLabel ?? `J${s.dayOfWeek}`}</td>
               <td className="py-3 px-4">
                 <span className="inline-flex items-center gap-1">
-                  <FiClock className="w-4 h-4 text-violet-600 shrink-0" />
+                  <FiClock className="w-4 h-4 text-cptb-gold-dark shrink-0" />
                   {s.startTime} – {s.endTime}
                 </span>
               </td>

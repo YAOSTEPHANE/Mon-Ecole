@@ -114,7 +114,7 @@ const IdentityDocumentsPanel = ({ mode, studentId }: IdentityDocumentsPanelProps
 
   const fileIcon = (mime?: string | null) => {
     if (mime?.startsWith('image/')) return <FiImage className="w-5 h-5 text-emerald-600" />;
-    return <FiFileText className="w-5 h-5 text-indigo-600" />;
+    return <FiFileText className="w-5 h-5 text-cptb-blue" />;
   };
 
   return (
@@ -132,8 +132,8 @@ const IdentityDocumentsPanel = ({ mode, studentId }: IdentityDocumentsPanelProps
         </div>
       </div>
 
-      <Card className="border border-indigo-100 bg-indigo-50/30">
-        <p className="text-xs text-indigo-900 flex items-start gap-2">
+      <Card className="border border-cptb-gold/20 bg-amber-50/40">
+        <p className="text-xs text-stone-800 flex items-start gap-2">
           <FiInfo className="w-4 h-4 shrink-0 mt-0.5" />
           {mode === 'student'
             ? 'Vous pouvez déposer et retirer vos propres pièces. L’administration peut aussi en ajouter depuis votre dossier.'
@@ -143,7 +143,7 @@ const IdentityDocumentsPanel = ({ mode, studentId }: IdentityDocumentsPanelProps
 
       <Card>
         <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <FiUpload className="w-4 h-4 text-indigo-600" />
+          <FiUpload className="w-4 h-4 text-cptb-gold-dark" />
           Ajouter une pièce
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -155,7 +155,7 @@ const IdentityDocumentsPanel = ({ mode, studentId }: IdentityDocumentsPanelProps
               id="id-doc-type"
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-stone-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-cptb-gold/50"
             >
               {TYPE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -264,7 +264,7 @@ const IdentityDocumentsPanel = ({ mode, studentId }: IdentityDocumentsPanelProps
                     href={doc.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-cptb-blue hover:text-cptb-blue-dark"
                   >
                     <FiExternalLink className="w-4 h-4" />
                     Ouvrir

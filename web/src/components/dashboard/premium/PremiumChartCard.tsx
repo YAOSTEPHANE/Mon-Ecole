@@ -19,7 +19,7 @@ type PremiumChartCardProps = {
 
 const ACCENT_ICON: Record<NonNullable<PremiumChartCardProps['accent']>, string> = {
   indigo: 'from-cptb-blue to-cptb-blue-dark',
-  violet: 'from-violet-500 to-indigo-700',
+  violet: 'from-cptb-blue-mid to-cptb-blue-dark',
   emerald: 'from-emerald-500 to-teal-700',
   amber: 'from-cptb-gold to-cptb-gold-dark',
   rose: 'from-rose-500 to-pink-700',
@@ -29,7 +29,7 @@ const ACCENT_ICON: Record<NonNullable<PremiumChartCardProps['accent']>, string> 
 
 const ACCENT_BORDER: Record<NonNullable<PremiumChartCardProps['accent']>, string> = {
   indigo: 'from-cptb-blue/70 via-brand-500/45 to-sky-500/25',
-  violet: 'from-violet-500/70 via-indigo-500/45 to-cptb-blue/25',
+  violet: 'from-cptb-blue/70 via-cptb-gold/35 to-cptb-blue-dark/25',
   emerald: 'from-emerald-500/70 via-teal-500/50 to-cyan-500/30',
   amber: 'from-cptb-gold/80 via-amber-500/50 to-orange-500/25',
   rose: 'from-rose-500/70 via-pink-500/50 to-red-500/30',

@@ -230,19 +230,26 @@ const Search = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-5xl font-black mb-4 text-center">Recherche Globale</h1>
-          <p className="text-xl text-blue-100 text-center mb-8">
+    <div className="min-h-screen premium-body premium-body-v2 premium-body-v3">
+      <div className="relative overflow-hidden bg-[#07081a] text-white py-16">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f2e] via-[#001270] to-[#07081a]" aria-hidden />
+        <div className="page-hero-v2__glow absolute inset-0" aria-hidden />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cptb-gold/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cptb-gold/35 to-transparent" />
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.22em] text-cptb-gold/90">
+            Espace établissement
+          </p>
+          <h1 className="font-display text-4xl md:text-5xl font-semibold mb-4 text-center tracking-tight">
+            Recherche globale
+          </h1>
+          <p className="text-lg text-stone-300 text-center mb-8">
             Recherchez dans tous les éléments de votre établissement
           </p>
 
-          {/* Search Bar */}
           <div className="relative max-w-2xl mx-auto">
             <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none z-10">
-              <FiSearch className="w-6 h-6 text-gray-400" />
+              <FiSearch className="w-6 h-6 text-stone-400" />
             </div>
             <input
               type="text"
@@ -250,7 +257,7 @@ const Search = () => {
               onChange={(e) => handleSearch(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Rechercher des élèves, classes, enseignants, notes..."
-              className="w-full pl-16 pr-12 py-4 text-lg rounded-2xl border-2 border-white/30 bg-white/95 backdrop-blur-sm focus:ring-4 focus:ring-white/30 focus:border-white transition-all duration-200 shadow-xl text-gray-800 placeholder-gray-400"
+              className="w-full pl-16 pr-12 py-4 text-lg rounded-2xl border border-cptb-gold/30 bg-white/95 backdrop-blur-sm focus:ring-4 focus:ring-cptb-gold/25 focus:border-cptb-gold transition-all duration-200 shadow-lux text-stone-800 placeholder-stone-400"
               autoFocus
             />
             {searchQuery && (
@@ -258,18 +265,18 @@ const Search = () => {
                 type="button"
                 aria-label="Effacer la recherche"
                 onClick={() => handleSearch('')}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-stone-400 hover:text-stone-700 transition-colors"
               >
                 <FiX className="w-5 h-5" />
               </button>
             )}
           </div>
 
-          {/* Results Count */}
           {searchQuery && (
             <div className="text-center mt-6">
-              <p className="text-blue-100 text-lg">
-                <span className="font-bold text-white">{totalResults}</span> résultat{totalResults > 1 ? 's' : ''} trouvé{totalResults > 1 ? 's' : ''}
+              <p className="text-stone-300 text-lg">
+                <span className="font-bold text-cptb-gold">{totalResults}</span> résultat
+                {totalResults > 1 ? 's' : ''} trouvé{totalResults > 1 ? 's' : ''}
               </p>
             </div>
           )}
@@ -280,10 +287,10 @@ const Search = () => {
         {/* Categories */}
         <Card className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">Catégories</h2>
+            <h2 className="font-display text-lg font-semibold tracking-tight text-stone-900">Catégories</h2>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center space-x-2 text-sm text-stone-600 transition-colors hover:text-cptb-blue"
             >
               <FiFilter className="w-4 h-4" />
               <span>Filtres</span>
@@ -299,18 +306,18 @@ const Search = () => {
                   onClick={() => setActiveCategory(category.id)}
                   className={`group relative flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300 ${
                     isActive
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-gradient-to-r from-cptb-blue to-cptb-blue-dark text-white shadow-lux-soft border border-cptb-gold/30'
+                      : 'bg-stone-100 text-stone-700 hover:bg-amber-50 border border-stone-200/80'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-600'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-600'}`} />
                   <span>{category.label}</span>
                   {category.count > 0 && (
                     <Badge
                       className={`${
                         isActive
                           ? 'bg-white/30 text-white'
-                          : 'bg-blue-100 text-blue-800'
+                          : 'bg-amber-50 text-amber-950'
                       }`}
                     >
                       {category.count}
@@ -325,8 +332,8 @@ const Search = () => {
         {/* Recent Searches */}
         {!searchQuery && recentSearches.length > 0 && (
           <Card className="mb-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-              <FiClock className="w-5 h-5 mr-2 text-gray-400" />
+            <h3 className="font-display mb-4 flex items-center text-lg font-semibold tracking-tight text-stone-900">
+              <FiClock className="mr-2 h-5 w-5 text-cptb-gold" />
               Recherches récentes
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -334,7 +341,7 @@ const Search = () => {
                 <button
                   key={index}
                   onClick={() => handleSearch(search)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors flex items-center space-x-2"
+                  className="flex items-center space-x-2 rounded-lg border border-stone-200/80 bg-stone-50 px-4 py-2 text-sm text-stone-700 transition-colors hover:border-cptb-gold/40 hover:bg-amber-50"
                 >
                   <FiSearch className="w-3 h-3" />
                   <span>{search}</span>
@@ -351,29 +358,29 @@ const Search = () => {
             {(activeCategory === 'all' || activeCategory === 'students') && filteredResults.students.length > 0 && (
               <Card>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                    <FiUsers className="w-6 h-6 mr-2 text-blue-600" />
+                  <h3 className="font-display flex items-center text-xl font-semibold tracking-tight text-stone-900">
+                    <FiUsers className="mr-2 h-6 w-6 text-cptb-blue" />
                     Élèves ({filteredResults.students.length})
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredResults.students.map((student: any) => (
                     <div
                       key={student.id}
-                      className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:shadow-lg transition-all cursor-pointer"
+                      className="premium-result-tile cursor-pointer p-4"
                       onClick={() => router.push('/admin?tab=students')}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-cptb-blue to-cptb-blue-dark font-bold text-white ring-1 ring-cptb-gold/30">
                           {student.user.firstName[0]}{student.user.lastName[0]}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-800">
+                          <p className="font-semibold text-stone-900">
                             {student.user.firstName} {student.user.lastName}
                           </p>
-                          <p className="text-sm text-gray-600">{student.studentId}</p>
+                          <p className="text-sm text-stone-600">{student.studentId}</p>
                           {student.class && (
-                            <Badge className="bg-blue-100 text-blue-800 mt-1">
+                            <Badge className="mt-1 bg-amber-50 text-amber-950">
                               {student.class.name}
                             </Badge>
                           )}
@@ -389,27 +396,27 @@ const Search = () => {
             {(activeCategory === 'all' || activeCategory === 'classes') && filteredResults.classes.length > 0 && (
               <Card>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                    <FiBook className="w-6 h-6 mr-2 text-purple-600" />
+                  <h3 className="font-display flex items-center text-xl font-semibold tracking-tight text-stone-900">
+                    <FiBook className="mr-2 h-6 w-6 text-cptb-gold-dark" />
                     Classes ({filteredResults.classes.length})
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredResults.classes.map((cls: any) => (
                     <div
                       key={cls.id}
-                      className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 hover:shadow-lg transition-all cursor-pointer"
+                      className="premium-result-tile cursor-pointer p-4"
                       onClick={() => router.push('/admin?tab=classes')}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-800 text-lg">{cls.name}</p>
-                          <p className="text-sm text-gray-600">{cls.level} - {cls.academicYear}</p>
+                          <p className="font-display text-lg font-semibold text-stone-900">{cls.name}</p>
+                          <p className="text-sm text-stone-600">{cls.level} - {cls.academicYear}</p>
                           {cls.room && (
-                            <p className="text-xs text-gray-500 mt-1">Salle: {cls.room}</p>
+                            <p className="mt-1 text-xs text-stone-500">Salle: {cls.room}</p>
                           )}
                         </div>
-                        <Badge className="bg-purple-100 text-purple-800">
+                        <Badge className="bg-amber-50 text-amber-950">
                           {cls._count?.students || 0} élèves
                         </Badge>
                       </div>
@@ -423,28 +430,28 @@ const Search = () => {
             {(activeCategory === 'all' || activeCategory === 'teachers') && filteredResults.teachers.length > 0 && (
               <Card>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                    <FiUserCheck className="w-6 h-6 mr-2 text-indigo-600" />
+                  <h3 className="font-display flex items-center text-xl font-semibold tracking-tight text-stone-900">
+                    <FiUserCheck className="mr-2 h-6 w-6 text-cptb-blue" />
                     Enseignants ({filteredResults.teachers.length})
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredResults.teachers.map((teacher: any) => (
                     <div
                       key={teacher.id}
-                      className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-200 hover:shadow-lg transition-all cursor-pointer"
+                      className="premium-result-tile cursor-pointer p-4"
                       onClick={() => router.push('/admin?tab=teachers')}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-cptb-blue to-cptb-blue-dark font-bold text-white ring-1 ring-cptb-gold/30">
                           {teacher.user.firstName[0]}{teacher.user.lastName[0]}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-800">
+                          <p className="font-semibold text-stone-900">
                             {teacher.user.firstName} {teacher.user.lastName}
                           </p>
-                          <p className="text-sm text-gray-600">{teacher.employeeId}</p>
-                          <Badge className="bg-indigo-100 text-indigo-800 mt-1">
+                          <p className="text-sm text-stone-600">{teacher.employeeId}</p>
+                          <Badge className="mt-1 bg-amber-50 text-amber-950">
                             {teacher.specialization}
                           </Badge>
                         </div>
@@ -459,8 +466,8 @@ const Search = () => {
             {(activeCategory === 'all' || activeCategory === 'grades') && filteredResults.grades.length > 0 && (
               <Card>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                    <FiClipboard className="w-6 h-6 mr-2 text-green-600" />
+                  <h3 className="font-display flex items-center text-xl font-semibold tracking-tight text-stone-900">
+                    <FiClipboard className="mr-2 h-6 w-6 text-cptb-green" />
                     Notes ({filteredResults.grades.length})
                   </h3>
                 </div>
@@ -468,24 +475,24 @@ const Search = () => {
                   {filteredResults.grades.slice(0, 10).map((grade: any) => (
                     <div
                       key={grade.id}
-                      className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200 hover:shadow-lg transition-all cursor-pointer"
+                      className="premium-result-tile cursor-pointer p-4"
                       onClick={() => router.push('/admin?tab=management')}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-800">
+                          <p className="font-semibold text-stone-900">
                             {grade.student.user.firstName} {grade.student.user.lastName}
                           </p>
-                          <p className="text-sm text-gray-600">{grade.course.name} - {grade.title}</p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-sm text-stone-600">{grade.course.name} - {grade.title}</p>
+                          <p className="mt-1 text-xs text-stone-500">
                             {new Date(grade.date).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-green-600">
+                          <p className="text-2xl font-bold text-cptb-blue">
                             {((grade.score / grade.maxScore) * 20).toFixed(1)}
                           </p>
-                          <p className="text-xs text-gray-500">/ 20</p>
+                          <p className="text-xs text-stone-500">/ 20</p>
                         </div>
                       </div>
                     </div>
@@ -498,8 +505,8 @@ const Search = () => {
             {(activeCategory === 'all' || activeCategory === 'absences') && filteredResults.absences.length > 0 && (
               <Card>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                    <FiCalendar className="w-6 h-6 mr-2 text-orange-600" />
+                  <h3 className="font-display flex items-center text-xl font-semibold tracking-tight text-stone-900">
+                    <FiCalendar className="mr-2 h-6 w-6 text-amber-700" />
                     Absences ({filteredResults.absences.length})
                   </h3>
                 </div>
@@ -507,24 +514,24 @@ const Search = () => {
                   {filteredResults.absences.slice(0, 10).map((absence: any) => (
                     <div
                       key={absence.id}
-                      className="p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl border border-orange-200 hover:shadow-lg transition-all cursor-pointer"
+                      className="premium-result-tile cursor-pointer p-4"
                       onClick={() => router.push('/admin?tab=management')}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-800">
+                          <p className="font-semibold text-stone-900">
                             {absence.student.user.firstName} {absence.student.user.lastName}
                           </p>
-                          <p className="text-sm text-gray-600">{absence.course.name}</p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-sm text-stone-600">{absence.course.name}</p>
+                          <p className="mt-1 text-xs text-stone-500">
                             {new Date(absence.date).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
                         <Badge
                           className={
                             absence.excused
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-emerald-50 text-emerald-800'
+                              : 'bg-rose-50 text-rose-800'
                           }
                         >
                           {absence.excused ? 'Excusée' : 'Non excusée'}
@@ -540,8 +547,8 @@ const Search = () => {
             {(activeCategory === 'all' || activeCategory === 'assignments') && filteredResults.assignments.length > 0 && (
               <Card>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                    <FiUpload className="w-6 h-6 mr-2 text-purple-600" />
+                  <h3 className="font-display flex items-center text-xl font-semibold tracking-tight text-stone-900">
+                    <FiUpload className="mr-2 h-6 w-6 text-cptb-blue" />
                     Devoirs ({filteredResults.assignments.length})
                   </h3>
                 </div>
@@ -549,18 +556,18 @@ const Search = () => {
                   {filteredResults.assignments.slice(0, 10).map((assignment: any) => (
                     <div
                       key={assignment.id}
-                      className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 hover:shadow-lg transition-all cursor-pointer"
+                      className="premium-result-tile cursor-pointer p-4"
                       onClick={() => router.push('/admin?tab=management')}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-800">{assignment.title}</p>
-                          <p className="text-sm text-gray-600">{assignment.course.name}</p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="font-semibold text-stone-900">{assignment.title}</p>
+                          <p className="text-sm text-stone-600">{assignment.course.name}</p>
+                          <p className="mt-1 text-xs text-stone-500">
                             Échéance: {new Date(assignment.dueDate).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
-                        <Badge className="bg-purple-100 text-purple-800">
+                        <Badge className="bg-amber-50 text-amber-950">
                           {assignment._count?.students || 0} élèves
                         </Badge>
                       </div>
@@ -573,29 +580,29 @@ const Search = () => {
             {/* No Results */}
             {totalResults === 0 && (
               <Card>
-                <div className="text-center py-12">
-                  <FiSearch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Aucun résultat trouvé</h3>
-                  <p className="text-gray-600 mb-6">
+                <div className="py-12 text-center">
+                  <FiSearch className="mx-auto mb-4 h-16 w-16 text-stone-300" />
+                  <h3 className="font-display mb-2 text-xl font-semibold text-stone-900">Aucun résultat trouvé</h3>
+                  <p className="mb-6 text-stone-600">
                     Essayez avec d'autres mots-clés ou vérifiez l'orthographe
                   </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <span className="text-sm text-gray-500">Suggestions :</span>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <span className="text-sm text-stone-500">Suggestions :</span>
                     <button
                       onClick={() => handleSearch('élève')}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700"
+                      className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1 text-sm text-stone-700 hover:border-cptb-gold/40 hover:bg-amber-50"
                     >
                       élève
                     </button>
                     <button
                       onClick={() => handleSearch('classe')}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700"
+                      className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1 text-sm text-stone-700 hover:border-cptb-gold/40 hover:bg-amber-50"
                     >
                       classe
                     </button>
                     <button
                       onClick={() => handleSearch('enseignant')}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700"
+                      className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1 text-sm text-stone-700 hover:border-cptb-gold/40 hover:bg-amber-50"
                     >
                       enseignant
                     </button>
@@ -606,24 +613,24 @@ const Search = () => {
           </div>
         ) : (
           <Card>
-            <div className="text-center py-12">
-              <FiSearch className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Commencez votre recherche</h3>
-              <p className="text-gray-600 mb-6">
+            <div className="py-12 text-center">
+              <FiSearch className="mx-auto mb-4 h-20 w-20 text-stone-300" />
+              <h3 className="font-display mb-2 text-2xl font-semibold text-stone-900">Commencez votre recherche</h3>
+              <p className="mb-6 text-stone-600">
                 Recherchez des élèves, classes, enseignants, notes, absences ou devoirs
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <FiUsers className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-gray-800">Élèves</p>
+              <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="premium-result-tile p-4">
+                  <FiUsers className="mx-auto mb-2 h-8 w-8 text-cptb-blue" />
+                  <p className="text-sm font-semibold text-stone-900">Élèves</p>
                 </div>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <FiBook className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-gray-800">Classes</p>
+                <div className="premium-result-tile p-4">
+                  <FiBook className="mx-auto mb-2 h-8 w-8 text-cptb-gold-dark" />
+                  <p className="text-sm font-semibold text-stone-900">Classes</p>
                 </div>
-                <div className="p-4 bg-indigo-50 rounded-lg">
-                  <FiUserCheck className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-gray-800">Enseignants</p>
+                <div className="premium-result-tile p-4">
+                  <FiUserCheck className="mx-auto mb-2 h-8 w-8 text-cptb-blue" />
+                  <p className="text-sm font-semibold text-stone-900">Enseignants</p>
                 </div>
               </div>
             </div>

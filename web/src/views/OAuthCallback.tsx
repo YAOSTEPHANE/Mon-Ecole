@@ -57,7 +57,7 @@ export default function OAuthCallbackClient() {
   }, [loading, user, router]);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden premium-body">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden premium-body premium-body-v2 premium-body-v3">
       <LoginBackground />
       <div className="relative z-10 px-4 text-center">
         <div

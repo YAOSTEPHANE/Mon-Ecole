@@ -346,7 +346,7 @@ export default function SuperAdminDashboard() {
             <div className="grid gap-6 md:grid-cols-2">
               <PremiumGlassCard accent="indigo">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-lg">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cptb-blue to-cptb-blue-dark text-white shadow-lg ring-1 ring-cptb-gold/35">
                     <FiDatabase className="h-6 w-6" aria-hidden />
                   </div>
                   <div>

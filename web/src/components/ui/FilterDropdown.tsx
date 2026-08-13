@@ -102,7 +102,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
         <div
           role="listbox"
           aria-label={label}
-          className={`fixed max-h-[min(70vh,20rem)] overflow-y-auto rounded-xl border border-indigo-200/90 bg-gradient-to-b from-indigo-50/98 via-violet-50/95 to-white py-1 shadow-lg shadow-indigo-200/30 ring-2 ring-violet-300/25 backdrop-blur-xl ${
+          className={`fixed max-h-[min(70vh,20rem)] overflow-y-auto rounded-xl border border-cptb-gold/25 bg-gradient-to-b from-white via-stone-50/98 to-amber-50/40 py-1 shadow-lux-soft ring-1 ring-amber-900/8 backdrop-blur-xl ${
             compact ? 'text-left' : ''
           }`}
           style={{
@@ -127,8 +127,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'
               } ${
                 current === option.value
-                  ? 'bg-gradient-to-r from-violet-200/95 to-indigo-200/90 text-indigo-950 font-semibold'
-                  : 'text-indigo-950/85 hover:bg-indigo-100/80 hover:text-indigo-950'
+                  ? 'bg-gradient-to-r from-[#0a0f2e] to-[#001270] text-amber-50 font-semibold'
+                  : 'text-stone-800 hover:bg-amber-50/80 hover:text-stone-950'
               }`}
             >
               {option.label}
@@ -163,8 +163,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 : 'items-center gap-2 px-4 py-3 border-2'
         } ${
           isOpen
-            ? 'border-indigo-300/90 bg-gradient-to-r from-indigo-50/95 via-violet-50/90 to-indigo-50/95 ring-2 ring-violet-300/40'
-            : 'border-stone-300/90 bg-white/90 hover:border-indigo-300/60 hover:bg-indigo-50/30'
+            ? 'border-cptb-gold/50 bg-gradient-to-r from-amber-50/95 via-white to-amber-50/80 ring-2 ring-cptb-gold/25'
+            : 'border-stone-300/90 bg-white/90 hover:border-cptb-gold/45 hover:bg-amber-50/30'
         }`}
       >
         {!isField ? (
@@ -175,12 +175,12 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
           >
             <FiFilter
               className={`shrink-0 ${triggerCompact ? 'h-4 w-4' : 'h-5 w-5'} ${
-                isOpen ? 'text-indigo-500' : 'text-indigo-400/80'
+                isOpen ? 'text-cptb-gold' : 'text-stone-400'
               }`}
             />
             <span
               className={`font-medium truncate ${triggerCompact ? 'text-xs' : 'text-sm'} ${
-                isOpen ? 'text-indigo-900' : 'text-stone-800'
+                isOpen ? 'text-stone-900' : 'text-stone-800'
               }`}
             >
               {label}
@@ -188,7 +188,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
             {compactFilterStack ? (
               <FiChevronDown
                 className={`shrink-0 h-4 w-4 transition-transform ${
-                  isOpen ? 'rotate-180 text-indigo-600' : 'text-indigo-400/70'
+                  isOpen ? 'rotate-180 text-cptb-gold' : 'text-stone-400'
                 }`}
               />
             ) : null}
@@ -198,7 +198,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
           className={`truncate min-w-0 ${
             compactFilterStack || isField ? 'w-full flex-1' : 'flex-1'
           } ${triggerCompact || isField ? 'text-sm' : 'text-sm'} ${
-            isOpen ? 'text-violet-800' : isField ? 'text-stone-800' : 'text-stone-600'
+            isOpen ? 'text-amber-950' : isField ? 'text-stone-800' : 'text-stone-600'
           }`}
         >
           {selectedOption?.label || (current ? current : isField ? 'Choisir…' : 'Choisir…')}
@@ -206,7 +206,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
         {!compactFilterStack ? (
           <FiChevronDown
             className={`shrink-0 transition-transform ${triggerCompact || isField ? 'h-4 w-4' : 'h-4 w-4'} ${
-              isOpen ? 'rotate-180 text-indigo-600' : 'text-indigo-400/70'
+              isOpen ? 'rotate-180 text-cptb-gold' : 'text-stone-400'
             }`}
           />
         ) : null}

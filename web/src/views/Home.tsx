@@ -260,7 +260,7 @@ export default function Home() {
   }, [headerTitle]);
 
   return (
-    <div className="home-page home-page--v3 min-h-screen premium-body premium-body-v2 font-sans text-tran-mauve-950 antialiased">
+    <div className="home-page home-page--v3 min-h-screen premium-body premium-body-v2 premium-body-v3 font-sans text-tran-mauve-950 antialiased">
       <header className="home-header sticky top-0 z-50 glass-nav glass-nav-v2 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 min-h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-6">
           <Link

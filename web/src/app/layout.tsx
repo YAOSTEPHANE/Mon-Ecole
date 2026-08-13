@@ -34,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className={`${jakarta.variable} ${cormorant.variable}`}>
-      <body className="premium-body premium-body-v2 min-h-full font-sans antialiased text-base text-stone-900">
+      <body className="premium-body premium-body-v2 premium-body-v3 min-h-full font-sans antialiased text-base text-stone-900">
         <Providers>{children}</Providers>
       </body>
     </html>

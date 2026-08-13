@@ -101,9 +101,9 @@ const StudentDashboard = () => {
 
   const tabs: TabDef[] = useMemo(
     () => [
-      { id: 'overview', label: 'Vue d’ensemble', icon: FiLayout, color: 'from-violet-500 to-purple-600', description: 'Résumé de votre scolarité et accès rapides' },
+      { id: 'overview', label: 'Vue d’ensemble', icon: FiLayout, color: 'from-cptb-blue to-cptb-blue-dark', description: 'Résumé de votre scolarité et accès rapides' },
       { id: 'profile', label: 'Profil', icon: FiUser, color: 'from-fuchsia-500 to-pink-600', description: 'Coordonnées et informations personnelles' },
-      { id: 'academic-history', label: 'Historique scolaire', icon: FiArchive, color: 'from-indigo-500 to-violet-600', description: 'Parcours et données académiques' },
+      { id: 'academic-history', label: 'Historique scolaire', icon: FiArchive, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Parcours et données académiques' },
       { id: 'identity-documents', label: 'Documents d’identité', icon: FiCreditCard, color: 'from-slate-600 to-slate-800', description: 'Pièces officielles et justificatifs' },
       { id: 'grades', label: 'Notes', icon: FiAward, color: 'from-purple-500 to-fuchsia-600', description: 'Résultats et évaluations' },
       { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, color: 'from-pink-500 to-rose-600', description: 'Planning des cours' },
@@ -122,13 +122,13 @@ const StudentDashboard = () => {
         id: 'orientation',
         label: 'Orientation',
         icon: FiNavigation,
-        color: 'from-indigo-500 to-violet-600',
+        color: 'from-cptb-blue to-cptb-blue-dark',
         description: 'Filières, tests, conseils, partenariats, suivi et stages',
       },
       { id: 'payments', label: 'Paiements', icon: FiDollarSign, color: 'from-emerald-500 to-green-600', description: 'Frais et règlements en ligne' },
-      { id: 'messages', label: 'Messages école', icon: FiMessageCircle, color: 'from-blue-500 to-indigo-600', description: 'Échanges avec l’administration' },
-      { id: 'digital-library', label: 'Bibliothèque numérique', icon: FiCloud, color: 'from-sky-500 to-indigo-600', description: 'E-books, PDF et ressources pédagogiques en ligne' },
-      { id: 'elearning', label: 'E-learning', icon: FiMonitor, color: 'from-violet-500 to-purple-600', description: 'Cours en ligne, quiz et classes virtuelles' },
+      { id: 'messages', label: 'Messages école', icon: FiMessageCircle, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Échanges avec l’administration' },
+      { id: 'digital-library', label: 'Bibliothèque numérique', icon: FiCloud, color: 'from-sky-600 to-cptb-blue', description: 'E-books, PDF et ressources pédagogiques en ligne' },
+      { id: 'elearning', label: 'E-learning', icon: FiMonitor, color: 'from-cptb-blue to-cptb-blue-mid', description: 'Cours en ligne, quiz et classes virtuelles' },
       {
         id: 'mock-exams',
         label: 'Examens blancs',
@@ -270,8 +270,8 @@ const StudentDashboard = () => {
                         {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
                       </p>
                     </div>
-                    <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-50 border border-violet-200/80 text-violet-950 text-xs font-semibold shrink-0 ring-1 ring-violet-900/5">
-                      <FiBook className="w-3.5 h-3.5 text-violet-700" aria-hidden />
+                    <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-cptb-gold/30 text-stone-900 text-xs font-semibold shrink-0 ring-1 ring-cptb-blue/10">
+                      <FiBook className="w-3.5 h-3.5 text-cptb-blue" aria-hidden />
                       Élève
                     </div>
                   </div>
@@ -341,7 +341,7 @@ const StudentDashboard = () => {
                         onClick={() => setShowSearchFilters(!showSearchFilters)}
                         className={`absolute inset-y-0 right-0 pr-3 flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
                           showSearchFilters || searchCategory !== 'all' || searchDateRange !== 'all'
-                            ? 'text-violet-700'
+                            ? 'text-cptb-blue'
                             : 'text-stone-400 hover:text-stone-600'
                         }`}
                       >
@@ -352,7 +352,7 @@ const StudentDashboard = () => {
                     {showSearchFilters && (
                       <Card
                         variant="premium"
-                        className="absolute top-full mt-2 w-full z-50 !p-4 border border-stone-200/90 ring-1 ring-violet-200/40"
+                        className="absolute top-full mt-2 w-full z-50 !p-4 border border-stone-200/90 ring-1 ring-cptb-gold/25"
                         hover={false}
                       >
                         <div className="flex items-center justify-between mb-3">
@@ -389,8 +389,8 @@ const StudentDashboard = () => {
                                 }}
                                 className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 ${
                                   searchCategory === cat.value
-                                    ? 'border-violet-500 bg-violet-50 text-violet-900'
-                                    : 'border-stone-200 hover:border-violet-200 text-stone-700'
+                                    ? 'border-cptb-gold bg-amber-50 text-stone-900'
+                                    : 'border-stone-200 hover:border-cptb-gold/40 text-stone-700'
                                 }`}
                               >
                                 <Icon className="w-4 h-4 mb-1" />

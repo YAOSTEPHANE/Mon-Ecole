@@ -78,8 +78,8 @@ const Documentation = () => {
     {
       title: 'Ressources',
       icon: FiFileText,
-      gradient: 'from-violet-700 to-stone-900',
-      ring: 'ring-violet-500/20',
+      gradient: 'from-cptb-blue to-[#07081a]',
+      ring: 'ring-cptb-gold/25',
       items: [
         { title: 'Tutoriels vidéo', link: '/docs/videos' },
         { title: 'FAQ technique', link: '/docs/faq' },

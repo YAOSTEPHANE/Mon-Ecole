@@ -45,16 +45,16 @@ const EducatorDashboard = () => {
 
   const tabs: TabDef[] = useMemo(
     () => [
-      { id: 'overview', label: 'Vue d’ensemble', icon: FiLayout, color: 'from-violet-500 to-indigo-600', description: 'Indicateurs de conduite et priorités du jour' },
-      { id: 'students', label: 'Élèves', icon: FiUsers, color: 'from-indigo-500 to-purple-600', description: 'Liste des élèves par classe' },
-      { id: 'teachers', label: 'Enseignants', icon: FiBookOpen, color: 'from-blue-500 to-indigo-600', description: 'Liste des enseignants de l’établissement' },
+      { id: 'overview', label: 'Vue d’ensemble', icon: FiLayout, color: 'from-cptb-blue to-cptb-blue-dark', description: 'Indicateurs de conduite et priorités du jour' },
+      { id: 'students', label: 'Élèves', icon: FiUsers, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Liste des élèves par classe' },
+      { id: 'teachers', label: 'Enseignants', icon: FiBookOpen, color: 'from-cptb-blue to-cptb-blue-dark', description: 'Liste des enseignants de l’établissement' },
       { id: 'parents', label: 'Parents', icon: FiHeart, color: 'from-rose-500 to-pink-600', description: 'Familles et contacts par classe' },
       { id: 'messaging', label: 'Messagerie', icon: FiMessageSquare, color: 'from-emerald-500 to-teal-600', description: 'Communication avec enseignants, parents et élèves' },
       { id: 'schedule', label: 'Emplois du temps', icon: FiCalendar, color: 'from-amber-500 to-orange-600', description: 'Plannings par classe et par enseignant' },
       { id: 'attendance', label: 'Appels', icon: FiUserCheck, color: 'from-cyan-500 to-teal-600', description: 'Appel de remplacement sur vos classes' },
       { id: 'conduct', label: 'Conduite', icon: FiShield, color: 'from-purple-500 to-fuchsia-600', description: 'Évaluations et historique comportemental' },
       { id: 'discipline', label: 'Discipline', icon: FiAlertTriangle, color: 'from-amber-700 to-orange-800', description: 'Sanctions et suivis disciplinaires' },
-      { id: 'validations', label: 'Validations', icon: FiCheckCircle, color: 'from-blue-600 to-indigo-600', description: 'Valider les notes et moyennes (2e étape)' },
+      { id: 'validations', label: 'Validations', icon: FiCheckCircle, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Valider les notes et moyennes (2e étape)' },
     ],
     []
   );

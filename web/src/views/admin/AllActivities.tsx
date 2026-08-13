@@ -193,7 +193,7 @@ const AllActivities = () => {
       case 'assignment_created':
         return 'from-purple-500 to-purple-600';
       case 'class_created':
-        return 'from-indigo-500 to-indigo-600';
+        return 'from-cptb-blue to-cptb-blue-dark';
       case 'teacher_added':
         return 'from-teal-500 to-teal-600';
       case 'user_updated':

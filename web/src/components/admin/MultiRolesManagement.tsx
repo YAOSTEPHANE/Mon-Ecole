@@ -466,21 +466,22 @@ const MultiRolesManagement = () => {
       </Card>
 
       {/* Cartes des rôles */}
-      <div className={ADM.grid6}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {roles.map((role) => {
           const Icon = role.icon;
           const count = roleStats ? (roleStats as any)[ROLE_STATS_API_KEY[role.id]] ?? 0 : 0;
           const isSelected = selectedRole === role.id;
+          const usersLabel = count <= 1 ? 'utilisateur' : 'utilisateurs';
           
           return (
             <Card
               key={role.id}
-              className={`!p-2.5 sm:!p-3 cursor-pointer transition-all duration-300 hover:shadow-lg ${
+              className={`!p-3 sm:!p-3.5 min-w-0 overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg ${
                 isSelected ? `border-2 border-indigo-500 bg-gradient-to-br ${role.color} text-white` : ''
               }`}
               onClick={() => setSelectedRole(role.id)}
             >
-              <div className="flex items-center justify-between mb-2 gap-2">
+              <div className="flex items-start justify-between gap-2 mb-2">
                 <div
                   className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br ${role.color} flex items-center justify-center shrink-0 ${
                     isSelected ? 'bg-white/20' : ''
@@ -488,25 +489,27 @@ const MultiRolesManagement = () => {
                 >
                   <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-white" />
                 </div>
-                <div className={`text-right min-w-0 ${isSelected ? 'text-white' : 'text-gray-600'}`}>
-                  <div className="text-base sm:text-lg font-bold tabular-nums leading-none">{count}</div>
+                <div className={`text-right min-w-0 flex-1 ${isSelected ? 'text-white' : 'text-stone-600'}`}>
+                  <div className="text-lg font-bold tabular-nums leading-none sm:text-xl">{count}</div>
                   <div
-                    className={
-                      isSelected
-                        ? 'text-[10px] font-medium uppercase tracking-wide text-indigo-100/90'
-                        : ADM.statLabel
-                    }
+                    className={`mt-0.5 text-[10px] font-semibold uppercase leading-tight tracking-wide break-words ${
+                      isSelected ? 'text-indigo-100/90' : 'text-stone-500'
+                    }`}
                   >
-                    utilisateurs
+                    {usersLabel}
                   </div>
                 </div>
               </div>
-              <h3 className={`font-bold text-sm mb-1 leading-tight ${isSelected ? 'text-white' : 'text-gray-800'}`}>
+              <h3
+                className={`font-bold text-sm mb-1 leading-snug break-words ${
+                  isSelected ? 'text-white' : 'text-stone-800'
+                }`}
+              >
                 {role.label}
               </h3>
               <p
-                className={`text-[11px] mb-1.5 leading-snug line-clamp-2 ${
-                  isSelected ? 'text-indigo-100' : 'text-gray-600'
+                className={`text-[11px] leading-snug break-words ${
+                  isSelected ? 'text-indigo-100' : 'text-stone-600'
                 }`}
               >
                 {role.description}
@@ -520,7 +523,7 @@ const MultiRolesManagement = () => {
                     {role.permissions.map((permission, idx) => (
                       <li key={idx} className="text-[10px] text-indigo-100/95 flex items-start gap-1 leading-snug">
                         <FiCheckCircle className="w-2.5 h-2.5 mt-0.5 shrink-0" />
-                        <span>{permission}</span>
+                        <span className="min-w-0 break-words">{permission}</span>
                       </li>
                     ))}
                   </ul>
