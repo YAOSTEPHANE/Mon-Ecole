@@ -5,7 +5,11 @@ import type { EducationSectorValue } from '@/lib/educationSector';
 export const adminApi = {
   getStudents: async (
     params?:
-      | { includeParents?: boolean; educationSector?: EducationSectorValue }
+      | {
+          includeParents?: boolean;
+          educationSector?: EducationSectorValue;
+          enrollmentStatus?: 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ARCHIVED';
+        }
       | { queryKey?: unknown; signal?: unknown }
   ) => {
     const isQueryOpts =
@@ -13,14 +17,22 @@ export const adminApi = {
       typeof params === 'object' &&
       ('queryKey' in params || 'signal' in params);
     const opts = !isQueryOpts
-      ? (params as { includeParents?: boolean; educationSector?: EducationSectorValue } | undefined)
+      ? (params as
+          | {
+              includeParents?: boolean;
+              educationSector?: EducationSectorValue;
+              enrollmentStatus?: 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ARCHIVED';
+            }
+          | undefined)
       : undefined;
     const includeParents = Boolean(opts?.includeParents);
     const educationSector = opts?.educationSector;
+    const enrollmentStatus = opts?.enrollmentStatus;
     const response = await api.get('/admin/students', {
       params: {
         ...(includeParents ? { includeParents: '1' } : {}),
         ...(educationSector ? { educationSector } : {}),
+        ...(enrollmentStatus ? { enrollmentStatus } : {}),
       },
     });
     return response.data;
@@ -239,6 +251,10 @@ export const adminApi = {
   },
   deleteTeacherCareerHistoryEntry: async (teacherId: string, entryId: string) => {
     const response = await api.delete(`/admin/teachers/${teacherId}/career-history/${entryId}`);
+    return response.data;
+  },
+  getProfessionalTrainings: async () => {
+    const response = await api.get('/admin/professional-trainings');
     return response.data;
   },
   addTeacherProfessionalTraining: async (

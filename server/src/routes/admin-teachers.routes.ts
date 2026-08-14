@@ -1116,6 +1116,41 @@ router.delete('/teachers/:teacherId/career-history/:entryId', async (req, res) =
   }
 });
 
+// Formation continue — liste consolidée
+router.get('/professional-trainings', async (req: SchoolContextRequest, res) => {
+  try {
+    const schoolId = req.schoolId;
+    const rows = await prisma.teacherProfessionalTraining.findMany({
+      where: schoolId
+        ? {
+            teacher: {
+              OR: [
+                { classes: { some: { schoolId } } },
+                { courses: { some: { class: { schoolId } } } },
+              ],
+            },
+          }
+        : undefined,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            employeeId: true,
+            specialization: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erreur serveur',
+    });
+  }
+});
+
 // Formation continue
 router.post('/teachers/:id/professional-trainings', async (req, res) => {
   try {

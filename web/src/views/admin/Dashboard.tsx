@@ -33,6 +33,8 @@ import {
   FiUserPlus,
   FiLayers,
   FiEdit3,
+  FiFileText,
+  FiGift,
   FiCreditCard,
   FiCheckSquare,
   FiPackage,
@@ -52,6 +54,8 @@ import {
   FiNavigation,
   FiMonitor,
   FiHome,
+  FiTarget,
+  FiTrendingUp,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -103,6 +107,12 @@ const ExtracurricularAdminModule = dynamic(() => import('../../components/admin/
 const CampusServicesModule = dynamic(() => import('../../components/admin/CampusServicesModule'), { loading: () => <DashboardTabLoading />, ssr: false });
 const SchoolOperationsHub = dynamic(() => import('../../components/admin/SchoolOperationsHub'), { loading: () => <DashboardTabLoading />, ssr: false });
 const OrientationAdminModule = dynamic(() => import('../../components/admin/OrientationAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ExamsAdminModule = dynamic(() => import('../../components/admin/ExamsAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const SchoolCalendarAdminModule = dynamic(() => import('../../components/admin/SchoolCalendarAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const CertificatesAdminModule = dynamic(() => import('../../components/admin/CertificatesAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ScholarshipsAdminModule = dynamic(() => import('../../components/admin/ScholarshipsAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const TeacherTrainingAdminModule = dynamic(() => import('../../components/admin/TeacherTrainingAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AlumniAdminModule = dynamic(() => import('../../components/admin/AlumniAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ReportsStatisticsModule = dynamic(() => import('../../components/admin/reports/ReportsStatisticsModule'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AdminModulesHub = dynamic(() => import('../../components/admin/AdminModulesHub'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AddStudentModal = dynamic(() => import('../../components/admin/AddStudentModal'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -205,8 +215,10 @@ const AdminDashboard = () => {
     { id: 'activities', label: 'Activités', icon: FiActivity, color: 'from-sky-500 to-sky-600', description: 'Historique des activités récentes' },
     { id: 'notifications', label: 'Notifications', icon: FiInbox, color: 'from-amber-500 to-amber-600', description: 'Toutes les notifications' },
     { id: 'students', label: 'Élèves', icon: FiUsers, color: 'from-green-500 to-green-600', description: 'Gestion des élèves' },
+    { id: 'alumni', label: 'Anciens élèves', icon: FiAward, color: 'from-slate-600 to-slate-800', description: 'Élèves archivés, diplômés et réintégration' },
     { id: 'academic', label: 'Gestion académique', icon: FiLayers, color: 'from-cptb-blue to-cptb-blue-mid', description: 'Classes, matières, emploi du temps et calendrier' },
     { id: 'grading', label: 'Notation & évaluation', icon: FiEdit3, color: 'from-fuchsia-500 to-fuchsia-600', description: 'Notes, moyennes, bulletins PDF et rapports' },
+    { id: 'exams', label: 'Examens blancs & officiels', icon: FiTarget, color: 'from-fuchsia-500 to-pink-600', description: 'BEPC, BAC, questionnaires et sessions' },
     { id: 'classes', label: 'Classes', icon: FiBook, color: 'from-purple-500 to-purple-600', description: 'Gestion des classes' },
     { id: 'teachers', label: 'Enseignants', icon: FiUserCheck, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Gestion des enseignants' },
     {
@@ -254,6 +266,7 @@ const AdminDashboard = () => {
       color: 'from-cptb-blue to-cptb-blue-dark',
       description: 'Filières, tests d’aptitude, conseils, partenariats, suivi des élèves, stages et apprentissages',
     },
+    { id: 'calendar', label: 'Calendrier scolaire', icon: FiCalendar, color: 'from-orange-500 to-orange-600', description: 'Jours fériés, vacances, examens et réunions' },
     { id: 'communication', label: 'Communication', icon: FiBell, color: 'from-rose-500 to-rose-600', description: 'Messagerie, alertes, circulaires, actualités et demandes' },
     { id: 'library', label: 'Bibliothèque', icon: FiBookOpen, color: 'from-sky-600 to-cptb-blue', description: 'Catalogue, emprunts, réservations, pénalités et inventaire' },
     { id: 'health', label: 'Infirmerie & santé', icon: FiHeart, color: 'from-rose-500 to-pink-600', description: 'Dossiers médicaux, visites, campagnes sanitaires et urgences' },
@@ -265,10 +278,13 @@ const AdminDashboard = () => {
     { id: 'pointage', label: 'Pointage des élèves', icon: FiUserCheck, color: 'from-emerald-500 to-emerald-600', description: 'Carte scolaire, empreinte digitale ou appel manuel' },
     { id: 'attendance', label: 'Gestion des présences', icon: FiCheckSquare, color: 'from-teal-500 to-cyan-600', description: 'Appel, absences, rapports d’assiduité et notifications aux parents' },
     { id: 'hr', label: 'Ressources humaines', icon: FiPackage, color: 'from-rose-500 to-pink-600', description: 'Contrats, paie mensuelle, avantages, évaluations et congés' },
+    { id: 'training', label: 'Formation continue', icon: FiTrendingUp, color: 'from-indigo-500 to-violet-600', description: 'Formations des enseignants, organismes et volumes horaires' },
     { id: 'administrative', label: 'Gestion administrative', icon: FiBriefcase, color: 'from-teal-500 to-teal-600', description: 'Vue d’ensemble administrative' },
+    { id: 'certificates', label: 'Certificats & attestations', icon: FiFileText, color: 'from-cptb-blue to-cptb-blue-dark', description: 'Attestations de scolarité, fréquentation, radiation et réussite' },
     { id: 'admissions', label: 'Inscriptions & admissions', icon: FiUserPlus, color: 'from-cptb-blue to-cptb-blue-dark', description: 'Pré-inscriptions en ligne et finalisation des dossiers' },
     { id: 'fees', label: 'Gestion des frais', icon: FiCreditCard, color: 'from-teal-500 to-teal-600', description: 'Facturation, paiements, rappels, reçus et historique' },
     { id: 'tuition-fees', label: 'Frais de scolarité', icon: FiDollarSign, color: 'from-amber-500 to-amber-600', description: 'Frais de scolarité' },
+    { id: 'scholarships', label: 'Bourses & aides', icon: FiGift, color: 'from-cptb-gold to-cptb-gold-dark', description: 'Remises fixes ou en pourcentage sur la facturation' },
     { id: 'payments', label: 'Paiements', icon: FiDollarSign, color: 'from-green-500 to-green-600', description: 'Paiements reçus' },
     {
       id: 'accounting',
@@ -558,8 +574,10 @@ const AdminDashboard = () => {
                 </div>
               )}
               {activeTab === 'students' && <StudentsList searchQuery={searchQuery} />}
+              {activeTab === 'alumni' && <AlumniAdminModule />}
               {activeTab === 'academic' && <AcademicManagement />}
               {activeTab === 'grading' && <GradingEvaluationManagement />}
+              {activeTab === 'exams' && <ExamsAdminModule />}
               {activeTab === 'classes' && <ClassesList searchQuery={searchQuery} />}
               {activeTab === 'teachers' && <TeachersList searchQuery={searchQuery} />}
               {activeTab === 'staff-personnel' && (
@@ -580,6 +598,7 @@ const AdminDashboard = () => {
                 </div>
               )}
               {activeTab === 'orientation' && <OrientationAdminModule />}
+              {activeTab === 'calendar' && <SchoolCalendarAdminModule />}
               {activeTab === 'communication' && <CommunicationHubModule />}
               {activeTab === 'library' && <LibraryManagementModule />}
               {activeTab === 'health' && <HealthManagementModule />}
@@ -591,10 +610,13 @@ const AdminDashboard = () => {
               {activeTab === 'pointage' && <PointageEleves />}
               {activeTab === 'attendance' && <AttendanceManagementModule />}
               {activeTab === 'hr' && <HRManagementModule />}
+              {activeTab === 'training' && <TeacherTrainingAdminModule />}
               {activeTab === 'administrative' && <AdministrativeManagement />}
+              {activeTab === 'certificates' && <CertificatesAdminModule />}
               {activeTab === 'admissions' && <AdmissionsManagementModule />}
               {activeTab === 'fees' && <FeesManagementModule />}
               {activeTab === 'tuition-fees' && <TuitionFeesManagement />}
+              {activeTab === 'scholarships' && <ScholarshipsAdminModule />}
               {activeTab === 'payments' && <PaymentsManagement />}
               {activeTab === 'accounting' && <AccountingManagementModule />}
               {activeTab === 'nfc-scanner' && <AccessControlModule />}
