@@ -26,7 +26,7 @@ const Terms = () => {
     <UltraPremiumPageShell
       navLabel="Légal"
       title="Conditions d'utilisation"
-      description={`Dernière mise à jour : ${updated}. En utilisant School Manager, vous acceptez ces conditions.`}
+      description={`Dernière mise à jour : ${updated}. En utilisant École à jour, vous acceptez ces conditions.`}
     >
       <div className="mx-auto max-w-4xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="-mt-10 space-y-6">
@@ -41,7 +41,7 @@ const Terms = () => {
             <div>
               <h3 className="mb-2 text-lg font-bold text-stone-900">Introduction</h3>
               <p className="text-stone-700">
-                Les présentes conditions régissent votre accès et votre utilisation de la plateforme School Manager.
+                Les présentes conditions régissent votre accès et votre utilisation de la plateforme École à jour.
                 En accédant ou en utilisant notre service, vous acceptez d&apos;être lié par ces conditions. Si vous
                 n&apos;acceptez pas ces conditions, veuillez ne pas utiliser notre service.
               </p>
@@ -58,7 +58,7 @@ const Terms = () => {
                 1. Acceptation des Conditions
               </h2>
               <p className="mb-4 text-stone-700">
-                En accédant et en utilisant School Manager, vous reconnaissez avoir lu, compris et accepté d&apos;être
+                En accédant et en utilisant École à jour, vous reconnaissez avoir lu, compris et accepté d&apos;être
                 lié par les présentes conditions ainsi que par notre{' '}
                 <Link href="/privacy" className="font-medium text-amber-900/90 underline-offset-2 hover:underline">
                   Politique de confidentialité
@@ -88,7 +88,7 @@ const Terms = () => {
               <ul className="list-disc pl-6 text-stone-700 mb-4 space-y-2">
                 <li>Utiliser le service uniquement à des fins légales et conformément à ces conditions</li>
                 <li>Ne pas partager, vendre ou transférer vos identifiants de connexion à des tiers</li>
-                <li>Respecter les droits de propriété intellectuelle de School Manager et des autres utilisateurs</li>
+                <li>Respecter les droits de propriété intellectuelle de École à jour et des autres utilisateurs</li>
                 <li>Ne pas utiliser le service à des fins frauduleuses, malveillantes ou illégales</li>
                 <li>Ne pas tenter d'accéder à des zones non autorisées du système</li>
                 <li>Ne pas perturber ou nuire au fonctionnement du service</li>
@@ -116,7 +116,7 @@ const Terms = () => {
                 3. Comptes Utilisateurs
               </h2>
               <p className="text-stone-700 mb-4">
-                Pour accéder à certaines fonctionnalités de School Manager, vous devez créer un compte utilisateur.
+                Pour accéder à certaines fonctionnalités de École à jour, vous devez créer un compte utilisateur.
               </p>
               <p className="text-stone-700 mb-4 font-semibold">
                 Responsabilités liées au compte :
@@ -129,7 +129,7 @@ const Terms = () => {
                 <li>Vous ne devez pas créer plusieurs comptes pour contourner les restrictions</li>
               </ul>
               <p className="text-stone-700">
-                School Manager se réserve le droit de suspendre ou de supprimer votre compte en cas de violation 
+                École à jour se réserve le droit de suspendre ou de supprimer votre compte en cas de violation 
                 de ces conditions ou de comportement inapproprié.
               </p>
             </div>
@@ -143,7 +143,7 @@ const Terms = () => {
                 4. Propriété Intellectuelle
               </h2>
               <p className="text-stone-700 mb-4">
-                Tous les contenus présents sur School Manager, incluant mais sans s'y limiter :
+                Tous les contenus présents sur École à jour, incluant mais sans s'y limiter :
               </p>
               <ul className="list-disc pl-6 text-stone-700 mb-4 space-y-2">
                 <li>Les textes, graphiques, logos, icônes et images</li>
@@ -153,12 +153,12 @@ const Terms = () => {
                 <li>Les marques de commerce et les noms de domaine</li>
               </ul>
               <p className="text-stone-700 mb-4">
-                sont la propriété exclusive de School Manager ou de ses concédants de licence et sont protégés par 
+                sont la propriété exclusive de École à jour ou de ses concédants de licence et sont protégés par 
                 les lois françaises et internationales sur la propriété intellectuelle.
               </p>
               <p className="text-stone-700">
                 Vous n'êtes pas autorisé à reproduire, modifier, distribuer, afficher publiquement ou créer des 
-                œuvres dérivées basées sur le contenu de School Manager sans notre autorisation écrite préalable.
+                œuvres dérivées basées sur le contenu de École à jour sans notre autorisation écrite préalable.
               </p>
             </div>
           </Card>
@@ -171,7 +171,7 @@ const Terms = () => {
                 5. Limitations de Responsabilité
               </h2>
               <p className="text-stone-700 mb-4">
-                School Manager est fourni "tel quel" et "selon disponibilité". Nous ne garantissons pas que :
+                École à jour est fourni "tel quel" et "selon disponibilité". Nous ne garantissons pas que :
               </p>
               <ul className="list-disc pl-6 text-stone-700 mb-4 space-y-2">
                 <li>Le service sera ininterrompu, sécurisé ou exempt d'erreurs</li>
@@ -180,7 +180,7 @@ const Terms = () => {
                 <li>Le service répondra à vos besoins spécifiques</li>
               </ul>
               <p className="text-stone-700 mb-4">
-                Dans la mesure permise par la loi, School Manager décline toute responsabilité concernant :
+                Dans la mesure permise par la loi, École à jour décline toute responsabilité concernant :
               </p>
               <ul className="list-disc pl-6 text-stone-700 mb-4 space-y-2">
                 <li>Les dommages directs, indirects, accessoires ou consécutifs</li>
@@ -206,7 +206,7 @@ const Terms = () => {
                 Vous pouvez résilier votre compte à tout moment en contactant notre service client.
               </p>
               <p className="text-stone-700 mb-4">
-                School Manager se réserve le droit de suspendre ou de résilier votre accès au service, 
+                École à jour se réserve le droit de suspendre ou de résilier votre accès au service, 
                 sans préavis, en cas de :
               </p>
               <ul className="list-disc pl-6 text-stone-700 mb-4 space-y-2">
@@ -262,7 +262,7 @@ const Terms = () => {
                 , qui fait partie intégrante de ces conditions d&apos;utilisation.
               </p>
               <p className="text-stone-700">
-                En utilisant School Manager, vous consentez au traitement de vos données personnelles conformément 
+                En utilisant École à jour, vous consentez au traitement de vos données personnelles conformément 
                 à notre Politique de Confidentialité et au Règlement Général sur la Protection des Données (RGPD).
               </p>
             </div>
@@ -305,7 +305,7 @@ const Terms = () => {
                 pas une renonciation à ce droit ou à cette disposition.
               </p>
               <p className="text-stone-700">
-                Ces Conditions d'Utilisation constituent l'accord complet entre vous et School Manager concernant 
+                Ces Conditions d'Utilisation constituent l'accord complet entre vous et École à jour concernant 
                 l'utilisation du service et remplacent tous les accords antérieurs.
               </p>
             </div>
@@ -373,7 +373,7 @@ const Terms = () => {
               <FiCheckCircle className="mx-auto mb-4 h-12 w-12 text-emerald-700" aria-hidden />
               <h3 className="mb-2 text-xl font-bold text-stone-900">Acceptation des conditions</h3>
               <p className="mb-4 text-stone-700">
-                En utilisant School Manager, vous confirmez avoir lu, compris et accepté les présentes conditions
+                En utilisant École à jour, vous confirmez avoir lu, compris et accepté les présentes conditions
                 d&apos;utilisation.
               </p>
               <div className="flex flex-col justify-center gap-4 sm:flex-row">

@@ -4,7 +4,7 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
-  /** `premium` : verre dépoli · `luxe` : pierre + or tamisé (défaut) · `default` : blanc classique */
+  /** `premium` / `luxe` : carte Insights blanche · `default` : blanc classique */
   variant?: 'default' | 'premium' | 'luxe';
   onClick?: () => void;
   style?: React.CSSProperties;
@@ -31,16 +31,11 @@ const Card: React.FC<CardProps> = ({
       ? 'premium-card-surface p-6 sm:p-8'
       : variant === 'luxe'
         ? `lux-card-surface ${luxePad}`.trim()
-        : 'bg-white/95 rounded-2xl shadow-dash-card p-6 ring-1 ring-stone-200/60';
+        : 'premium-surface p-6';
 
-  const motion =
-    hover && variant === 'premium'
-      ? 'transition-all duration-300 ease-premium hover:shadow-premium hover:-translate-y-0.5'
-      : hover && variant === 'luxe'
-        ? 'transition-all duration-500 ease-premium hover:shadow-dash-card-hover hover:-translate-y-0.5'
-        : hover
-          ? 'transition-all duration-300 ease-premium hover:shadow-dash-card-hover hover:-translate-y-0.5'
-          : '';
+  const motion = hover
+    ? 'transition-all duration-200 ease-premium hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-18px_rgba(28,39,76,0.28)] hover:border-[#cfd7ea]'
+    : '';
 
   return (
     <div

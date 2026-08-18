@@ -50,7 +50,7 @@ export default function Carousel({
       className={`relative overflow-hidden ${className}`}
       role="region"
       aria-label={ariaLabel}
-      aria-roledescription="carousel"
+            aria-roledescription="carrousel"
     >
       <div
         className="flex transition-transform duration-300 ease-out"
@@ -66,7 +66,7 @@ export default function Carousel({
             style={{ width: `${100 / count}%` }}
             role="group"
             aria-roledescription="slide"
-            aria-label={`Slide ${i + 1} sur ${count}`}
+            aria-label={`Diapositive ${i + 1} sur ${count}`}
           >
             {child}
           </div>
@@ -79,7 +79,7 @@ export default function Carousel({
             type="button"
             onClick={goPrev}
             className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-700 shadow-md transition-colors hover:bg-gray-50 hover:text-indigo-600"
-            aria-label="Slide précédent"
+            aria-label="Diapositive précédente"
           >
             <FiChevronLeft className="h-5 w-5" />
           </button>
@@ -87,17 +87,17 @@ export default function Carousel({
             type="button"
             onClick={goNext}
             className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-700 shadow-md transition-colors hover:bg-gray-50 hover:text-indigo-600"
-            aria-label="Slide suivant"
+            aria-label="Diapositive suivante"
           >
             <FiChevronRight className="h-5 w-5" />
           </button>
 
-          <div className="mt-4 flex justify-center gap-2" aria-label="Position des slides">
+          <div className="mt-4 flex justify-center gap-2" aria-label="Position des diapositives">
             {items.map((_, i) => (
               <button
                 key={i}
                 type="button"
-                aria-label={`Aller au slide ${i + 1}`}
+                aria-label={`Aller à la diapositive ${i + 1}`}
                 onClick={() => setIndex(i)}
                 className={`h-2 rounded-full transition-all ${
                   i === index ? 'w-6 bg-indigo-600' : 'w-2 bg-gray-300 hover:bg-gray-400'

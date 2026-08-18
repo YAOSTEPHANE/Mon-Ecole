@@ -8,7 +8,7 @@ authenticator.options = {
 };
 
 function issuer(): string {
-  return process.env.TWO_FACTOR_ISSUER?.trim() || 'School Manager';
+  return process.env.TWO_FACTOR_ISSUER?.trim() || 'École à jour';
 }
 
 export function generateTwoFactorSecret(email: string): {

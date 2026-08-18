@@ -10,6 +10,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import AdminTabLogoCard from '../../components/admin/AdminTabLogoCard';
 import SchoolSwitcher from '../../components/admin/SchoolSwitcher';
+import AccountHeaderControls from '../../components/AccountHeaderControls';
 import type { PersonnelCategoryFilter } from '../../components/admin/staff/StaffPersonnelModule';
 import { 
   FiLayout, 
@@ -57,8 +58,6 @@ import {
   FiTarget,
   FiTrendingUp,
 } from 'react-icons/fi';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import type { IconType } from 'react-icons';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
@@ -74,8 +73,7 @@ const ClassesList = dynamic(() => import('../../components/admin/ClassesList'), 
 const TeachersList = dynamic(() => import('../../components/admin/TeachersList'), { loading: () => <DashboardTabLoading />, ssr: false });
 const StaffPersonnelModule = dynamic(() => import('../../components/admin/staff/StaffPersonnelModule'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ParentGuardiansModule = dynamic(() => import('../../components/admin/parents/ParentGuardiansModule'), { loading: () => <DashboardTabLoading />, ssr: false });
-const DashboardStats = dynamic(() => import('../../components/admin/DashboardStats'), { loading: () => <DashboardTabLoading />, ssr: false });
-const SchoolOverviewCharts = dynamic(() => import('../../components/admin/SchoolOverviewCharts'), { loading: () => <DashboardTabLoading />, ssr: false });
+const AdminOpsDashboard = dynamic(() => import('../../components/admin/ops-dashboard/AdminOpsDashboard'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AllActivities = dynamic(() => import('./AllActivities'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AllNotifications = dynamic(() => import('./AllNotifications'), { loading: () => <DashboardTabLoading />, ssr: false });
 const CompleteManagement = dynamic(() => import('../../components/admin/CompleteManagement'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -114,7 +112,6 @@ const ScholarshipsAdminModule = dynamic(() => import('../../components/admin/Sch
 const TeacherTrainingAdminModule = dynamic(() => import('../../components/admin/TeacherTrainingAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AlumniAdminModule = dynamic(() => import('../../components/admin/AlumniAdminModule'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ReportsStatisticsModule = dynamic(() => import('../../components/admin/reports/ReportsStatisticsModule'), { loading: () => <DashboardTabLoading />, ssr: false });
-const AdminModulesHub = dynamic(() => import('../../components/admin/AdminModulesHub'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AddStudentModal = dynamic(() => import('../../components/admin/AddStudentModal'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AddClassModal = dynamic(() => import('../../components/admin/AddClassModal'), { loading: () => <DashboardTabLoading />, ssr: false });
 const AddTeacherModal = dynamic(() => import('../../components/admin/AddTeacherModal'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -375,16 +372,13 @@ const AdminDashboard = () => {
     }
   }, [activeTab, effectiveVisibleModules, router, searchParams, isSuperAdmin]);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
-    return 'Bonsoir';
-  };
-
   const changeTab = (
     tabId: string,
-    options?: { personnel?: 'educator' | 'staff'; action?: 'add-educator' },
+    options?: {
+      personnel?: 'educator' | 'staff';
+      action?: 'add-educator';
+      admissionsTab?: 'preinscriptions' | 'reenrollments';
+    },
   ) => {
     const resolvedId = tabId === 'educators' ? 'staff-personnel' : tabId;
     setActiveTab(resolvedId);
@@ -402,11 +396,21 @@ const AdminDashboard = () => {
     } else {
       params.delete('action');
     }
+    if (options?.admissionsTab) {
+      params.set('admissionsTab', options.admissionsTab);
+    } else if (resolvedId !== 'admissions') {
+      params.delete('admissionsTab');
+    }
     router.replace(`/admin?${params.toString()}`);
   };
 
   return (
-    <Layout user={user} onLogout={logout} role="ADMIN">
+    <Layout
+      user={user}
+      onLogout={logout}
+      role="ADMIN"
+      hideHeader
+    >
       <PremiumPortalShell variant="admin">
       <div className="flex min-w-0 max-w-full dash-min-h-under-header w-full items-stretch overflow-x-clip">
         <AdminSidebar
@@ -421,76 +425,83 @@ const AdminDashboard = () => {
         />
 
         <div className="flex min-w-0 max-w-full flex-1 flex-col">
-          {/* Header */}
-          <header className="dash-command-bar sticky dash-sticky-under-header z-20">
-            <div className="px-2.5 sm:px-5 py-1.5 sm:py-3">
-              <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSidebarOpen((o) => !o)}
-                    className="flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-xl p-2 text-stone-700 transition-colors hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2 lg:hidden"
-                    aria-label="Ouvrir le menu de navigation"
-                  >
-                    <FiMenu className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSidebarCollapsed((c) => !c)}
-                    className="hidden min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-xl border border-stone-200/90 bg-white/95 p-2 text-stone-600 shadow-sm transition-colors hover:border-amber-300/70 hover:bg-amber-50/40 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 lg:flex"
-                    aria-expanded={!sidebarCollapsed}
-                    aria-label={
-                      sidebarCollapsed ? 'Développer le menu latéral' : 'Réduire le menu latéral'
+          {activeTab === 'dashboard' ? null : (
+          <header className="dash-command-bar z-20 shrink-0 bg-white">
+            <div className="flex items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen((o) => !o)}
+                className="flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl text-stone-700 hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 lg:hidden"
+                aria-label="Ouvrir le menu de navigation"
+              >
+                <FiMenu className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed((c) => !c)}
+                className="hidden min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border border-stone-200/90 bg-white p-2 text-stone-600 hover:bg-amber-50/40 lg:flex"
+                aria-expanded={!sidebarCollapsed}
+                aria-label={
+                  sidebarCollapsed ? 'Développer le menu latéral' : 'Réduire le menu latéral'
+                }
+              >
+                {sidebarCollapsed ? (
+                  <FiChevronRight className="h-4 w-4" aria-hidden />
+                ) : (
+                  <FiChevronLeft className="h-4 w-4" aria-hidden />
+                )}
+              </button>
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold text-stone-800">
+                {isMultiSchool && activeSchool ? activeSchool.name : activeTabMeta.label}
+              </p>
+              <div className="relative hidden w-44 shrink-0 md:block lg:w-64">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+                  <FiSearch className="h-4 w-4" aria-hidden />
+                </div>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
                     }
-                  >
-                    {sidebarCollapsed ? (
-                      <FiChevronRight className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <FiChevronLeft className="h-4 w-4" aria-hidden />
-                    )}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <h1 className="font-display text-[15px] sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight break-words leading-snug">
-                      {getGreeting()}, {user?.firstName}
-                    </h1>
-                    <p className="hidden sm:block text-xs text-stone-600 mt-0.5 line-clamp-1 max-w-md">
-                      {isMultiSchool && activeSchool
-                        ? `Établissement : ${activeSchool.name}`
-                        : 'Pilotage — stratégique, opérationnel et conformité'}
-                    </p>
-                    <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
-                      {format(new Date(), "EEE d MMM yyyy • HH:mm", { locale: fr })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:max-w-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                <SchoolSwitcher className="w-full sm:w-auto" />
-                <div className="relative min-w-0 w-full sm:max-w-xs shrink">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                    <FiSearch className="w-4 h-4" aria-hidden />
-                  </div>
-                  <input
-                    type="search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && searchQuery.trim()) {
-                        router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-                      }
-                    }}
-                    placeholder="Recherche globale…"
-                    aria-label="Recherche globale, valider avec Entrée"
-                    autoComplete="off"
-                    className="dash-search-field w-full min-w-0 rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
-                  />
-                </div>
-                </div>
+                  }}
+                  placeholder="Rechercher…"
+                  aria-label="Recherche globale, valider avec Entrée"
+                  autoComplete="off"
+                  className="dash-search-field w-full rounded-xl py-2 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
+                />
               </div>
+              <SchoolSwitcher className="hidden sm:flex" />
+              <AccountHeaderControls
+                user={user}
+                role="ADMIN"
+                onLogout={logout}
+                onOpenSettings={() => {
+                  setSettingsModalTab('school');
+                  setIsSettingsModalOpen(true);
+                }}
+              />
             </div>
           </header>
+          )}
 
-          <main className="dash-workspace flex-1 min-w-0 px-2.5 sm:px-6 py-2.5 sm:py-6 overflow-y-auto overflow-x-hidden pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
-            <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6 min-w-0">
+          <main
+            className={`dash-workspace flex-1 min-w-0 overflow-y-auto overflow-x-hidden scroll-smooth ${
+              activeTab === 'dashboard'
+                ? 'bg-white p-0'
+                : 'px-2.5 sm:px-6 py-2.5 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]'
+            }`}
+          >
+            <div
+              className={`${
+                activeTab === 'dashboard'
+                  ? 'max-w-none'
+                  : 'max-w-[1240px] mx-auto space-y-5 sm:space-y-6'
+              } min-w-0`}
+            >
+              {activeTab !== 'dashboard' ? (
               <PremiumModuleHeader
                 title={activeTabMeta.label}
                 description={activeTabMeta.description}
@@ -513,6 +524,7 @@ const AdminDashboard = () => {
                   </>
                 }
               />
+              ) : null}
 
               
 
@@ -535,7 +547,7 @@ const AdminDashboard = () => {
               ) : activeTab === 'notifications' ? (
                 <AllNotifications />
               ) : activeTab === 'dashboard' && (
-                <div className="space-y-4 sm:space-y-5">
+                <div className="min-h-full">
                   {isSuperAdmin ? (
                     <Card className="p-4 border-amber-200/80 bg-gradient-to-r from-amber-50/90 to-orange-50/60">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -552,24 +564,23 @@ const AdminDashboard = () => {
                       </div>
                     </Card>
                   ) : null}
-                  <DashboardStats
-                    onAddStudent={() => setIsAddStudentModalOpen(true)}
-                    onCreateClass={() => setIsAddClassModalOpen(true)}
-                    onAddTeacher={() => setIsAddTeacherModalOpen(true)}
-                    onAddEducator={() =>
-                      changeTab('staff-personnel', { personnel: 'educator', action: 'add-educator' })
-                    }
-                    onGenerateReport={() => setIsGenerateReportModalOpen(true)}
-                    onExportData={() => setIsExportDataModalOpen(true)}
-                    onSettings={() => {
+                  <AdminOpsDashboard
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    onNavigate={changeTab}
+                    onExport={() => setIsExportDataModalOpen(true)}
+                    firstName={user?.firstName}
+                    lastName={user?.lastName}
+                    avatar={user?.avatar}
+                    roleLabel={user?.role === 'SUPER_ADMIN' ? 'Super administrateur' : 'Administrateur'}
+                    user={user ?? undefined}
+                    onLogout={logout}
+                    onOpenSettings={() => {
                       setSettingsModalTab('school');
                       setIsSettingsModalOpen(true);
                     }}
-                  />
-                  <SchoolOverviewCharts />
-                  <AdminModulesHub
-                    allTabs={tabs.filter((t) => t.id !== 'dashboard')}
-                    onNavigate={changeTab}
+                    onOpenSidebar={() => setSidebarOpen(true)}
+                    modules={filteredTabs.filter((t) => t.id !== 'dashboard')}
                   />
                 </div>
               )}

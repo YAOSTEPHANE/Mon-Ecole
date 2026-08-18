@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBranding } from '../contexts/AppBrandingContext';
 import Button from '../components/ui/Button';
@@ -27,6 +28,7 @@ import {
   FiAward,
   FiBarChart2,
   FiBook,
+  FiCamera,
   FiCheck,
   FiCompass,
   FiClock,
@@ -48,6 +50,7 @@ import {
 
 const NAV_LINKS = [
   { href: '#etablissement', label: 'Établissement' },
+  { href: '#galerie', label: 'Galerie' },
   { href: '#matricule-fne', label: 'Matricule FNE' },
   { href: '#parcours', label: 'Admissions' },
   { href: '#actualites', label: 'Actualités' },
@@ -163,6 +166,8 @@ const EXPERIENCE_CARDS = [
     stat: 'Suivi continu',
     icon: FiTarget,
     accent: 'from-tran-mauve-500 to-tran-mauve-800',
+    image: '/home/experience-academique.jpg',
+    imageAlt: 'Élèves concentrés lors d’une évaluation en classe',
   },
   {
     eyebrow: 'Vie scolaire',
@@ -171,6 +176,8 @@ const EXPERIENCE_CARDS = [
     stat: 'Cadre maîtrisé',
     icon: FiShield,
     accent: 'from-tran-mustard-500 to-tran-mustard-800',
+    image: '/home/experience-vie-scolaire.jpg',
+    imageAlt: 'Accompagnement d’élèves dans les couloirs de l’établissement',
   },
   {
     eyebrow: 'Familles',
@@ -179,6 +186,35 @@ const EXPERIENCE_CARDS = [
     stat: 'Lien renforcé',
     icon: FiUsers,
     accent: 'from-tran-mauve-700 to-tran-mustard-700',
+    image: '/home/experience-familles.jpg',
+    imageAlt: 'Rencontre parents–enseignants dans une salle de classe',
+  },
+] as const;
+
+const CAMPUS_GALLERY = [
+  {
+    src: '/home/gallery-assembly.jpg',
+    alt: 'Rassemblement des élèves dans la cour',
+    label: 'Vie collective',
+    span: 'md:col-span-2 md:row-span-2',
+  },
+  {
+    src: '/home/gallery-lab.jpg',
+    alt: 'Travaux pratiques en laboratoire',
+    label: 'Sciences',
+    span: '',
+  },
+  {
+    src: '/home/gallery-library.jpg',
+    alt: 'Lecture et recherche en bibliothèque',
+    label: 'Bibliothèque',
+    span: '',
+  },
+  {
+    src: '/home/gallery-sport.jpg',
+    alt: 'Activité sportive sur le terrain de l’école',
+    label: 'Sport',
+    span: 'md:col-span-2',
   },
 ] as const;
 
@@ -391,14 +427,14 @@ export default function Home() {
             />
           </div>
           <div className="home-hero-veil absolute inset-0" aria-hidden />
-          <div className="page-hero-v2__noise pointer-events-none absolute inset-0 opacity-50" aria-hidden />
-          <div className="home-hero-fine-grid pointer-events-none absolute inset-0 opacity-40" aria-hidden />
+          <div className="page-hero-v2__noise pointer-events-none absolute inset-0 opacity-18" aria-hidden />
+          <div className="home-hero-fine-grid pointer-events-none absolute inset-0 opacity-12" aria-hidden />
           <div
-            className="home-hero-orb home-hero-orb--drift-a absolute -left-28 top-10 h-[min(32rem,55vw)] w-[min(32rem,55vw)] bg-cptb-blue/35"
+            className="home-hero-orb home-hero-orb--drift-a absolute -left-28 top-10 h-[min(32rem,55vw)] w-[min(32rem,55vw)] bg-cptb-blue/16"
             aria-hidden
           />
           <div
-            className="home-hero-orb home-hero-orb--drift-b absolute -right-24 bottom-8 h-[min(26rem,48vw)] w-[min(26rem,48vw)] bg-tran-mustard-500/25"
+            className="home-hero-orb home-hero-orb--drift-b absolute -right-24 bottom-8 h-[min(26rem,48vw)] w-[min(26rem,48vw)] bg-tran-mustard-500/12"
             aria-hidden
           />
 
@@ -525,19 +561,31 @@ export default function Home() {
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-3">
-                    {EXPERIENCE_CARDS.map(({ eyebrow, title, text, stat, icon: Icon, accent }, idx) => (
+                    {EXPERIENCE_CARDS.map(({ eyebrow, title, text, stat, icon: Icon, accent, image, imageAlt }, idx) => (
                       <HomeReveal key={title} delayMs={idx * 70}>
-                        <article className="home-experience-card group relative h-full overflow-hidden rounded-3xl border border-stone-200/80 bg-white/90 p-6 shadow-lg shadow-stone-900/[0.04] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-tran-mauve-900/[0.08]">
-                          <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-white shadow-xl ring-4 ring-white`}>
-                            <Icon className="h-6 w-6" aria-hidden />
+                        <article className="home-experience-card group relative h-full overflow-hidden rounded-3xl border border-stone-200/80 bg-white/90 shadow-lg shadow-stone-900/[0.04] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-tran-mauve-900/[0.08]">
+                          <div className="relative h-40 overflow-hidden sm:h-44">
+                            <Image
+                              src={image}
+                              alt={imageAlt}
+                              fill
+                              className="object-cover transition-transform duration-700 motion-safe:group-hover:scale-105"
+                              sizes="(max-width: 768px) 100vw, 33vw"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-stone-950/55 via-stone-900/10 to-transparent" />
                           </div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-tran-mustard-800">
-                            {eyebrow}
-                          </p>
-                          <h3 className="mt-2 font-display text-xl font-semibold text-stone-900">{title}</h3>
-                          <p className="mt-3 text-sm leading-relaxed text-stone-600">{text}</p>
-                          <div className="mt-6 inline-flex rounded-full border border-tran-mauve-100 bg-tran-mauve-50 px-3 py-1 text-xs font-bold text-tran-mauve-800">
-                            {stat}
+                          <div className="relative p-6">
+                            <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-white shadow-xl ring-4 ring-white`}>
+                              <Icon className="h-6 w-6" aria-hidden />
+                            </div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-tran-mustard-800">
+                              {eyebrow}
+                            </p>
+                            <h3 className="mt-2 font-display text-xl font-semibold text-stone-900">{title}</h3>
+                            <p className="mt-3 text-sm leading-relaxed text-stone-600">{text}</p>
+                            <div className="mt-6 inline-flex rounded-full border border-tran-mauve-100 bg-tran-mauve-50 px-3 py-1 text-xs font-bold text-tran-mauve-800">
+                              {stat}
+                            </div>
                           </div>
                         </article>
                       </HomeReveal>
@@ -603,6 +651,43 @@ export default function Home() {
               </div>
             </div>
           </div>
+          </HomeReveal>
+        </section>
+
+        {/* Galerie photo */}
+        <section id="galerie" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 sm:py-20">
+          <HomeReveal>
+            <div className="mb-10 flex flex-col gap-4 text-center">
+              <span className="home-eyebrow mx-auto">
+                <FiCamera className="mr-1.5 inline h-3.5 w-3.5" aria-hidden />
+                La vie à l’école
+              </span>
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
+                Un campus, des visages, une communauté
+              </h2>
+              <div className="home-section-accent" aria-hidden />
+              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-stone-600">
+                Classes, laboratoire, bibliothèque, sport et rassemblements : le quotidien de {schoolDisplayName} en images.
+              </p>
+            </div>
+            <div className="grid auto-rows-[12rem] gap-4 sm:auto-rows-[14rem] md:grid-cols-4 md:auto-rows-[11rem]">
+              {CAMPUS_GALLERY.map(({ src, alt, label, span }, idx) => (
+                <HomeReveal key={src} delayMs={idx * 60} className={`h-full min-h-[12rem] ${span}`}>
+                  <figure className="group relative h-full min-h-[12rem] overflow-hidden rounded-[1.75rem] border border-stone-200/80 bg-stone-100 shadow-[0_20px_44px_-24px_rgba(28,39,76,0.28)]">
+                    <Image
+                      src={src}
+                      alt={alt}
+                      fill
+                      className="object-cover transition-transform duration-700 motion-safe:group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                    <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-stone-950/80 via-stone-950/30 to-transparent px-5 pb-4 pt-12">
+                      <p className="text-sm font-semibold text-white">{label}</p>
+                    </figcaption>
+                  </figure>
+                </HomeReveal>
+              ))}
+            </div>
           </HomeReveal>
         </section>
 
@@ -685,8 +770,19 @@ export default function Home() {
           <div className="home-journey-grid pointer-events-none absolute inset-0" aria-hidden />
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
             <HomeReveal>
-              <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+              <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                 <div>
+                  <div className="relative mb-8 overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl">
+                    <Image
+                      src="/home/admissions-desk.jpg"
+                      alt="Famille accueillie au bureau des admissions"
+                      width={1200}
+                      height={675}
+                      className="h-56 w-full object-cover sm:h-72"
+                      sizes="(max-width: 1024px) 100vw, 45vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-tran-mauve-950/50 to-transparent" />
+                  </div>
                   <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-300/35 bg-tran-mustard-400/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-100 backdrop-blur-md">
                     Admissions & accompagnement
                   </span>
@@ -877,10 +973,22 @@ export default function Home() {
             <div className="grid gap-5 md:grid-cols-2">
               {SCHOOL_NEWS.map((item, idx) => (
                 <HomeReveal key={item.title} delayMs={idx * 60}>
-                  <article className="home-news-card h-full rounded-3xl border border-stone-200/90 bg-white p-6 shadow-lg shadow-stone-900/[0.04]">
-                    <p className="text-xs font-bold uppercase tracking-wider text-tran-mustard-800">{item.date}</p>
-                    <h3 className="mt-2 font-display text-xl font-semibold text-stone-900">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-stone-600">{item.excerpt}</p>
+                  <article className="home-news-card group h-full overflow-hidden rounded-3xl border border-stone-200/90 bg-white shadow-lg shadow-stone-900/[0.04]">
+                    <div className="relative h-44 overflow-hidden sm:h-52">
+                      <Image
+                        src={item.image}
+                        alt={item.imageAlt}
+                        fill
+                        className="object-cover transition-transform duration-700 motion-safe:group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-stone-950/45 to-transparent" />
+                    </div>
+                    <div className="p-6">
+                      <p className="text-xs font-bold uppercase tracking-wider text-tran-mustard-800">{item.date}</p>
+                      <h3 className="mt-2 font-display text-xl font-semibold text-stone-900">{item.title}</h3>
+                      <p className="mt-3 text-sm leading-relaxed text-stone-600">{item.excerpt}</p>
+                    </div>
                   </article>
                 </HomeReveal>
               ))}
@@ -894,6 +1002,17 @@ export default function Home() {
             <HomeReveal>
               <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
                 <div>
+                  <div className="relative mb-6 overflow-hidden rounded-[1.5rem]">
+                    <Image
+                      src="/home/split-campus.jpg"
+                      alt={`Campus de ${schoolDisplayName}`}
+                      width={900}
+                      height={520}
+                      className="h-44 w-full object-cover sm:h-52"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-stone-950/40 to-transparent" />
+                  </div>
                   <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
                     Infos pratiques
                   </h2>

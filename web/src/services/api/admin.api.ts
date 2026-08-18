@@ -770,7 +770,12 @@ export const adminApi = {
   },
   getAllUsers: async (params?: { role?: string; isActive?: boolean }) => {
     const response = await api.get('/admin/users', { params });
-    return response.data;
+    const data = response.data as unknown;
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === 'object' && Array.isArray((data as { users?: unknown[] }).users)) {
+      return (data as { users: unknown[] }).users;
+    }
+    return [];
   },
   updateUserRole: async (userId: string, role: string) => {
     const response = await api.put(`/admin/users/${userId}/role`, { role });
@@ -2096,6 +2101,8 @@ export const adminApi = {
         paymentWave: string;
         paymentCinetpay: string;
         paymentPaystack: string;
+        paymentMtn: string;
+        paymentOrange: string;
       };
       mena: {
         webhookSecretConfigured: boolean;

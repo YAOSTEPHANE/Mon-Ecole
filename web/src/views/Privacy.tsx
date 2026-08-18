@@ -23,7 +23,7 @@ const Privacy = () => {
                 1. Introduction
               </h2>
               <p className="mb-6 text-stone-700">
-                School Manager s&apos;engage à protéger votre vie privée et vos données personnelles. Cette politique
+                École à jour s&apos;engage à protéger votre vie privée et vos données personnelles. Cette politique
                 explique comment nous collectons, utilisons et protégeons vos informations.
               </p>
 

@@ -73,6 +73,10 @@ export const studentApi = {
     const response = await api.get('/student/report-cards', { params });
     return response.data;
   },
+  getOfficialReportCard: async (reportCardId: string) => {
+    const response = await api.get(`/student/report-cards/${reportCardId}/official`);
+    return response.data;
+  },
   getConduct: async (params?: { period?: string; academicYear?: string }) => {
     const response = await api.get('/student/conduct', { params });
     return response.data;
@@ -166,7 +170,28 @@ export const studentApi = {
       accountNumber,
       reference,
     });
-    return response.data;
+    return response.data as {
+      payment?: { id?: string; paymentMethod?: string; status?: string };
+      checkoutUrl?: string | null;
+      provider?: string | null;
+      mode?: 'live' | 'sandbox' | null;
+      ussdHint?: string | null;
+      message?: string;
+    };
+  },
+  getPayment: async (paymentId: string) => {
+    const response = await api.get(`/student/payments/${paymentId}`);
+    return response.data as {
+      id: string;
+      status: string;
+      amount: number;
+      paymentMethod?: string | null;
+      checkoutUrl?: string | null;
+      receiptUrl?: string | null;
+      receiptNumber?: string | null;
+      paymentReference?: string | null;
+      paidAt?: string | null;
+    };
   },
   getPaymentSettings: async () => {
     const response = await api.get('/student/payment-settings');

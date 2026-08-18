@@ -44,12 +44,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 z-[9998] bg-[#07081a]/70 backdrop-blur-md transition-opacity"
+          className="fixed inset-0 z-[9998] bg-[#07081a]/72 backdrop-blur-md transition-opacity"
           onClick={onClose}
         />
 
         <div
-          className={`relative z-[9999] w-full transform overflow-hidden rounded-3xl border border-stone-200/70 bg-gradient-to-b from-stone-50 to-white text-left shadow-lux ring-1 ring-amber-900/10 transition-all sm:my-8 sm:align-middle ${sizes[size]} ${
+          className={`premium-surface relative z-[9999] w-full transform text-left transition-all sm:my-8 sm:align-middle ${sizes[size]} ${
             compact
               ? 'inline-flex max-h-[min(88vh,820px)] flex-col'
               : 'inline-block align-bottom'
@@ -57,12 +57,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         >
           {title && (
             <div
-              className={`flex shrink-0 items-center justify-between border-b border-cptb-gold/25 bg-gradient-to-r from-[#0a0f2e] via-[#001270] to-stone-950 ${
+              className={`flex shrink-0 items-center justify-between border-b border-[#e4e8f2] bg-gradient-to-b from-white to-[#f8f9fd] ${
                 compact ? 'px-4 py-2.5' : 'px-6 py-4'
               }`}
             >
               <h3
-                className={`font-display font-semibold tracking-[0.04em] text-amber-50 ${
+                className={`font-display font-semibold tracking-tight text-stone-900 ${
                   compact ? 'text-lg' : 'text-xl md:text-2xl'
                 }`}
               >
@@ -73,7 +73,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
                 title="Fermer"
                 aria-label="Fermer la fenêtre"
                 onClick={onClose}
-                className={`rounded-lg text-amber-100/90 transition-all duration-200 hover:bg-amber-500/15 hover:text-white ${
+                className={`rounded-full text-stone-400 transition-all duration-200 hover:bg-stone-100 hover:text-stone-800 ${
                   compact ? 'p-1.5' : 'p-2'
                 }`}
               >
@@ -89,7 +89,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             </div>
           )}
           <div
-            className={`bg-gradient-to-b from-white to-stone-50/50 ${
+            className={`bg-white ${
               compact
                 ? 'min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3'
                 : 'px-6 py-6'

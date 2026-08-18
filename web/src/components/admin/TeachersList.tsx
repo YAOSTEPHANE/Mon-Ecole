@@ -202,7 +202,7 @@ const TeachersList: React.FC<TeachersListProps> = ({ searchQuery = '' }) => {
         ].join(';')
       );
       const csv =
-        '\ufeff# School Manager - Export Enseignants\n' +
+        '\ufeff# École à jour - Export Enseignants\n' +
         `# ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })}\n` +
         headers.join(';') +
         '\n' +
@@ -222,7 +222,7 @@ const TeachersList: React.FC<TeachersListProps> = ({ searchQuery = '' }) => {
   const exportToJSON = () => {
     try {
       const data = {
-        application: 'School Manager',
+        application: 'École à jour',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: filteredTeachers?.length || 0,
         enseignants: (filteredTeachers || []).map((t: any) => ({
@@ -257,7 +257,7 @@ const TeachersList: React.FC<TeachersListProps> = ({ searchQuery = '' }) => {
       doc.text('SM', 34, 18, { align: 'center' });
       doc.setTextColor(99, 102, 241);
       doc.setFontSize(20);
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Liste des Enseignants', 60, 25);

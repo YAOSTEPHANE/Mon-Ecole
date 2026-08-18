@@ -21,6 +21,15 @@ function cookieSameSite(): 'Strict' | 'Lax' | 'None' {
   return 'Lax';
 }
 
+/** Doit être identique à la pose du cookie, sinon le navigateur refuse de l’effacer. */
+function cookieSecure(sameSite: 'Strict' | 'Lax' | 'None'): boolean {
+  return (
+    process.env.NODE_ENV === 'production' ||
+    sameSite === 'None' ||
+    process.env.AUTH_COOKIE_SECURE === '1'
+  );
+}
+
 function parseCookies(header: string | undefined): Record<string, string> {
   if (!header) return {};
   const out: Record<string, string> = {};
@@ -52,9 +61,8 @@ export function extractAccessToken(req: Request): string | undefined {
 }
 
 export function setAuthSessionCookie(res: Response, token: string): void {
-  const isProd = process.env.NODE_ENV === 'production';
   const sameSite = cookieSameSite();
-  const secure = isProd || sameSite === 'None' || process.env.AUTH_COOKIE_SECURE === '1';
+  const secure = cookieSecure(sameSite);
   const maxAge = Math.floor(authCookieMaxAgeMs() / 1000);
   const parts = [
     `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
@@ -69,7 +77,7 @@ export function setAuthSessionCookie(res: Response, token: string): void {
 
 export function clearAuthSessionCookie(res: Response): void {
   const sameSite = cookieSameSite();
-  const secure = process.env.NODE_ENV === 'production' || sameSite === 'None';
+  const secure = cookieSecure(sameSite);
   const parts = [
     `${AUTH_COOKIE_NAME}=`,
     'Path=/',

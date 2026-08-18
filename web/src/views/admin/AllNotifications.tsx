@@ -134,7 +134,7 @@ const AllNotifications = ({ audience = 'admin' }: AllNotificationsProps) => {
             id: '8',
             type: 'system',
             title: 'Mise à jour disponible',
-            content: 'Une nouvelle version de School Manager est disponible',
+            content: 'Une nouvelle version de École à jour est disponible',
             read: true,
             readAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
             createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),

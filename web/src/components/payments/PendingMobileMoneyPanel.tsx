@@ -93,7 +93,9 @@ export default function PendingMobileMoneyPanel({
             Mobile Money &amp; carte en attente
           </h3>
           <p className="mt-1 text-xs text-stone-600">
-            Confirmations manuelles / sandbox en attendant le webhook prestataire.
+            En production, Wave / Orange / MTN / Moov (CinetPay) confirment seuls via webhook et le reçu est émis
+            automatiquement. Cette file sert au sandbox et aux incidents (paiement abouti chez l’opérateur mais
+            webhook manquant).
           </p>
         </div>
         <Badge variant="warning">{rows.length} en attente</Badge>

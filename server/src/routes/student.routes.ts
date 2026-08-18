@@ -17,6 +17,7 @@ import {
 } from '../utils/audit-log.util';
 import {
   buildPortalOfferingWhere,
+  listStudentExtracurricularRegistrations,
   registerStudentForExtracurricular,
 } from '../utils/extracurricular.util';
 import { notifyStaffOfPendingCashPayment } from '../utils/payment-cash-notify.util';
@@ -39,6 +40,7 @@ import {
   getAcademicYearsWithTuitionBlockForParent,
   parentTuitionBlockFromYears,
 } from '../utils/parent-academic-result-access.util';
+import { getOfficialPublishedReportCard } from '../utils/report-card.util';
 import { findSchedulesWithRelations } from '../utils/safe-schedule-query.util';
 import {
   applyApprovedPermissionToAbsences,
@@ -1218,6 +1220,35 @@ router.get('/report-cards', async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/report-cards/:reportCardId/official', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+
+    const blockedAcademicYears = await getAcademicYearsWithTuitionBlockForParent(prisma, student.id);
+    const result = await getOfficialPublishedReportCard({
+      studentId: student.id,
+      reportCardId: req.params.reportCardId,
+      schoolId: student.schoolId,
+    });
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    const ay = (result.payload.academicYear ?? '').trim();
+    if (ay && blockedAcademicYears.has(ay)) {
+      return res.status(403).json({ error: 'Bulletin masqué tant que la scolarité n’est pas régularisée' });
+    }
+    res.json(result.payload);
+  } catch (error: unknown) {
+    console.error('GET student official report card:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // Obtenir la conduite de l'élève
 router.get('/conduct', async (req: AuthRequest, res) => {
   try {
@@ -1368,27 +1399,7 @@ router.get('/extracurricular/registrations', async (req: AuthRequest, res) => {
     if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
     const academicYear =
       typeof req.query.academicYear === 'string' ? req.query.academicYear : undefined;
-    const rows = await prisma.extracurricularRegistration.findMany({
-      where: {
-        studentId: student.id,
-        ...(academicYear?.trim() ? { offering: { academicYear: academicYear.trim() } } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        offering: {
-          select: {
-            id: true,
-            title: true,
-            kind: true,
-            category: true,
-            startAt: true,
-            endAt: true,
-            location: true,
-            academicYear: true,
-          },
-        },
-      },
-    });
+    const rows = await listStudentExtracurricularRegistrations(student.id, academicYear);
     res.json(rows);
   } catch (error: unknown) {
     console.error('GET /student/extracurricular/registrations:', error);
@@ -1962,13 +1973,14 @@ router.post('/payments', async (req: AuthRequest, res) => {
     } = payment;
     if (paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') {
       const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0]?.trim();
-      const checkoutPayment = await attachOnlineCheckout(prisma, payment.id, {
+      const { payment: checkoutPayment, checkout } = await attachOnlineCheckout(prisma, payment.id, {
         method: paymentMethod,
         phoneNumber,
         operator,
         customerEmail: req.user?.email,
         customerName: req.user?.email ?? '',
         returnUrl: `${frontend}/student?tab=payments`,
+        cancelUrl: `${frontend}/student?tab=payments`,
       });
       onlinePayment = {
         ...payment,
@@ -1981,9 +1993,22 @@ router.post('/payments', async (req: AuthRequest, res) => {
         void notifyParentWhatsApp(
           phoneNumber,
           'Paiement initié',
-          `Réf. ${payment.paymentReference} — ${paymentAmount.toLocaleString('fr-FR')} FCFA.`
+          `Réf. ${payment.paymentReference} — ${paymentAmount.toLocaleString('fr-FR')} FCFA. ${
+            checkout.checkoutUrl
+              ? `Ouvrez : ${checkout.checkoutUrl}`
+              : checkout.ussdHint || 'Validez sur votre téléphone. Le reçu arrivera automatiquement.'
+          }`
         ).catch((e) => console.error('whatsapp payment:', e));
       }
+      return res.status(201).json({
+        payment: onlinePayment,
+        paymentUrl: checkout.checkoutUrl || `/payment/process/${payment.id}`,
+        checkoutUrl: checkout.checkoutUrl || null,
+        provider: checkout.provider,
+        mode: checkout.mode,
+        ussdHint: checkout.ussdHint || null,
+        message: checkout.message,
+      });
     }
 
     res.status(201).json({
@@ -2064,6 +2089,33 @@ router.get('/payments', async (req: AuthRequest, res) => {
       error: error.message || 'Erreur serveur',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+router.get('/payments/:id', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
+    const payment = await prisma.payment.findFirst({
+      where: { id: req.params.id, studentId: student.id },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        paymentMethod: true,
+        paymentProvider: true,
+        checkoutUrl: true,
+        receiptUrl: true,
+        receiptNumber: true,
+        paymentReference: true,
+        paidAt: true,
+      },
+    });
+    if (!payment) return res.status(404).json({ error: 'Paiement introuvable' });
+    res.json(payment);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(500).json({ error: message });
   }
 });
 

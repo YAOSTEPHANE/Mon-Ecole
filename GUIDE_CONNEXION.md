@@ -1,4 +1,4 @@
-# Guide de Connexion - School Manager App
+# Guide de connexion — École à jour
 
 ## 🚀 Démarrage Rapide
 

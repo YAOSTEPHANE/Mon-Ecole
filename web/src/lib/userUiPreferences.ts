@@ -21,8 +21,7 @@ export function parseUserUiPreferences(raw: unknown): UserUiPreferences {
   const o = raw as Record<string, unknown>;
   const theme = o.theme === 'dark' || o.theme === 'auto' || o.theme === 'light' ? o.theme : 'light';
   const timeFormat = o.timeFormat === '12h' || o.timeFormat === '24h' ? o.timeFormat : '24h';
-  const language =
-    o.language === 'en' || o.language === 'es' || o.language === 'fr' ? o.language : 'fr';
+  const language = 'fr';
   const timezone =
     o.timezone === 'Europe/London' ||
     o.timezone === 'America/New_York' ||

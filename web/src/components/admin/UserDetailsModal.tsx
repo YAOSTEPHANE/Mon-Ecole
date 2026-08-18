@@ -161,7 +161,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
             </h4>
             <div className="space-y-2">
               <p className="text-sm text-gray-700">
-                <span className="font-medium">Email:</span> {user.email}
+                <span className="font-medium">E-mail :</span> {user.email}
               </p>
               {user.phone && (
                 <p className="text-sm text-gray-700">
@@ -170,11 +170,11 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
               )}
               <p className="text-sm text-gray-700">
                 <span className="font-medium">Créé le:</span>{' '}
-                {user.createdAt ? format(new Date(user.createdAt), 'dd/MM/yyyy à HH:mm', { locale: fr }) : 'N/A'}
+                {user.createdAt ? format(new Date(user.createdAt), 'dd/MM/yyyy à HH:mm', { locale: fr }) : '—'}
               </p>
               <p className="text-sm text-gray-700">
                 <span className="font-medium">Modifié le:</span>{' '}
-                {user.updatedAt ? format(new Date(user.updatedAt), 'dd/MM/yyyy à HH:mm', { locale: fr }) : 'N/A'}
+                {user.updatedAt ? format(new Date(user.updatedAt), 'dd/MM/yyyy à HH:mm', { locale: fr }) : '—'}
               </p>
             </div>
           </div>
@@ -248,7 +248,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <ul className="space-y-1">
                       {user.parentProfile.students.map((s: any) => (
                         <li key={s.student.id} className="text-sm text-gray-600">
-                          {s.student.user.firstName} {s.student.user.lastName} - {s.student.class?.name || 'N/A'}
+                          {s.student.user.firstName} {s.student.user.lastName} - {s.student.class?.name || '—'}
                         </li>
                       ))}
                     </ul>

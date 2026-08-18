@@ -3,9 +3,11 @@ import prisma from './prisma';
 import { autoReceiptUrl } from './tuition-financial-automation.util';
 import { finalizeCompletedTuitionPayment } from './tuition-fee-paid-sync.util';
 import { notifyParentsForStudent } from './parent-notify.util';
+import { notifyParentWhatsApp } from './whatsapp.util';
 import { assertPaymentInSchool } from './school-access-guard.util';
 import {
   initiateOnlineCheckout,
+  type InitiateCheckoutResult,
   type PaymentProviderId,
 } from './payment-providers.util';
 import { getPaymentWebhookSecret } from './integration-settings.util';
@@ -107,12 +109,34 @@ export async function completeOnlinePayment(
   try {
     const methodLabel =
       payment.paymentMethod === 'CARD' ? 'carte bancaire' : 'Mobile Money';
+    const amountLabel = `${payment.amount.toLocaleString('fr-FR')} FCFA`;
+    const receiptHint = updated?.receiptNumber ? ` Reçu ${updated.receiptNumber}.` : '';
     await notifyParentsForStudent(payment.studentId, {
       type: 'PAYMENT',
       title: `Paiement ${methodLabel} confirmé`,
-      content: `Un paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été confirmé.`,
+      content: `Un paiement de ${amountLabel} a été confirmé.${receiptHint}`,
       link: '/parent?tab=payments',
     });
+    const links = await prisma.studentParent.findMany({
+      where: { studentId: payment.studentId },
+      select: { parent: { select: { user: { select: { phone: true } } } } },
+    });
+    const phones = [
+      ...new Set(
+        links
+          .map((l) => l.parent?.user?.phone)
+          .filter((p): p is string => Boolean(p && p.trim())),
+      ),
+    ];
+    await Promise.all(
+      phones.map((phone) =>
+        notifyParentWhatsApp(
+          phone,
+          'Paiement confirmé',
+          `Paiement de ${amountLabel} validé.${receiptHint} Consultez l’espace parent pour le reçu.`,
+        ),
+      ),
+    );
   } catch (e) {
     console.error('notify payment completed:', e);
   }
@@ -173,8 +197,12 @@ export async function attachOnlineCheckout(
     customerEmail?: string;
     customerName?: string;
     returnUrl?: string;
+    cancelUrl?: string;
   }
-) {
+): Promise<{
+  payment: Awaited<ReturnType<typeof prisma.payment.update>>;
+  checkout: InitiateCheckoutResult;
+}> {
   const payment = await client.payment.findUnique({ where: { id: paymentId } });
   if (!payment) throw Object.assign(new Error('Paiement introuvable'), { status: 404 });
 
@@ -188,6 +216,7 @@ export async function attachOnlineCheckout(
     customerEmail: opts.customerEmail,
     customerName: opts.customerName,
     returnUrl: opts.returnUrl,
+    cancelUrl: opts.cancelUrl || opts.returnUrl,
     description: `Paiement scolarité ${payment.paymentReference || payment.id}`,
   });
 
@@ -195,7 +224,7 @@ export async function attachOnlineCheckout(
     checkout.ussdHint ? ` — ${checkout.ussdHint}` : ''
   }`;
 
-  return client.payment.update({
+  const updated = await client.payment.update({
     where: { id: paymentId },
     data: {
       paymentProvider: checkout.provider as PaymentProviderId,
@@ -205,6 +234,8 @@ export async function attachOnlineCheckout(
     },
     include: PAYMENT_INCLUDE,
   });
+
+  return { payment: updated, checkout };
 }
 
 export type { Payment, Role };

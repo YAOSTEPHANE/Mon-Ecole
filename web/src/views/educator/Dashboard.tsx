@@ -10,14 +10,13 @@ import EducatorParentsList from '../../components/educator/EducatorParentsList';
 import EducatorInternalMessaging from '../../components/educator/EducatorInternalMessaging';
 import EducatorScheduleTab from '../../components/educator/EducatorScheduleTab';
 import AcademicValidationPanel from '../../components/academic/AcademicValidationPanel';
-import { FiLayout, FiUsers, FiShield, FiSearch, FiTrendingUp, FiCommand, FiCheckCircle, FiBookOpen, FiHeart, FiMessageSquare, FiCalendar, FiUserCheck, FiAlertTriangle } from 'react-icons/fi';
+import { FiLayout, FiUsers, FiShield, FiCheckCircle, FiBookOpen, FiHeart, FiMessageSquare, FiCalendar, FiUserCheck, FiAlertTriangle } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
-import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
-import { EDUCATOR_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+import PortalSpaceHeader from '../../components/dashboard/PortalSpaceHeader';
 import AttendanceManager from '../../components/teacher/AttendanceManager';
 import EducatorDisciplinePanel from '../../components/educator/EducatorDisciplinePanel';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +26,15 @@ import Badge from '../../components/ui/Badge';
 
 const VALID_TAB_IDS = ['overview', 'students', 'teachers', 'parents', 'messaging', 'schedule', 'attendance', 'conduct', 'discipline', 'validations'] as const;
 type TabId = (typeof VALID_TAB_IDS)[number];
+
+const MOBILE_PRIMARY_TABS: TabId[] = [
+  'overview',
+  'students',
+  'attendance',
+  'conduct',
+  'discipline',
+  'messaging',
+];
 
 type TabDef = {
   id: TabId;
@@ -42,6 +50,7 @@ const EducatorDashboard = () => {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const tabs: TabDef[] = useMemo(
     () => [
@@ -89,6 +98,7 @@ const EducatorDashboard = () => {
 
   const changeTab = (tabId: TabId) => {
     setActiveTab(tabId);
+    setSidebarOpen(false);
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', tabId);
     router.replace(`/educator?${params.toString()}`);
@@ -97,18 +107,24 @@ const EducatorDashboard = () => {
   const activeMeta = tabs.find((t) => t.id === activeTab) ?? tabs[0];
   const ActiveTabIcon = activeMeta.icon;
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
-    return 'Bonsoir';
-  };
-
   return (
-    <Layout user={user} onLogout={logout} role="EDUCATOR">
+    <Layout user={user} onLogout={logout} role="EDUCATOR" hideHeader>
       <PremiumPortalShell variant="educator">
-      <div className="min-h-screen flex">
-        <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky dash-sticky-under-header dash-h-under-header bg-white/92 backdrop-blur-xl border-r border-stone-200/90 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)]">
+      <div className="flex dash-min-h-under-header w-full items-stretch">
+        {sidebarOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 z-[55] cursor-default border-0 bg-slate-900/40 p-0 backdrop-blur-sm lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Fermer la navigation"
+          />
+        ) : null}
+        <aside
+          className={`w-64 shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl
+            fixed left-0 top-0 z-[60] h-dvh max-h-dvh
+            ${sidebarOpen ? 'flex' : 'hidden'}
+            lg:sticky lg:flex dash-sticky-under-header dash-h-under-header lg:self-start lg:z-50`}
+        >
           <div className="p-2.5 flex flex-col flex-1 min-h-0">
             <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider px-2 py-1.5 shrink-0">
               Éducateur
@@ -141,82 +157,33 @@ const EducatorDashboard = () => {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="dash-command-bar sticky dash-sticky-under-header z-20 shrink-0">
-            <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-2 sm:py-2.5">
-              <div className="flex flex-col gap-2 sm:gap-3">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
-                  <div className="min-w-0">
-                    <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight leading-snug">
-                      {getGreeting()}, {user?.firstName}
-                    </h1>
-                    <p className="text-stone-600 text-xs mt-0.5 line-clamp-1 max-w-md">
-                      Conduite et accompagnement
-                    </p>
-                    <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
-                      {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
-                    </p>
-                  </div>
-                  <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-50 border border-violet-200/80 text-violet-950 text-xs font-semibold shrink-0 ring-1 ring-violet-900/5">
-                    <FiTrendingUp className="w-3.5 h-3.5 text-violet-700" aria-hidden />
-                    Éducateur
-                  </div>
-                </div>
-
-                <div className="dash-mobile-tabs scrollbar-hide">
-                  {tabs.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => changeTab(tab.id)}
-                        aria-label={tab.label}
-                        title={tab.label}
-                        className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
-                          isActive
-                            ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
-                            : 'bg-stone-100 text-stone-700'
-                        }`}
-                      >
-                        <Icon
-                          className={`w-3.5 h-3.5 shrink-0 ${
-                            isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
-                          }`}
-                        />
-                        <span className="dash-mobile-tab-label">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="relative w-full max-w-xl">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                    <FiSearch className="w-4 h-4" aria-hidden />
-                  </div>
-                  <input
-                    type="search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher un élève, enseignant ou parent…"
-                className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
-                    aria-label="Recherche dans l’espace éducateur"
-                  />
-                </div>
-              </div>
-            </div>
-          </header>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <PortalSpaceHeader
+            user={user}
+            role="EDUCATOR"
+            onLogout={logout}
+            title="Espace éducateur"
+            onMenuClick={() => setSidebarOpen((open) => !open)}
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Rechercher…"
+            searchAriaLabel="Recherche dans l’espace éducateur"
+            mobileTabs={tabs.filter((tab) => MOBILE_PRIMARY_TABS.includes(tab.id))}
+            activeTab={activeTab}
+            onTabChange={(id) => changeTab(id as TabId)}
+          />
 
           <main className="dash-workspace flex-1 overflow-y-auto overflow-x-hidden px-2.5 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
             <div className="max-w-[1200px] mx-auto space-y-4 sm:space-y-5">
-                            <PremiumModuleHeader
-                title={activeMeta.label}
-                description={activeMeta.description}
-                icon={ActiveTabIcon}
-                gradient={activeMeta.color}
-                badge="Éducateur"
-              />
+              {activeTab !== 'overview' ? (
+                <PremiumModuleHeader
+                  title={activeMeta.label}
+                  description={activeMeta.description}
+                  icon={ActiveTabIcon}
+                  gradient={activeMeta.color}
+                  badge="Éducateur"
+                />
+              ) : null}
 
               <div className="animate-slide-up">
                 {activeTab === 'overview' && (
@@ -275,11 +242,6 @@ const EducatorDashboard = () => {
                       </Card>
                     )}
                     <EducatorOverview searchQuery={searchQuery} />
-                    <PortalRoleModulesHub
-                      tabs={tabs}
-                      categories={EDUCATOR_MODULE_CATEGORIES}
-                      onNavigate={(id) => changeTab(id as TabId)}
-                    />
                   </>
                 )}
                 {activeTab === 'students' && <StudentsList searchQuery={searchQuery} />}

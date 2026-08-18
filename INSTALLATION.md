@@ -1,4 +1,4 @@
-# Guide d'Installation - School Manager App
+# Guide d'installation — École à jour
 
 ## Prérequis
 
@@ -34,7 +34,7 @@ npm install
 
 #### Option A : MongoDB Local
 
-1. Installer MongoDB sur votre machine (voir [MongoDB Installation Guide](https://www.mongodb.com/docs/manual/installation/))
+1. Installer MongoDB sur votre machine (voir le [guide d’installation MongoDB](https://www.mongodb.com/docs/manual/installation/))
 
 2. Démarrer MongoDB :
 ```bash
@@ -51,7 +51,7 @@ brew services start mongodb-community
 
 1. Créer un compte gratuit sur [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 2. Créer un cluster gratuit
-3. Obtenir la chaîne de connexion (Connection String)
+3. Obtenir la chaîne de connexion
 
 2. Configurer les variables d'environnement :
 
@@ -203,6 +203,8 @@ npm run prisma:generate
 ```
 
 ## Prochaines étapes
+
+Checklist complète (local → établissement → production) : `CHECKLIST_MISE_EN_SERVICE.md`.
 
 1. Créer des classes
 2. Ajouter des enseignants

@@ -20,7 +20,6 @@ import {
   FiArchive,
   FiCreditCard,
   FiMessageCircle,
-  FiCommand,
   FiMap,
   FiNavigation,
   FiCloud,
@@ -29,12 +28,9 @@ import {
 } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import Card from '../../components/ui/Card';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
-import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
-import { STUDENT_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+import PortalSpaceHeader from '../../components/dashboard/PortalSpaceHeader';
 import { studentApi } from '../../services/api';
 
 const StudentOverview = dynamic(() => import('../../components/student/StudentOverview'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -77,6 +73,15 @@ const VALID_TAB_IDS = [
 
 type TabId = (typeof VALID_TAB_IDS)[number];
 
+const MOBILE_PRIMARY_TABS: TabId[] = [
+  'overview',
+  'grades',
+  'absences',
+  'assignments',
+  'schedule',
+  'payments',
+];
+
 type TabDef = {
   id: TabId;
   label: string;
@@ -91,6 +96,7 @@ const StudentDashboard = () => {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSearchFilters, setShowSearchFilters] = useState(false);
   const [searchCategory, setSearchCategory] = useState<
     'all' | 'grades' | 'absences' | 'assignments' | 'schedule' | 'conduct'
@@ -149,6 +155,7 @@ const StudentDashboard = () => {
 
   const changeTab = (tabId: TabId) => {
     setActiveTab(tabId);
+    setSidebarOpen(false);
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', tabId);
     router.replace(`/student?${params.toString()}`);
@@ -195,18 +202,11 @@ const StudentDashboard = () => {
   const activeMeta = tabs.find((t) => t.id === activeTab) ?? tabs[0];
   const ActiveTabIcon = activeMeta.icon;
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
-    return 'Bonsoir';
-  };
-
   const enrollmentStatus = (user as { studentProfile?: { enrollmentStatus?: string } } | null)
     ?.studentProfile?.enrollmentStatus;
 
   return (
-    <Layout user={user} onLogout={logout} role="STUDENT">
+    <Layout user={user} onLogout={logout} role="STUDENT" hideHeader>
       <PremiumPortalShell variant="student">
       <div className="min-h-screen flex flex-col">
         {enrollmentStatus === 'GRADUATED' && (
@@ -221,7 +221,20 @@ const StudentDashboard = () => {
         )}
 
         <div className="flex dash-min-h-under-header w-full flex-1 items-stretch">
-          <aside className="relative z-50 hidden shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl lg:sticky dash-sticky-under-header lg:flex dash-h-under-header lg:w-64 lg:self-start">
+          {sidebarOpen ? (
+            <button
+              type="button"
+              className="fixed inset-0 z-[55] cursor-default border-0 bg-slate-900/40 p-0 backdrop-blur-sm lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Fermer la navigation"
+            />
+          ) : null}
+          <aside
+            className={`w-64 shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl
+              fixed left-0 top-0 z-[60] h-dvh max-h-dvh
+              ${sidebarOpen ? 'flex' : 'hidden'}
+              lg:sticky lg:flex dash-sticky-under-header dash-h-under-header lg:self-start lg:z-50`}
+          >
             <div className="flex min-h-0 flex-1 flex-col p-2.5">
               <p className="shrink-0 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500">
                 Élève
@@ -255,192 +268,141 @@ const StudentDashboard = () => {
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="dash-command-bar sticky dash-sticky-under-header z-20 shrink-0">
-              <div className="mx-auto max-w-[1240px] px-3 sm:px-6 py-2 sm:py-3">
-                <div className="flex flex-col gap-2 sm:gap-3">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
-                    <div className="min-w-0">
-                      <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight leading-snug">
-                        {getGreeting()}, {user?.firstName}
-                      </h1>
-                      <p className="text-stone-600 text-xs mt-0.5 line-clamp-1 max-w-md">
-                        Progression et scolarité
-                      </p>
-                      <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
-                        {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
-                      </p>
+            <PortalSpaceHeader
+              user={user}
+              role="STUDENT"
+              onLogout={logout}
+              title="Espace élève"
+              onMenuClick={() => setSidebarOpen((open) => !open)}
+              mobileTabs={tabs.filter((tab) => MOBILE_PRIMARY_TABS.includes(tab.id))}
+              activeTab={activeTab}
+              onTabChange={(id) => changeTab(id as TabId)}
+              searchSlot={
+                <div className="relative hidden w-52 shrink-0 md:block lg:w-72" ref={searchContainerRef}>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+                      <FiSearch className="h-4 w-4" aria-hidden />
                     </div>
-                    <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-cptb-gold/30 text-stone-900 text-xs font-semibold shrink-0 ring-1 ring-cptb-blue/10">
-                      <FiBook className="w-3.5 h-3.5 text-cptb-blue" aria-hidden />
-                      Élève
-                    </div>
-                  </div>
-
-                  <div className="dash-mobile-tabs scrollbar-hide">
-                    {tabs.map((tab) => {
-                      const Icon = tab.icon;
-                      const isActive = activeTab === tab.id;
-                      return (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          onClick={() => changeTab(tab.id)}
-                          aria-label={tab.label}
-                          title={tab.label}
-                          className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
-                            isActive
-                              ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
-                              : 'bg-stone-100 text-stone-700'
-                          }`}
-                        >
-                          <Icon
-                            className={`w-3.5 h-3.5 shrink-0 ${
-                              isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
-                            }`}
-                          />
-                          <span className="dash-mobile-tab-label">{tab.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="relative w-full max-w-xl" ref={searchContainerRef}>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                        <FiSearch className="w-4 h-4" aria-hidden />
-                      </div>
-                      <input
-                        ref={searchInputRef}
-                        type="search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onFocus={() => setShowSearchFilters(true)}
-                        placeholder="Rechercher (Ctrl+K)…"
-                        aria-label="Recherche dans l’espace élève"
-                        className="dash-search-field w-full rounded-xl py-2 pl-10 pr-24 text-sm text-stone-900 placeholder:text-stone-400 sm:py-2.5"
-                      />
-                      {searchQuery && (
-                        <button
-                          type="button"
-                          aria-label="Effacer la recherche"
-                          title="Effacer la recherche"
-                          onClick={() => {
-                            setSearchQuery('');
-                            setSearchCategory('all');
-                            setSearchDateRange('all');
-                          }}
-                          className="absolute inset-y-0 right-12 pr-2 flex items-center text-stone-400 hover:text-stone-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
-                        >
-                          <FiX className="w-5 h-5" aria-hidden />
-                        </button>
-                      )}
+                    <input
+                      ref={searchInputRef}
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => setShowSearchFilters(true)}
+                      placeholder="Rechercher…"
+                      aria-label="Recherche dans l’espace élève"
+                      className="dash-search-field w-full rounded-xl py-2 pl-10 pr-16 text-sm text-stone-900 placeholder:text-stone-400"
+                    />
+                    {searchQuery ? (
                       <button
                         type="button"
-                        aria-label={showSearchFilters ? 'Masquer les filtres' : 'Afficher les filtres'}
-                        title="Filtres de recherche"
-                        onClick={() => setShowSearchFilters(!showSearchFilters)}
-                        className={`absolute inset-y-0 right-0 pr-3 flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
-                          showSearchFilters || searchCategory !== 'all' || searchDateRange !== 'all'
-                            ? 'text-cptb-blue'
-                            : 'text-stone-400 hover:text-stone-600'
-                        }`}
+                        aria-label="Effacer la recherche"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSearchCategory('all');
+                          setSearchDateRange('all');
+                        }}
+                        className="absolute inset-y-0 right-8 flex items-center pr-1 text-stone-400 hover:text-stone-700"
                       >
-                        <FiFilter className="w-5 h-5" aria-hidden />
+                        <FiX className="h-4 w-4" aria-hidden />
                       </button>
-                    </div>
-
-                    {showSearchFilters && (
-                      <Card
-                        variant="premium"
-                        className="absolute top-full mt-2 w-full z-50 !p-4 border border-stone-200/90 ring-1 ring-cptb-gold/25"
-                        hover={false}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-stone-900 text-sm">Filtres</h3>
-                          <button
-                            type="button"
-                            aria-label="Fermer les filtres"
-                            title="Fermer"
-                            onClick={() => setShowSearchFilters(false)}
-                            className="text-stone-400 hover:text-stone-700 p-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
-                          >
-                            <FiX className="w-5 h-5" aria-hidden />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {[
-                            { value: 'all' as const, label: 'Tout', icon: FiLayout },
-                            { value: 'grades' as const, label: 'Notes', icon: FiAward },
-                            { value: 'absences' as const, label: 'Absences', icon: FiAlertCircle },
-                            { value: 'assignments' as const, label: 'Devoirs', icon: FiFileText },
-                            { value: 'schedule' as const, label: 'EDT', icon: FiCalendar },
-                            { value: 'conduct' as const, label: 'Conduite', icon: FiStar },
-                          ].map((cat) => {
-                            const Icon = cat.icon;
-                            return (
-                              <button
-                                key={cat.value}
-                                type="button"
-                                onClick={() => {
-                                  setSearchCategory(cat.value);
-                                  if (cat.value !== 'all') {
-                                    changeTab(cat.value);
-                                  }
-                                }}
-                                className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 ${
-                                  searchCategory === cat.value
-                                    ? 'border-cptb-gold bg-amber-50 text-stone-900'
-                                    : 'border-stone-200 hover:border-cptb-gold/40 text-stone-700'
-                                }`}
-                              >
-                                <Icon className="w-4 h-4 mb-1" />
-                                {cat.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <label htmlFor="student-search-period" className="block text-xs font-medium text-stone-600 mt-3 mb-1">
-                          Période
-                        </label>
-                        <select
-                          id="student-search-period"
-                          aria-label="Période pour la recherche"
-                          value={searchDateRange}
-                          onChange={(e) => setSearchDateRange(e.target.value as typeof searchDateRange)}
-                          className="w-full px-3 py-2.5 rounded-xl border border-stone-200/90 text-sm bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/35"
-                        >
-                          <option value="all">Toutes les périodes</option>
-                          <option value="week">7 derniers jours</option>
-                          <option value="month">30 derniers jours</option>
-                          <option value="semester">6 derniers mois</option>
-                        </select>
-                      </Card>
-                    )}
+                    ) : null}
+                    <button
+                      type="button"
+                      aria-label={showSearchFilters ? 'Masquer les filtres' : 'Afficher les filtres'}
+                      onClick={() => setShowSearchFilters(!showSearchFilters)}
+                      className={`absolute inset-y-0 right-0 flex items-center pr-3 ${
+                        showSearchFilters || searchCategory !== 'all' || searchDateRange !== 'all'
+                          ? 'text-cptb-blue'
+                          : 'text-stone-400 hover:text-stone-600'
+                      }`}
+                    >
+                      <FiFilter className="h-4 w-4" aria-hidden />
+                    </button>
                   </div>
+                  {showSearchFilters ? (
+                    <Card
+                      variant="premium"
+                      className="absolute top-full right-0 z-50 mt-2 w-[min(100vw-2rem,22rem)] !p-4 border border-stone-200/90 ring-1 ring-cptb-gold/25"
+                      hover={false}
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-stone-900">Filtres</h3>
+                        <button
+                          type="button"
+                          aria-label="Fermer les filtres"
+                          onClick={() => setShowSearchFilters(false)}
+                          className="rounded-lg p-1 text-stone-400 hover:text-stone-700"
+                        >
+                          <FiX className="h-4 w-4" aria-hidden />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { value: 'all' as const, label: 'Tout', icon: FiLayout },
+                          { value: 'grades' as const, label: 'Notes', icon: FiAward },
+                          { value: 'absences' as const, label: 'Absences', icon: FiAlertCircle },
+                          { value: 'assignments' as const, label: 'Devoirs', icon: FiFileText },
+                          { value: 'schedule' as const, label: 'EDT', icon: FiCalendar },
+                          { value: 'conduct' as const, label: 'Conduite', icon: FiStar },
+                        ].map((cat) => {
+                          const Icon = cat.icon;
+                          return (
+                            <button
+                              key={cat.value}
+                              type="button"
+                              onClick={() => {
+                                setSearchCategory(cat.value);
+                                if (cat.value !== 'all') changeTab(cat.value);
+                              }}
+                              className={`flex flex-col items-center justify-center rounded-xl border p-2 text-[11px] font-medium ${
+                                searchCategory === cat.value
+                                  ? 'border-cptb-gold bg-amber-50 text-stone-900'
+                                  : 'border-stone-200 text-stone-700 hover:border-cptb-gold/40'
+                              }`}
+                            >
+                              <Icon className="mb-1 h-4 w-4" />
+                              {cat.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <label htmlFor="student-search-period" className="mb-1 mt-3 block text-xs font-medium text-stone-600">
+                        Période
+                      </label>
+                      <select
+                        id="student-search-period"
+                        aria-label="Période pour la recherche"
+                        value={searchDateRange}
+                        onChange={(e) => setSearchDateRange(e.target.value as typeof searchDateRange)}
+                        className="w-full rounded-xl border border-stone-200/90 bg-white px-3 py-2 text-sm text-stone-900"
+                      >
+                        <option value="all">Toutes les périodes</option>
+                        <option value="week">7 derniers jours</option>
+                        <option value="month">30 derniers jours</option>
+                        <option value="semester">6 derniers mois</option>
+                      </select>
+                    </Card>
+                  ) : null}
                 </div>
-              </div>
-            </header>
+              }
+            />
 
             <main className="dash-workspace flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-5 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
               <div className="mx-auto max-w-[1240px] space-y-5 sm:space-y-6">
-                              <PremiumModuleHeader
-                title={activeMeta.label}
-                description={activeMeta.description}
-                icon={ActiveTabIcon}
-                gradient={activeMeta.color}
-                badge="Élève"
-              />
+              {activeTab !== 'overview' ? (
+                <PremiumModuleHeader
+                  title={activeMeta.label}
+                  description={activeMeta.description}
+                  icon={ActiveTabIcon}
+                  gradient={activeMeta.color}
+                  badge="Élève"
+                />
+              ) : null}
 
               <div className="animate-slide-up">
                   {activeTab === 'overview' && (
-                    <>
-                      <StudentOverview searchQuery={searchQuery} searchCategory={searchCategory} />
-                      <PortalRoleModulesHub
-                        tabs={tabs}
-                        categories={STUDENT_MODULE_CATEGORIES}
-                        onNavigate={(id) => changeTab(id as TabId)}
-                      />
-                    </>
+                    <StudentOverview searchQuery={searchQuery} searchCategory={searchCategory} />
                   )}
                   {activeTab === 'profile' && <StudentProfile searchQuery={searchQuery} />}
                   {activeTab === 'academic-history' && <StudentAcademicHistory searchQuery={searchQuery} />}

@@ -93,7 +93,7 @@ const Documentation = () => {
     <UltraPremiumPageShell
       navLabel="Ressources"
       title="Documentation"
-      description="Guides, parcours par rôle et références pour exploiter School Manager à fond."
+      description="Guides, parcours par rôle et références pour exploiter École à jour à fond."
     >
       <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="-mt-10 mb-12">

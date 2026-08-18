@@ -548,7 +548,7 @@ const ScheduleManagement = ({ compact = false }: ScheduleManagementProps) => {
 
       doc.setFontSize(20);
       doc.setTextColor(249, 115, 22);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Emploi du Temps', 14, 30);

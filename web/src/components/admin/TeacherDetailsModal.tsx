@@ -109,7 +109,7 @@ const TeacherDetailsModal: React.FC<TeacherDetailsModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <FiMail className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="text-sm text-gray-500">E-mail</p>
                         <p className="font-medium text-gray-900">{teacher.user?.email}</p>
                       </div>
                     </div>

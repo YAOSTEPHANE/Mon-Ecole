@@ -111,7 +111,7 @@ export function buildSchoolCertificateHtml(opts: SchoolCertificatePrintOpts): st
       <div class="sign-line">Signature et cachet</div>
     </div>
   </div>
-  <p class="footer">Document généré par School Manager — usage administratif interne et officiel.</p>
+  <p class="footer">Document généré par École à jour — usage administratif interne et officiel.</p>
 </div>
 </body></html>`;
 }

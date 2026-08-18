@@ -1,4 +1,12 @@
 import prisma from './prisma';
+import { fetchBrandingLogoDataUrl } from './image-data-url.util';
+import { reportCardClientPhotoUrl } from './report-card-photo-url.util';
+import {
+  mentionsFromDisciplinaryCategory,
+  mentionsFromOpinion,
+  yearEndLabelFromPromotion,
+  type CouncilOpinionRow,
+} from './report-card-mentions.util';
 
 export type CourseAverageEntry = { total: number; count: number; average: number };
 
@@ -104,6 +112,25 @@ export function getPeriodLabel(period: string): string {
     sem2: 'Semestre 2',
   };
   return labels[period] || period;
+}
+
+/** Convertit un libellé stocké (« Trimestre 1 ») vers la clé PDF (`trim1`). */
+export function toPeriodKey(period: string): string {
+  const normalized = period.trim();
+  const lower = normalized.toLowerCase();
+  const fromLabel: Record<string, string> = {
+    'trimestre 1': 'trim1',
+    'trimestre 2': 'trim2',
+    'trimestre 3': 'trim3',
+    'semestre 1': 'sem1',
+    'semestre 2': 'sem2',
+    t1: 'trim1',
+    t2: 'trim2',
+    t3: 'trim3',
+  };
+  if (fromLabel[lower]) return fromLabel[lower];
+  if (['trim1', 'trim2', 'trim3', 'sem1', 'sem2'].includes(lower)) return lower;
+  return normalized;
 }
 
 /**
@@ -490,4 +517,402 @@ export async function enrichReportCardsWithTermHistory(
       };
     }
   }
+}
+
+export type OfficialReportCardStudent = {
+  studentId: string;
+  userId: string;
+  studentIdNumber: string;
+  gender: string;
+  dateOfBirth: Date;
+  birthPlace: string | null;
+  repeating: boolean;
+  address: string | null;
+  user: { firstName: string; lastName: string; email: string; avatar: string | null };
+  photoUrl: string | null;
+  class: { name: string; level: string } | null;
+  grades: Array<{
+    courseId: string;
+    title: string;
+    score: number;
+    maxScore: number;
+    coefficient: number;
+    date: Date;
+    course?: { id: string; name: string; code: string | null };
+  }>;
+  courseAverages: Record<string, CourseAverageEntry>;
+  allCourses: Array<{
+    id: string;
+    name: string;
+    code: string;
+    gradingCoefficient: number | null;
+    teacherName?: string;
+  }>;
+  average: number;
+  totalStudents: number;
+  absences: { total: number; unexcused: number; excused: number; late: number };
+  rank?: number;
+  termHistory?: ReportCardTermHistory;
+  annualSummary?: { average: number; rank: number };
+  classStats?: ReportCardClassStats;
+  conduct?: { average: number; byTerm?: Record<string, number> };
+  distinctions?: string[];
+  sanctions?: string[];
+  yearEndDecision?: string;
+};
+
+export type OfficialReportCardPayload = {
+  students: OfficialReportCardStudent[];
+  logoDataUrl: string | null;
+};
+
+/**
+ * Données bulletin officiel (même logique que GET /admin/report-cards/generate-data).
+ */
+export async function buildClassOfficialReportCards(params: {
+  classId: string;
+  period: string;
+  academicYear: string;
+  schoolId?: string | null;
+}): Promise<OfficialReportCardPayload> {
+  const periodKey = toPeriodKey(params.period);
+  const periodDates = getPeriodDates(periodKey, params.academicYear);
+
+  const students = await prisma.student.findMany({
+    where: { classId: params.classId },
+    include: {
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatar: true,
+        },
+      },
+      class: {
+        select: {
+          name: true,
+          level: true,
+        },
+      },
+    },
+  });
+
+  const classCourses = await prisma.course.findMany({
+    where: { classId: params.classId },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      gradingCoefficient: true,
+      teacher: {
+        select: {
+          user: { select: { firstName: true, lastName: true } },
+        },
+      },
+    },
+  });
+
+  const studentIds = students.map((s) => s.id);
+  const photoIdentityDocs = await prisma.identityDocument.findMany({
+    where: { studentId: { in: studentIds }, type: 'PHOTO_ID' },
+    orderBy: { createdAt: 'desc' },
+    select: { studentId: true, fileUrl: true },
+  });
+  const photoUrlByStudentId = new Map<string, string>();
+  for (const doc of photoIdentityDocs) {
+    if (!photoUrlByStudentId.has(doc.studentId)) {
+      photoUrlByStudentId.set(doc.studentId, doc.fileUrl);
+    }
+  }
+
+  const reportCardData: OfficialReportCardStudent[] = await Promise.all(
+    students.map(async (student) => {
+      const grades = await prisma.grade.findMany({
+        where: {
+          studentId: student.id,
+          ...gradePeriodWhere(periodKey, params.academicYear),
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
+          },
+        },
+      });
+
+      const courseAverages: Record<string, CourseAverageEntry> = {};
+      grades.forEach((grade) => {
+        const courseId = grade.courseId;
+        const entry = courseAverages[courseId] ?? { total: 0, count: 0, average: 0 };
+        const gradeOn20 = (grade.score / grade.maxScore) * 20;
+        entry.total += gradeOn20 * grade.coefficient;
+        entry.count += grade.coefficient;
+        courseAverages[courseId] = entry;
+      });
+
+      Object.keys(courseAverages).forEach((courseId) => {
+        const course = courseAverages[courseId];
+        if (course) {
+          course.average = course.count > 0 ? course.total / course.count : 0;
+        }
+      });
+
+      classCourses.forEach((course) => {
+        if (!courseAverages[course.id]) {
+          courseAverages[course.id] = { total: 0, count: 0, average: 0 };
+        }
+      });
+
+      let totalWeightedAverage = 0;
+      let totalCoefficient = 0;
+      Object.entries(courseAverages).forEach(([courseId, course]) => {
+        const hasGrades = grades.some((g) => g.courseId === courseId);
+        if (hasGrades && course.count > 0) {
+          totalWeightedAverage += course.average * course.count;
+          totalCoefficient += course.count;
+        }
+      });
+      const overallAverage = totalCoefficient > 0 ? totalWeightedAverage / totalCoefficient : 0;
+
+      const periodAbsences = await prisma.absence.findMany({
+        where: {
+          studentId: student.id,
+          date: { gte: periodDates.start, lte: periodDates.end },
+        },
+        select: { status: true, excused: true },
+      });
+      const absences = {
+        total: periodAbsences.filter((a) => a.status === 'ABSENT').length,
+        unexcused: periodAbsences.filter((a) => a.status === 'ABSENT' && !a.excused).length,
+        excused: periodAbsences.filter((a) => a.status === 'ABSENT' && a.excused).length,
+        late: periodAbsences.filter((a) => a.status === 'LATE').length,
+      };
+
+      return {
+        studentId: student.id,
+        userId: student.userId,
+        studentIdNumber: student.studentId,
+        gender: student.gender,
+        dateOfBirth: student.dateOfBirth,
+        birthPlace: student.birthPlace,
+        repeating: student.isRepeating ?? false,
+        address: student.address,
+        user: student.user,
+        photoUrl: reportCardClientPhotoUrl(
+          student.user.avatar || photoUrlByStudentId.get(student.id) || null,
+        ),
+        class: student.class,
+        grades,
+        courseAverages,
+        allCourses: classCourses.map((c) => ({
+          id: c.id,
+          name: c.name,
+          code: c.code,
+          gradingCoefficient: c.gradingCoefficient,
+          teacherName: c.teacher?.user
+            ? `${c.teacher.user.lastName} ${c.teacher.user.firstName}`.trim()
+            : undefined,
+        })),
+        average: overallAverage,
+        totalStudents: students.length,
+        absences,
+      };
+    }),
+  );
+
+  reportCardData.sort((a, b) => b.average - a.average);
+  reportCardData.forEach((student, index) => {
+    student.rank = index + 1;
+  });
+
+  await enrichReportCardsWithTermHistory(
+    params.classId,
+    params.academicYear,
+    periodKey,
+    reportCardData,
+  );
+
+  await attachBulletinMentions(params.classId, periodKey, params.academicYear, reportCardData);
+
+  const logoDataUrl = await fetchBrandingLogoDataUrl(params.schoolId);
+  return { students: reportCardData, logoDataUrl };
+}
+
+async function attachBulletinMentions(
+  classId: string,
+  periodKey: string,
+  academicYear: string,
+  reportCards: OfficialReportCardStudent[],
+): Promise<void> {
+  const periodLabel = getPeriodLabel(periodKey);
+  const periodValues = [...new Set([periodKey, periodLabel])];
+  const studentIds = reportCards.map((row) => row.studentId);
+
+  const [councils, disciplineRows, promotions] = await Promise.all([
+    prisma.classCouncilSession.findMany({
+      where: {
+        classId,
+        academicYear,
+        period: { in: periodValues },
+      },
+      orderBy: { meetingDate: 'desc' },
+      take: 8,
+    }),
+    prisma.studentDisciplinaryRecord.findMany({
+      where: { studentId: { in: studentIds }, academicYear },
+      select: { studentId: true, category: true, title: true, description: true },
+    }),
+    prisma.studentPromotionDecision.findMany({
+      where: {
+        studentId: { in: studentIds },
+        academicYear,
+        period: { in: periodValues },
+      },
+      select: { studentId: true, decision: true },
+    }),
+  ]);
+
+  const opinionByStudent = new Map<string, CouncilOpinionRow>();
+  const sortedCouncils = [...councils].sort((a, b) => {
+    if (a.status === 'FINALIZED' && b.status !== 'FINALIZED') return -1;
+    if (b.status === 'FINALIZED' && a.status !== 'FINALIZED') return 1;
+    return 0;
+  });
+  for (const council of sortedCouncils) {
+    const raw = council.studentOpinions;
+    if (!Array.isArray(raw)) continue;
+    for (const item of raw) {
+      if (!item || typeof item !== 'object') continue;
+      const row = item as CouncilOpinionRow;
+      const id = typeof row.studentId === 'string' ? row.studentId : '';
+      if (!id || opinionByStudent.has(id)) continue;
+      opinionByStudent.set(id, row);
+    }
+  }
+
+  const sanctionsByStudent = new Map<string, string[]>();
+  for (const rec of disciplineRows) {
+    const mapped = mentionsFromDisciplinaryCategory(
+      rec.category,
+      rec.title,
+      rec.description ?? '',
+    );
+    if (!mapped.length) continue;
+    const current = sanctionsByStudent.get(rec.studentId) ?? [];
+    for (const label of mapped) {
+      if (!current.includes(label)) current.push(label);
+    }
+    sanctionsByStudent.set(rec.studentId, current);
+  }
+
+  const promotionByStudent = new Map(promotions.map((row) => [row.studentId, row.decision]));
+
+  for (const card of reportCards) {
+    const fromCouncil = mentionsFromOpinion(opinionByStudent.get(card.studentId));
+    const fromDiscipline = sanctionsByStudent.get(card.studentId) ?? [];
+    card.distinctions = fromCouncil.distinctions;
+    card.sanctions = [...new Set([...fromCouncil.sanctions, ...fromDiscipline])];
+    card.yearEndDecision =
+      fromCouncil.yearEndDecision ??
+      yearEndLabelFromPromotion(promotionByStudent.get(card.studentId));
+  }
+}
+
+async function resolveReportCardClassId(
+  studentId: string,
+  fallbackClassId: string | null | undefined,
+  periodKey: string,
+  academicYear: string,
+): Promise<string | null> {
+  if (fallbackClassId) return fallbackClassId;
+  const grade = await prisma.grade.findFirst({
+    where: {
+      studentId,
+      ...gradePeriodWhere(periodKey, academicYear),
+    },
+    select: { course: { select: { classId: true } } },
+  });
+  return grade?.course?.classId ?? null;
+}
+
+export type OfficialPublishedReportCard = {
+  student: OfficialReportCardStudent;
+  periodKey: string;
+  periodLabel: string;
+  academicYear: string;
+  comments: string | null;
+  logoDataUrl: string | null;
+  reportCardId: string;
+};
+
+/**
+ * Reconstruit le bulletin officiel publié d’un élève (parents / élèves).
+ */
+export async function getOfficialPublishedReportCard(params: {
+  studentId: string;
+  reportCardId: string;
+  schoolId?: string | null;
+}): Promise<{ ok: true; payload: OfficialPublishedReportCard } | { ok: false; status: number; error: string }> {
+  const reportCard = await prisma.reportCard.findFirst({
+    where: {
+      id: params.reportCardId,
+      studentId: params.studentId,
+      published: true,
+    },
+  });
+  if (!reportCard) {
+    return { ok: false, status: 404, error: 'Bulletin introuvable ou non publié' };
+  }
+
+  const student = await prisma.student.findUnique({
+    where: { id: params.studentId },
+    select: { classId: true, schoolId: true },
+  });
+  if (!student) {
+    return { ok: false, status: 404, error: 'Élève introuvable' };
+  }
+
+  const periodKey = toPeriodKey(reportCard.period);
+  const classId = await resolveReportCardClassId(
+    params.studentId,
+    student.classId,
+    periodKey,
+    reportCard.academicYear,
+  );
+  if (!classId) {
+    return { ok: false, status: 400, error: 'Impossible de reconstruire le bulletin : classe introuvable' };
+  }
+
+  const { students, logoDataUrl } = await buildClassOfficialReportCards({
+    classId,
+    period: periodKey,
+    academicYear: reportCard.academicYear,
+    schoolId: params.schoolId ?? student.schoolId,
+  });
+  const officialStudent = students.find((row) => row.studentId === params.studentId);
+  if (!officialStudent) {
+    return { ok: false, status: 404, error: 'Impossible de reconstruire le bulletin pour cet élève' };
+  }
+
+  officialStudent.average = reportCard.average;
+  if (typeof reportCard.rank === 'number') {
+    officialStudent.rank = reportCard.rank;
+  }
+
+  return {
+    ok: true,
+    payload: {
+      student: officialStudent,
+      periodKey,
+      periodLabel: getPeriodLabel(periodKey),
+      academicYear: reportCard.academicYear,
+      comments: reportCard.comments ?? null,
+      logoDataUrl,
+      reportCardId: reportCard.id,
+    },
+  };
 }

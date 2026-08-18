@@ -71,7 +71,7 @@ const ReportsStatisticsModule: React.FC = () => {
         <div>
           <h2 className={ADM.h2}>Rapports et statistiques</h2>
           <p className={ADM.intro}>
-            Indicateurs consolidés : finances, résultats, dossiers d’inscription et risques pédagogiques.
+            Indicateurs type Insights : absences, classes, finances, goulots et actions suggérées.
           </p>
           {updated && (
             <p className="text-[11px] text-gray-400 mt-1">Dernière mise à jour : {updated}</p>

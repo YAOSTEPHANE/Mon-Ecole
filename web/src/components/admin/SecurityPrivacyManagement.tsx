@@ -275,7 +275,7 @@ const SecurityPrivacyManagement = () => {
       const headers = ['Utilisateur', 'Email', 'Statut', 'Adresse IP', 'Date', 'Raison'];
       const csvContent =
         '\ufeff' +
-        '# School Manager - Logs de Connexion\n' +
+        '# École à jour - Logs de Connexion\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         headers.join(';') +
@@ -310,7 +310,7 @@ const SecurityPrivacyManagement = () => {
   const exportLoginLogsToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: filteredLoginLogs?.length || 0,
@@ -356,7 +356,7 @@ const SecurityPrivacyManagement = () => {
       doc.setTextColor(220, 38, 38);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
@@ -407,7 +407,7 @@ const SecurityPrivacyManagement = () => {
       const headers = ['Type', 'Sévérité', 'Description', 'Utilisateur', 'Adresse IP', 'Date'];
       const csvContent =
         '\ufeff' +
-        '# School Manager - Événements de Sécurité\n' +
+        '# École à jour - Événements de Sécurité\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         headers.join(';') +
@@ -442,7 +442,7 @@ const SecurityPrivacyManagement = () => {
   const exportSecurityEventsToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: filteredSecurityEvents?.length || 0,
@@ -488,7 +488,7 @@ const SecurityPrivacyManagement = () => {
       doc.setTextColor(220, 38, 38);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
@@ -539,7 +539,7 @@ const SecurityPrivacyManagement = () => {
       const headers = ['Nom', 'Prénom', 'Email', 'Rôle', 'Statut'];
       const csvContent =
         '\ufeff' +
-        '# School Manager - Liste des Utilisateurs\n' +
+        '# École à jour - Liste des Utilisateurs\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         headers.join(';') +
@@ -573,7 +573,7 @@ const SecurityPrivacyManagement = () => {
   const exportUsersToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: filteredUsers?.length || 0,
@@ -618,7 +618,7 @@ const SecurityPrivacyManagement = () => {
       doc.setTextColor(220, 38, 38);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
@@ -886,7 +886,7 @@ const SecurityPrivacyManagement = () => {
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Utilisateur</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Email</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">E-mail</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Statut</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Adresse IP</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Date</th>
@@ -1176,7 +1176,7 @@ const SecurityPrivacyManagement = () => {
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Utilisateur</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Email</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">E-mail</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Rôle</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Statut</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
@@ -1651,7 +1651,7 @@ const SecurityPrivacyManagement = () => {
                 </p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Email</p>
+                <p className="text-sm text-gray-600 mb-1">E-mail</p>
                 <p className="font-semibold text-gray-800">{selectedLog.email}</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">

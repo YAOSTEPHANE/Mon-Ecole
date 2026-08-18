@@ -107,6 +107,8 @@ router.get('/mena/fne-options', async (req: SchoolContextRequest, res) => {
     res.json({
       cycle: opts.cycle,
       years: opts.years,
+      portalYears: opts.portalYears,
+      preferredYear: opts.preferredYear,
       schools,
       schoolsTotal: opts.schools.length,
       formUrl: opts.formUrl,
@@ -121,7 +123,7 @@ router.get('/mena/fne-options', async (req: SchoolContextRequest, res) => {
 });
 
 /**
- * Recherche de matricule FNE directement depuis School Manager (proxy vers SIGFNE).
+ * Recherche de matricule FNE directement depuis École à jour (proxy vers SIGFNE).
  */
 router.post('/mena/fne-lookup', async (req: SchoolContextRequest, res) => {
   try {
@@ -139,13 +141,8 @@ router.post('/mena/fne-lookup', async (req: SchoolContextRequest, res) => {
     const nom = typeof body.nom === 'string' ? body.nom.trim() : '';
     const prenoms = typeof body.prenoms === 'string' ? body.prenoms.trim() : '';
     const datenaiss = typeof body.datenaiss === 'string' ? body.datenaiss.trim() : '';
-    let etablissement =
+    const etablissement =
       typeof body.etablissement === 'string' ? body.etablissement.trim() : '';
-
-    if (!etablissement) {
-      const defaults = await schoolFneDefaults(req.schoolId!);
-      if (defaults.schoolCode) etablissement = defaults.schoolCode;
-    }
 
     const result = await searchFneMatricule({
       cycle,

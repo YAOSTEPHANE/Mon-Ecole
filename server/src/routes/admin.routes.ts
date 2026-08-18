@@ -10,9 +10,7 @@ import { optionalPasswordPolicyValidator, PASSWORD_POLICY_HINT } from '../utils/
 import { isSyntheticStudentEmail } from '../utils/student-login-identifier.util';
 import prisma from '../utils/prisma';
 import { deleteStoredUploadUrl } from '../utils/upload-persist.util';
-import { reportCardClientPhotoUrl } from '../utils/report-card-photo-url.util';
-import { fetchBrandingLogoDataUrl } from '../utils/image-data-url.util';
-import { computeClassBulletinRanks, enrichReportCardsWithTermHistory, getCurrentAcademicYear, getPeriodDates, getPeriodLabel, gradePeriodWhere, inferReportingPeriod } from '../utils/report-card.util';
+import { buildClassOfficialReportCards, computeClassBulletinRanks, getCurrentAcademicYear, getPeriodDates, getPeriodLabel, gradePeriodWhere, inferReportingPeriod, toPeriodKey } from '../utils/report-card.util';
 import {
   declarePromotionDecisions,
   previewPromotionDecisions,
@@ -319,12 +317,15 @@ router.get('/absences', async (req, res) => {
                 firstName: true,
                 lastName: true,
                 email: true,
+                avatar: true,
               },
             },
             class: {
               select: {
+                id: true,
                 name: true,
                 level: true,
+                educationSector: true,
               },
             },
           },
@@ -3233,7 +3234,7 @@ router.post('/messages', async (req, res) => {
       const { sendMessageEmail } = await import('../utils/email.util');
       const emailResult = await sendMessageEmail(
         receiver.email,
-        subject || 'Message de School Manager',
+        subject || 'Message d’École à jour',
         content,
         `${sender?.firstName} ${sender?.lastName}`
       );
@@ -5183,7 +5184,7 @@ router.put('/security/users/:id/status', async (req, res) => {
 router.get('/dashboard', async (req: SchoolContextRequest, res) => {
   try {
     const schoolId = req.schoolId!;
-    const studentWhere = studentScopeWhere(schoolId);
+    const studentWhere = studentScopeWhere(schoolId, req.school?.isDefault ?? false);
     const [
       totalStudents,
       totalTeachers,
@@ -5251,13 +5252,25 @@ router.get('/dashboard', async (req: SchoolContextRequest, res) => {
 router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
   try {
     const schoolId = req.schoolId!;
-    const studentWhere = studentScopeWhere(schoolId);
+    const studentWhere = studentScopeWhere(schoolId, req.school?.isDefault ?? false);
     const admissionWhere = admissionScopeWhere(schoolId, req.school?.isDefault);
     const now = new Date();
     const d30 = new Date(now);
     d30.setDate(d30.getDate() - 30);
+    const d60 = new Date(now);
+    d60.setDate(d60.getDate() - 60);
+    const d90 = new Date(now);
+    d90.setDate(d90.getDate() - 90);
     const d180 = new Date(now);
     d180.setDate(d180.getDate() - 180);
+
+    const d24 = new Date(now);
+    d24.setHours(0, 0, 0, 0);
+    d24.setDate(d24.getDate() - 23);
+    const startToday = new Date(now);
+    startToday.setHours(0, 0, 0, 0);
+    const startYesterday = new Date(startToday);
+    startYesterday.setDate(startYesterday.getDate() - 1);
 
     const [
       admissionsPending,
@@ -5268,6 +5281,11 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
       saSubmitted,
       saTotal,
       activeStudentIds,
+      examAttempts,
+      attendanceRecent,
+      attendancePrev,
+      attendanceDailyRows,
+      attendanceClassRows,
     ] = await Promise.all([
       prisma.admission.count({ where: { ...admissionWhere, status: 'PENDING' } }),
       prisma.admission.count({ where: { ...admissionWhere, status: 'UNDER_REVIEW' } }),
@@ -5302,6 +5320,34 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
         select: { id: true },
         take: 800,
       }),
+      prisma.mockExamAttempt.findMany({
+        where: { submittedAt: { not: null }, student: studentWhere },
+        select: { passed: true },
+        take: 4000,
+      }),
+      prisma.absence.groupBy({
+        by: ['status'],
+        where: { date: { gte: d30, lte: now }, student: studentWhere },
+        _count: { _all: true },
+      }),
+      prisma.absence.groupBy({
+        by: ['status'],
+        where: { date: { gte: d60, lt: d30 }, student: studentWhere },
+        _count: { _all: true },
+      }),
+      prisma.absence.findMany({
+        where: { date: { gte: d24, lte: now }, student: studentWhere },
+        select: { date: true, status: true },
+      }),
+      prisma.absence.findMany({
+        where: { date: { gte: startYesterday, lte: now }, student: studentWhere },
+        select: {
+          status: true,
+          date: true,
+          studentId: true,
+          student: { select: { class: { select: { id: true, name: true } } } },
+        },
+      }),
     ]);
 
     const aggCount = (a: { _count?: number | { _all?: number } }) => {
@@ -5327,14 +5373,22 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
     const studentIds = activeStudentIds.map((s) => s.id);
     let h = 0;
     let m = 0;
+    let grades: Array<{
+      studentId: string;
+      score: number;
+      maxScore: number;
+      coefficient: number;
+      date: Date;
+    }> = [];
+    const byStudent = new Map<string, { score: number; coef: number }>();
     if (studentIds.length > 0) {
-      const [grades, absenceGroups] = await Promise.all([
+      const [gradeRows, absenceGroups] = await Promise.all([
         prisma.grade.findMany({
           where: {
             studentId: { in: studentIds },
             date: { gte: d180 },
           },
-          select: { studentId: true, score: true, maxScore: true, coefficient: true },
+          select: { studentId: true, score: true, maxScore: true, coefficient: true, date: true },
         }),
         prisma.absence.groupBy({
           by: ['studentId'],
@@ -5342,8 +5396,8 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
           _count: { _all: true },
         }),
       ]);
+      grades = gradeRows;
 
-      const byStudent = new Map<string, { score: number; coef: number }>();
       for (const g of grades) {
         const cur = byStudent.get(g.studentId) ?? { score: 0, coef: 0 };
         if (g.maxScore > 0) {
@@ -5365,8 +5419,134 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
       }
     }
 
+    const foldAvg20 = (from: Date, to: Date) => {
+      let sum = 0;
+      let coef = 0;
+      for (const g of grades) {
+        if (g.date < from || g.date > to || g.maxScore <= 0) continue;
+        const c = g.coefficient || 1;
+        sum += (g.score / g.maxScore) * 20 * c;
+        coef += c;
+      }
+      return coef > 0 ? sum / coef : null;
+    };
+    const avgRecent = foldAvg20(d90, now);
+    const avgPrev = foldAvg20(d180, d90);
+    const avgAll = foldAvg20(d180, now);
+    const standardizedTestScore =
+      avgAll != null ? Math.round((avgAll / 20) * 1000) / 10 : null;
+    const annualProgression =
+      avgRecent != null && avgPrev != null
+        ? Math.round(((avgRecent - avgPrev) / 20) * 1000) / 10
+        : null;
+
+    let examSuccessRate: number | null = null;
+    const submittedExams = examAttempts;
+    if (submittedExams.length > 0) {
+      const passedExams = submittedExams.filter((a) => a.passed).length;
+      examSuccessRate = Math.round((passedExams / submittedExams.length) * 1000) / 10;
+    } else {
+      let evaluated = 0;
+      let passed = 0;
+      for (const g of byStudent.values()) {
+        if (g.coef <= 0) continue;
+        evaluated += 1;
+        if (g.score / g.coef >= 10) passed += 1;
+      }
+      examSuccessRate = evaluated > 0 ? Math.round((passed / evaluated) * 1000) / 10 : null;
+    }
+
     const submissionRate =
       saTotal > 0 ? Math.round((saSubmitted / saTotal) * 1000) / 10 : null;
+
+    const foldAttendance = (
+      groups: Array<{ status: string; _count: { _all: number } }>,
+    ) => {
+      let present = 0;
+      let late = 0;
+      let absent = 0;
+      let excused = 0;
+      for (const g of groups) {
+        const n = g._count._all;
+        if (g.status === 'PRESENT') present = n;
+        else if (g.status === 'LATE') late = n;
+        else if (g.status === 'ABSENT') absent = n;
+        else if (g.status === 'EXCUSED') excused = n;
+      }
+      const total = present + late + absent + excused;
+      const presentCount = present + late;
+      const absentCount = absent + excused;
+      const presenceRate =
+        total > 0 ? Math.round((presentCount / total) * 1000) / 10 : null;
+      return { presentCount, absentCount, presenceRate };
+    };
+    const attendanceNow = foldAttendance(attendanceRecent);
+    const attendanceBefore = foldAttendance(attendancePrev);
+    const attendancePresenceDelta =
+      attendanceNow.presenceRate != null && attendanceBefore.presenceRate != null
+        ? Math.round((attendanceNow.presenceRate - attendanceBefore.presenceRate) * 10) / 10
+        : 0;
+    const attendanceTotalNow = attendanceNow.presentCount + attendanceNow.absentCount;
+    const attendanceTotalPrev = attendanceBefore.presentCount + attendanceBefore.absentCount;
+    const attendanceTotalDelta = attendanceTotalNow - attendanceTotalPrev;
+
+    const dayKey = (value: Date) => {
+      const d = new Date(value);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    const attendanceDaily = Array.from({ length: 24 }, (_, i) => {
+      const d = new Date(d24);
+      d.setDate(d24.getDate() + i);
+      return { key: dayKey(d), day: d.getDate(), present: 0, absent: 0 };
+    });
+    const dailyIndex = new Map(attendanceDaily.map((row, i) => [row.key, i]));
+    for (const row of attendanceDailyRows) {
+      const i = dailyIndex.get(dayKey(row.date));
+      if (i == null) continue;
+      const present = row.status === 'PRESENT' || row.status === 'LATE';
+      if (present) attendanceDaily[i]!.present += 1;
+      else attendanceDaily[i]!.absent += 1;
+    }
+    const attendanceDailyCounts = attendanceDaily.map((row) => row.present + row.absent);
+    const attendanceDailyPresent = attendanceDaily.map((row) => row.present);
+    const attendanceDailyAbsent = attendanceDaily.map((row) => row.absent);
+    const attendanceDailyLabels = [0, 6, 12, 18].map((start) => {
+      const a = attendanceDaily[start]?.day ?? 1;
+      const b = attendanceDaily[start + 5]?.day ?? a;
+      return `${String(a).padStart(2, '0')}-${String(b).padStart(2, '0')}`;
+    });
+
+    const uniquePresentByClass = (rows: typeof attendanceClassRows) => {
+      const present = new Map<string, { classId: string; className: string }>();
+      for (const row of rows) {
+        if (row.status !== 'PRESENT' && row.status !== 'LATE') continue;
+        if (present.has(row.studentId)) continue;
+        present.set(row.studentId, {
+          classId: row.student?.class?.id || 'none',
+          className: row.student?.class?.name || 'Sans classe',
+        });
+      }
+      const byClass = new Map<string, { classId: string; className: string; present: number }>();
+      for (const info of present.values()) {
+        const cur = byClass.get(info.classId) ?? {
+          classId: info.classId,
+          className: info.className,
+          present: 0,
+        };
+        cur.present += 1;
+        byClass.set(info.classId, cur);
+      }
+      return {
+        total: present.size,
+        byClass: [...byClass.values()].sort((a, b) => b.present - a.present),
+      };
+    };
+    const todayPresent = uniquePresentByClass(
+      attendanceClassRows.filter((row) => row.date >= startToday),
+    );
+    const yesterdayPresent = uniquePresentByClass(
+      attendanceClassRows.filter((row) => row.date >= startYesterday && row.date < startToday),
+    );
 
     res.json({
       generatedAt: now.toISOString(),
@@ -5380,6 +5560,21 @@ router.get('/dashboard/kpis', async (req: SchoolContextRequest, res) => {
         studentAssignmentsSubmissionRate: submissionRate,
         atRiskHigh: h,
         atRiskMedium: m,
+        standardizedTestScore,
+        annualProgression,
+        examSuccessRate,
+        attendancePresenceRate: attendanceNow.presenceRate,
+        attendancePresentCount: attendanceNow.presentCount,
+        attendanceAbsentCount: attendanceNow.absentCount,
+        attendancePresenceDelta,
+        attendanceTotalDelta,
+        attendanceDaily: attendanceDailyCounts,
+        attendanceDailyPresent,
+        attendanceDailyAbsent,
+        attendanceDailyLabels,
+        attendancePresentUnique: todayPresent.total,
+        attendancePresentUniqueDelta: todayPresent.total - yesterdayPresent.total,
+        attendancePresentByClass: todayPresent.byClass,
       },
       charts: {
         paymentsByMonth,
@@ -5403,183 +5598,13 @@ router.get('/report-cards/generate-data', async (req, res) => {
       return res.status(400).json({ error: 'classId, period et academicYear sont requis' });
     }
 
-    // Calculer les dates de début et fin de période
-    const periodDates = getPeriodDates(period as string, academicYear as string);
-    
-    // Récupérer tous les élèves de la classe
-    const students = await prisma.student.findMany({
-      where: { classId: classId as string },
-      include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatar: true,
-          },
-        },
-        class: {
-          select: {
-            name: true,
-            level: true,
-          },
-        },
-      },
+    const payload = await buildClassOfficialReportCards({
+      classId: classId as string,
+      period: period as string,
+      academicYear: academicYear as string,
+      schoolId: schoolReq.schoolId,
     });
-
-    // Récupérer tous les cours de la classe pour inclure les matières sans notes
-    const classCourses = await prisma.course.findMany({
-      where: { classId: classId as string },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        gradingCoefficient: true,
-        teacher: {
-          select: {
-            user: { select: { firstName: true, lastName: true } },
-          },
-        },
-      },
-    });
-
-    const studentIds = students.map((s) => s.id);
-    const photoIdentityDocs = await prisma.identityDocument.findMany({
-      where: { studentId: { in: studentIds }, type: 'PHOTO_ID' },
-      orderBy: { createdAt: 'desc' },
-      select: { studentId: true, fileUrl: true },
-    });
-    const photoUrlByStudentId = new Map<string, string>();
-    for (const doc of photoIdentityDocs) {
-      if (!photoUrlByStudentId.has(doc.studentId)) {
-        photoUrlByStudentId.set(doc.studentId, doc.fileUrl);
-      }
-    }
-
-    // Pour chaque élève, calculer les moyennes par matière
-    const reportCardData = await Promise.all(
-      students.map(async (student) => {
-        // Récupérer toutes les notes de l'élève dans la période
-        const grades = await prisma.grade.findMany({
-          where: {
-            studentId: student.id,
-            ...gradePeriodWhere(period as string, academicYear as string),
-          },
-          include: {
-            course: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-              },
-            },
-          },
-        });
-
-        // Calculer les moyennes par cours (seulement pour les cours avec notes)
-        const courseAverages: Record<string, { total: number; count: number; average: number }> = {};
-
-        grades.forEach((grade) => {
-          const courseId = grade.courseId;
-          if (!courseAverages[courseId]) {
-            courseAverages[courseId] = { total: 0, count: 0, average: 0 };
-          }
-          const gradeOn20 = (grade.score / grade.maxScore) * 20;
-          courseAverages[courseId].total += gradeOn20 * grade.coefficient;
-          courseAverages[courseId].count += grade.coefficient;
-        });
-
-        // Calculer la moyenne finale pour chaque cours
-        Object.keys(courseAverages).forEach((courseId) => {
-          const course = courseAverages[courseId];
-          course.average = course.count > 0 ? course.total / course.count : 0;
-        });
-
-        // Ajouter les cours sans notes avec moyenne 0
-        classCourses.forEach((course) => {
-          if (!courseAverages[course.id]) {
-            courseAverages[course.id] = { total: 0, count: 0, average: 0 };
-          }
-        });
-
-        // Calculer la moyenne générale (seulement pour les cours avec notes)
-        let totalWeightedAverage = 0;
-        let totalCoefficient = 0;
-        Object.entries(courseAverages).forEach(([courseId, course]) => {
-          // Vérifier si ce cours a des notes
-          const hasGrades = grades.some(g => g.courseId === courseId);
-          if (hasGrades && course.count > 0) {
-            totalWeightedAverage += course.average * course.count;
-            totalCoefficient += course.count;
-          }
-        });
-        const overallAverage = totalCoefficient > 0 ? totalWeightedAverage / totalCoefficient : 0;
-
-        const periodAbsences = await prisma.absence.findMany({
-          where: {
-            studentId: student.id,
-            date: { gte: periodDates.start, lte: periodDates.end },
-          },
-          select: { status: true, excused: true },
-        });
-        const absences = {
-          total: periodAbsences.filter((a) => a.status === 'ABSENT').length,
-          unexcused: periodAbsences.filter((a) => a.status === 'ABSENT' && !a.excused).length,
-          excused: periodAbsences.filter((a) => a.status === 'ABSENT' && a.excused).length,
-          late: periodAbsences.filter((a) => a.status === 'LATE').length,
-        };
-
-        return {
-          studentId: student.id,
-          userId: student.userId,
-          studentIdNumber: student.studentId,
-          gender: student.gender,
-          dateOfBirth: student.dateOfBirth,
-          birthPlace: student.birthPlace,
-          repeating: student.isRepeating ?? false,
-          address: student.address,
-          user: student.user,
-          photoUrl: reportCardClientPhotoUrl(
-            student.user.avatar || photoUrlByStudentId.get(student.id) || null,
-          ),
-          class: student.class,
-          grades,
-          courseAverages,
-          allCourses: classCourses.map((c) => ({
-            id: c.id,
-            name: c.name,
-            code: c.code,
-            gradingCoefficient: c.gradingCoefficient,
-            teacherName: c.teacher?.user
-              ? `${c.teacher.user.lastName} ${c.teacher.user.firstName}`.trim()
-              : undefined,
-          })),
-          average: overallAverage,
-          totalStudents: students.length,
-          absences,
-        };
-      })
-    );
-
-    // Trier par moyenne décroissante et attribuer les rangs
-    reportCardData.sort((a, b) => b.average - a.average);
-    reportCardData.forEach((student: any, index) => {
-      student.rank = index + 1;
-    });
-
-    await enrichReportCardsWithTermHistory(
-      classId as string,
-      academicYear as string,
-      period as string,
-      reportCardData,
-    );
-
-    const logoDataUrl = await fetchBrandingLogoDataUrl(schoolReq.schoolId);
-
-    res.json({
-      students: reportCardData,
-      logoDataUrl,
-    });
+    res.json(payload);
   } catch (error: any) {
     console.error('Erreur lors de la génération des données de bulletins:', error);
     res.status(500).json({ 
@@ -5878,10 +5903,14 @@ router.put('/report-cards/template/default', async (req, res) => {
 router.get('/class-councils', async (req, res) => {
   try {
     const { classId, period, academicYear } = req.query;
+    const periodValues =
+      typeof period === 'string' && period.trim()
+        ? [...new Set([period, toPeriodKey(period), getPeriodLabel(toPeriodKey(period))])]
+        : null;
     const councils = await prisma.classCouncilSession.findMany({
       where: {
         ...(classId ? { classId: classId as string } : {}),
-        ...(period ? { period: period as string } : {}),
+        ...(periodValues ? { period: { in: periodValues } } : {}),
         ...(academicYear ? { academicYear: academicYear as string } : {}),
       },
       include: {

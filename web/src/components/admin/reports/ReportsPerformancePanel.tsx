@@ -1,70 +1,123 @@
-import Card from '../../ui/Card';
+'use client';
+
+import { InsightCard, InsightEmpty, INSIGHT_CARD } from '../insights/InsightsUi';
+
+type ClassAvg = {
+  classId: string;
+  className: string;
+  average: number | null;
+};
 
 type Props = {
-  summary: any;
+  summary:
+    | {
+        academic?: {
+          gradeAverage?: number | null;
+          gradesCount?: number;
+          averagesByClass?: ClassAvg[];
+          absenceTotals?: { total?: number; excused?: number };
+        };
+        performance?: {
+          atRiskHigh?: number;
+          atRiskMedium?: number;
+          atRiskTotal?: number;
+          absenceExcusedRate?: number | null;
+          submissionRate?: number | null;
+        };
+      }
+    | undefined;
   isLoading: boolean;
 };
 
-const ReportsPerformancePanel: React.FC<Props> = ({ summary, isLoading }) => {
+export default function ReportsPerformancePanel({ summary, isLoading }: Props) {
   if (isLoading || !summary) {
-    return <div className="h-64 bg-gray-100 rounded-xl animate-pulse" />;
+    return <div className={`${INSIGHT_CARD} h-64 animate-pulse bg-stone-50`} />;
   }
 
-  const p = summary.performance;
-  const a = summary.academic;
+  const p = summary.performance ?? {};
+  const a = summary.academic ?? {};
+  const bottlenecks = (a.averagesByClass ?? [])
+    .slice()
+    .sort((x, y) => (x.average ?? 20) - (y.average ?? 20))
+    .slice(0, 8)
+    .map((cls) => {
+      const avg = cls.average ?? 0;
+      const impact = avg < 10 ? 'Élevé' : avg < 12 ? 'Moyen' : 'Faible';
+      const fix =
+        avg < 10
+          ? 'Suivi pédagogique + convocation famille'
+          : avg < 12
+            ? 'Remédiation sur les matières faibles'
+            : 'Maintenir le rythme';
+      return { classe: cls.className, moyenne: avg, impact, fix };
+    });
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 border border-red-100 bg-red-50/40">
-          <p className="text-xs font-medium text-red-900 uppercase">Risque élevé</p>
-          <p className="text-4xl font-bold text-red-950 mt-1">{p.atRiskHigh}</p>
-          <p className="text-xs text-red-800 mt-2">
-            Moyenne &lt; 10/20 ou plus de 5 absences non justifiées (règle indicative).
-          </p>
-        </Card>
-        <Card className="p-5 border border-orange-100 bg-orange-50/40">
-          <p className="text-xs font-medium text-orange-900 uppercase">Risque modéré</p>
-          <p className="text-4xl font-bold text-orange-950 mt-1">{p.atRiskMedium}</p>
-          <p className="text-xs text-orange-800 mt-2">Moyenne entre 10 et 12/20.</p>
-        </Card>
-        <Card className="p-5 border border-slate-200 bg-white">
-          <p className="text-xs font-medium text-gray-500 uppercase">Total suivis « à risque »</p>
-          <p className="text-4xl font-bold text-gray-900 mt-1">{p.atRiskTotal}</p>
-        </Card>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[
+          { label: 'Risque élevé', value: p.atRiskHigh ?? 0, hint: 'Moyenne < 10 ou > 5 absences NJ' },
+          { label: 'Risque modéré', value: p.atRiskMedium ?? 0, hint: 'Moyenne entre 10 et 12' },
+          { label: 'Total à risque', value: p.atRiskTotal ?? 0, hint: 'Élèves à suivre' },
+        ].map((item) => (
+          <div key={item.label} className={`${INSIGHT_CARD} py-4`}>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">{item.label}</p>
+            <p className="mt-1 text-[28px] font-bold leading-none text-stone-900">{item.value}</p>
+            <p className="mt-1.5 text-[12px] text-stone-500">{item.hint}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-5 border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Moyenne générale</h3>
-          <p className="text-3xl font-bold text-indigo-700">
-            {a.gradeAverage != null ? `${a.gradeAverage} / 20` : '—'}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <InsightCard title="Moyenne générale">
+          <p className="text-[32px] font-bold leading-none text-stone-900">
+            {a.gradeAverage != null ? `${a.gradeAverage}` : '—'}
+            <span className="ml-1 text-base font-semibold text-stone-400">/ 20</span>
           </p>
-          <p className="text-sm text-gray-600 mt-2">
-            Calcul pondéré sur l’ensemble des notes ({a.gradesCount} enregistrements).
+          <p className="mt-3 text-sm text-stone-500">
+            {a.gradesCount ?? 0} notes · devoirs rendus{' '}
+            {p.submissionRate != null ? `${p.submissionRate} %` : '—'}
           </p>
-        </Card>
-        <Card className="p-5 border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Assiduité</h3>
-          <p className="text-lg text-gray-800">
-            Absences : <strong>{a.absenceTotals.total}</strong>
+        </InsightCard>
+        <InsightCard title="Assiduité">
+          <p className="text-[32px] font-bold leading-none text-stone-900">
+            {a.absenceTotals?.total ?? 0}
           </p>
-          <p className="text-sm text-gray-600 mt-1">
-            Taux d’absences justifiées :{' '}
+          <p className="mt-3 text-sm text-stone-500">
+            Absences enregistrées · justifiées{' '}
             {p.absenceExcusedRate != null ? `${p.absenceExcusedRate} %` : '—'}
           </p>
-        </Card>
+        </InsightCard>
       </div>
 
-      <Card className="p-5 border border-dashed border-indigo-200 bg-indigo-50/30">
-        <p className="text-sm text-indigo-950">
-          Pour le détail des élèves concernés, utilisez l’onglet{' '}
-          <strong>Suivi pédagogique</strong> du tableau de bord (liste à risque et statistiques par
-          classe).
-        </p>
-      </Card>
+      <InsightCard title="Principaux goulots">
+        {bottlenecks.length === 0 ? (
+          <InsightEmpty text="Pas encore de moyennes par classe." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-[12px]">
+              <thead>
+                <tr className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                  <th className="pb-2 pr-3">Classe</th>
+                  <th className="pb-2 pr-3">Moyenne</th>
+                  <th className="pb-2 pr-3">Impact</th>
+                  <th className="pb-2">Correctif suggéré</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {bottlenecks.map((row) => (
+                  <tr key={row.classe}>
+                    <td className="py-2.5 pr-3 font-semibold text-stone-800">{row.classe}</td>
+                    <td className="py-2.5 pr-3 tabular-nums text-stone-600">{row.moyenne.toFixed(1)}</td>
+                    <td className="py-2.5 pr-3 text-stone-600">{row.impact}</td>
+                    <td className="py-2.5 text-stone-700">{row.fix}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </InsightCard>
     </div>
   );
-};
-
-export default ReportsPerformancePanel;
+}

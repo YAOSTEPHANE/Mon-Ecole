@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   buildFneYearOptions,
+  emptyFneLookupNote,
+  fneUnavailableYearNote,
   mergeFneYearOptions,
   parseFneSearchResults,
+  pickPreferredFneYear,
   toFneDateFormat,
 } from './fne-matricule-search.util';
 
@@ -36,6 +39,44 @@ describe('fne-matricule-search.util', () => {
     assert.ok(merged.some((y) => y.value === '1718'));
     assert.ok(merged.some((y) => y.value === '1920'));
     assert.ok(merged.some((y) => y.value === '2021'));
+  });
+
+  it('prefers the latest year actually listed on the SIGFNE portal', () => {
+    const portal = [
+      { value: '1617', label: 'Fichier 2016-2017' },
+      { value: '1819', label: 'Fichier 2018-2019' },
+    ];
+    const all = mergeFneYearOptions(portal, buildFneYearOptions(2016, 2025));
+    assert.equal(pickPreferredFneYear(portal, all), '1819');
+    assert.equal(pickPreferredFneYear([], all), '2526');
+  });
+
+  it('explains when SIGFNE rejects a file year outside the public list', () => {
+    const portal = [
+      { value: '1617', label: 'Fichier 2016-2017' },
+      { value: '1819', label: 'Fichier 2018-2019' },
+    ];
+    const note = fneUnavailableYearNote('2526', portal);
+    assert.match(note, /2526/);
+    assert.match(note, /2016-2017/);
+    assert.match(note, /2018-2019/);
+    assert.match(
+      emptyFneLookupNote({ cycle: 'secondary', annee: '2526', portalYears: portal }),
+      /fichiers actuellement exposés/i
+    );
+    assert.match(
+      emptyFneLookupNote({
+        cycle: 'secondary',
+        annee: '1819',
+        portalYears: portal,
+        etablissement: '017152',
+      }),
+      /établissement/i
+    );
+    assert.match(
+      emptyFneLookupNote({ cycle: 'secondary', annee: '1819', portalYears: portal }),
+      /Aucun résultat/
+    );
   });
 
   it('parses secondary FNE result rows', () => {

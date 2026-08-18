@@ -48,5 +48,5 @@ Les logs doivent afficher `Server running on port 5000`. Si le processus redéma
 
 ```bash
 curl -s https://collegetranlefet.com/api/health
-# Attendu : {"status":"OK","message":"School Manager API is running"}
+# Attendu : {"status":"OK","message":"API École à jour opérationnelle"}
 ```

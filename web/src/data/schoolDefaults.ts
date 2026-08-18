@@ -79,24 +79,32 @@ export const SCHOOL_NEWS = [
     title: 'En route pour une nouvelle semaine',
     excerpt:
       'Une nouvelle semaine porteuse de défis à relever, de savoirs à acquérir et de réussites à construire. Chaque effort compte.',
+    image: '/home/news-semaine.jpg',
+    imageAlt: 'Élèves arrivant dans la cour pour une nouvelle semaine',
   },
   {
     date: '1 janv. 2026',
     title: 'Vœux du Nouvel An',
     excerpt:
       'Meilleurs vœux aux parents, élèves, enseignants et partenaires. Poursuivons notre engagement pour une éducation de qualité.',
+    image: '/home/news-voeux.jpg',
+    imageAlt: 'Communauté scolaire réunie pour les vœux de l’année',
   },
   {
     date: '18 déc. 2025',
     title: 'Journée portes ouvertes',
     excerpt:
       'Dialogue parents–enseignants et distribution des bulletins. Ensemble, préparons l’avenir de nos élèves.',
+    image: '/home/news-portes-ouvertes.jpg',
+    imageAlt: 'Parents et enseignants réunis lors des portes ouvertes',
   },
   {
     date: '29 nov. 2025',
     title: 'Notre mission',
     excerpt:
       "Former aujourd'hui, c'est bâtir la société de demain : un cadre structuré, moderne et orienté vers la réussite scolaire.",
+    image: '/home/news-mission.jpg',
+    imageAlt: 'Élèves et enseignant sur les marches de l’établissement',
   },
 ] as const;
 

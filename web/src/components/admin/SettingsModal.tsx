@@ -8,7 +8,7 @@ import {
   parseUserUiPreferences,
   type UserUiPreferences,
 } from '@/lib/userUiPreferences';
-import { setStoredLocale, type AppLocale } from '@/lib/i18n';
+import { setStoredLocale } from '@/lib/i18n';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -453,7 +453,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
         studiesDirectorFooterLine: directorMessageDraft.footerLine.trim() || null,
       });
       if (user) {
-        await authApi.updateMe({ uiPreferences: userSettings });
+        await authApi.updateMe({ uiPreferences: { ...userSettings, language: 'fr' } });
         await refreshUser();
         applyDocumentTheme(userSettings.theme);
       }
@@ -1574,20 +1574,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         Langue
                       </label>
                       <select
-                        value={userSettings.language}
-                        onChange={(e) => {
-                          const language = e.target.value;
-                          setUserSettings({ ...userSettings, language });
-                          if (language === 'fr' || language === 'en') {
-                            setStoredLocale(language as AppLocale);
-                          }
+                        value="fr"
+                        onChange={() => {
+                          setUserSettings({ ...userSettings, language: 'fr' });
+                          setStoredLocale('fr');
                         }}
                         aria-label="Langue"
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                       >
                         <option value="fr">Français</option>
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
                       </select>
                     </div>
 
@@ -1623,9 +1618,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         aria-label="Fuseau horaire"
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                       >
-                        <option value="Europe/Paris">Europe/Paris (GMT+1)</option>
-                        <option value="Europe/London">Europe/London (GMT+0)</option>
-                        <option value="America/New_York">America/New_York (GMT-5)</option>
+                        <option value="Europe/Paris">Paris (UTC+1)</option>
+                        <option value="Europe/London">Londres (UTC+0)</option>
+                        <option value="America/New_York">New York (UTC−5)</option>
                       </select>
                     </div>
 
@@ -1639,9 +1634,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         aria-label="Format de date"
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                       >
-                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        <option value="DD/MM/YYYY">jj/mm/aaaa</option>
+                        <option value="MM/DD/YYYY">mm/jj/aaaa</option>
+                        <option value="YYYY-MM-DD">aaaa-mm-jj</option>
                       </select>
                     </div>
                   </div>

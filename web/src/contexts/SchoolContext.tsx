@@ -77,13 +77,13 @@ function invalidateSchoolScopedQueries(queryClient: ReturnType<typeof useQueryCl
 }
 
 export function SchoolProvider({ children }: { children: ReactNode }) {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeSchoolId, setActiveSchoolIdState] = useState<string | null>(readStoredSchoolId);
   const lastResolvedSchoolRef = useRef<string | null>(null);
 
+  // Session cookie HttpOnly : `token` mémoire peut rester null après /auth/me.
   const enabled =
-    !!token &&
     !!user &&
     (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'STAFF');
 
@@ -92,9 +92,11 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       if (user?.role === 'STAFF') {
         const response = await api.get('/staff/schools');
-        return response.data as SchoolSummary[];
+        const data = response.data as unknown;
+        return (Array.isArray(data) ? data : []) as SchoolSummary[];
       }
-      return adminApi.listSchools() as Promise<SchoolSummary[]>;
+      const rows = await adminApi.listSchools();
+      return (Array.isArray(rows) ? rows : []) as SchoolSummary[];
     },
     enabled,
     staleTime: 60_000,
@@ -171,10 +173,6 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     }),
     [schools, activeSchool, activeSchoolId, schoolReady, setActiveSchoolId, isLoading, enabled]
   );
-
-  if (!enabled) {
-    return <>{children}</>;
-  }
 
   return <SchoolContext.Provider value={value}>{children}</SchoolContext.Provider>;
 }

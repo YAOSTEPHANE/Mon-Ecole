@@ -1,4 +1,4 @@
-# Déploiement sur VPS Hostinger — School Manager
+# Déploiement sur VPS Hostinger — École à jour
 
 Guide pour héberger **Next.js (web)** + **Express (server)** + **MongoDB** sur un VPS Hostinger (Ubuntu).
 

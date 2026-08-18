@@ -19,16 +19,21 @@ export async function guardParentOwnsStudentParam(
     res.status(400).json({ error: 'Identifiant élève invalide' });
     return;
   }
-  const parentId = await getParentIdForUser(req.user!.id);
-  if (!parentId) {
-    res.status(404).json({ error: 'Parent non trouvé' });
-    return;
-  }
   try {
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) {
+      res.status(404).json({ error: 'Parent non trouvé' });
+      return;
+    }
     await assertParentOwnsStudent(parentId, studentId);
     req.parentId = parentId;
     next();
-  } catch {
-    res.status(403).json({ error: 'Accès refusé — cet élève n’est pas associé à votre compte.' });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : '';
+    if (msg.includes('associé')) {
+      res.status(403).json({ error: 'Accès refusé — cet élève n’est pas associé à votre compte.' });
+      return;
+    }
+    next(error);
   }
 }

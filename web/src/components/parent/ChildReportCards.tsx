@@ -6,36 +6,55 @@ import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { 
-  FiFileText, 
-  FiDownload, 
-  FiCalendar,
-  FiAward,
-  FiTrendingUp,
-  FiSearch,
+import {
+  FiFileText,
+  FiDownload,
   FiFilter,
   FiAlertCircle,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { useAppBranding } from '@/contexts/AppBrandingContext';
+import {
+  downloadOfficialReportCardPdf,
+  type OfficialReportCardResponse,
+} from '@/lib/officialReportCardClient';
 
 interface ChildReportCardsProps {
   studentId: string;
 }
 
+type ReportCardRow = {
+  id: string;
+  period: string;
+  academicYear: string;
+  average: number;
+  rank?: number | null;
+  comments?: string | null;
+  publishedAt?: string | null;
+  parentAcknowledgedAt?: string | null;
+  parentAckSignature?: string | null;
+};
+
 const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
   const qc = useQueryClient();
-  const [selectedReportCard, setSelectedReportCard] = useState<any>(null);
+  const { branding, navigationLogoAbsolute, loginLogoAbsolute } = useAppBranding();
+  const [selectedReportCard, setSelectedReportCard] = useState<ReportCardRow | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [ackSignature, setAckSignature] = useState('');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
 
   const { data: reportPayload, isLoading } = useQuery({
     queryKey: ['parent-child-report-cards', studentId],
     queryFn: () => parentApi.getChildReportCards(studentId),
+  });
+
+  const { data: official, isLoading: officialLoading } = useQuery({
+    queryKey: ['parent-official-report-card', studentId, selectedReportCard?.id],
+    queryFn: () => parentApi.getChildOfficialReportCard(studentId, selectedReportCard!.id) as Promise<OfficialReportCardResponse>,
+    enabled: showDetailsModal && Boolean(selectedReportCard?.id),
   });
 
   const acknowledgeMut = useMutation({
@@ -52,71 +71,51 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
   });
 
   const legacyList = Array.isArray(reportPayload);
-  const reportCards = legacyList
-    ? (reportPayload as any[])
-    : ((reportPayload as { reportCards?: any[] } | undefined)?.reportCards ?? []);
+  const reportCards: ReportCardRow[] = legacyList
+    ? (reportPayload as ReportCardRow[])
+    : ((reportPayload as { reportCards?: ReportCardRow[] } | undefined)?.reportCards ?? []);
   const tuitionBlock = legacyList
     ? undefined
     : (reportPayload as { tuitionBlock?: { active?: boolean; hiddenAcademicYears?: string[] } } | undefined)
         ?.tuitionBlock;
 
-  const filteredReportCards = reportCards?.filter((card: any) => {
+  const filteredReportCards = reportCards.filter((card) => {
     if (filterPeriod !== 'all' && card.period !== filterPeriod) return false;
     if (filterYear !== 'all' && card.academicYear !== filterYear) return false;
     return true;
-  }) || [];
+  });
 
-  const periods: string[] = Array.from(
-    new Set((reportCards as any[])?.map((c: any) => c.period) || []),
-  ).sort() as string[];
-  const academicYears: string[] = Array.from(
-    new Set((reportCards as any[])?.map((c: any) => c.academicYear) || []),
-  )
+  const periods: string[] = Array.from(new Set(reportCards.map((c) => c.period))).sort();
+  const academicYears: string[] = Array.from(new Set(reportCards.map((c) => c.academicYear)))
     .sort()
-    .reverse() as string[];
+    .reverse();
 
-  const exportToPDF = (reportCard: any) => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const currentDate = new Date().toLocaleDateString('fr-FR');
-
-    // Header
-    doc.setFontSize(20);
-    doc.setTextColor(255, 102, 0);
-    doc.text('BULLETIN SCOLAIRE', 105, 20, { align: 'center' });
-
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Période: ${reportCard.period}`, 20, 35);
-    doc.text(`Année scolaire: ${reportCard.academicYear}`, 20, 42);
-    doc.text(`Date d'émission: ${currentDate}`, 20, 49);
-
-    // Moyenne générale
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Moyenne Générale: ${reportCard.average.toFixed(2)}/20`, 105, 65, { align: 'center' });
-
-    if (reportCard.rank) {
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Rang: ${reportCard.rank}`, 105, 72, { align: 'center' });
+  const exportOfficialPdf = async (reportCard: ReportCardRow) => {
+    setPdfBusyId(reportCard.id);
+    try {
+      const payload = (await parentApi.getChildOfficialReportCard(
+        studentId,
+        reportCard.id,
+      )) as OfficialReportCardResponse;
+      await downloadOfficialReportCardPdf(payload, branding, {
+        navigationLogoAbsolute,
+        loginLogoAbsolute,
+      });
+    } catch (error) {
+      const axiosMessage =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error
+          ? (error as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined;
+      toast.error(axiosMessage || (error instanceof Error ? error.message : 'Téléchargement impossible'));
+    } finally {
+      setPdfBusyId(null);
     }
-
-    // Commentaires
-    if (reportCard.comments) {
-      doc.setFontSize(11);
-      doc.text('Commentaires:', 20, 85);
-      doc.setFontSize(10);
-      const splitComments = doc.splitTextToSize(reportCard.comments, 170);
-      doc.text(splitComments, 20, 92);
-    }
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(`Généré le ${currentDate}`, 105, 280, { align: 'center' });
-
-    doc.save(`bulletin-${reportCard.period}-${reportCard.academicYear}.pdf`);
   };
+
+  const officialCourses = official?.student.allCourses ?? [];
+  const officialAverages = official?.student.courseAverages ?? {};
 
   if (isLoading) {
     return (
@@ -150,8 +149,7 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
         </Card>
       )}
 
-      {/* Filtres */}
-      {reportCards && reportCards.length > 0 && (
+      {reportCards.length > 0 && (
         <Card>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center space-x-2">
@@ -185,20 +183,19 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
         </Card>
       )}
 
-      {/* Liste des bulletins */}
       {filteredReportCards.length === 0 ? (
         <Card>
           <div className="text-center py-12 text-gray-500">
             <FiFileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
             <p className="text-lg mb-2">
-              {reportCards && reportCards.length === 0
+              {reportCards.length === 0
                 ? tuitionBlock?.active
                   ? 'Bulletins non disponibles'
                   : 'Aucun bulletin disponible'
                 : 'Aucun bulletin trouvé avec ces filtres'}
             </p>
             <p className="text-sm">
-              {reportCards && reportCards.length === 0
+              {reportCards.length === 0
                 ? tuitionBlock?.active
                   ? 'Les bulletins des années pour lesquelles la scolarité ou l\'inscription n\'est pas réglée ne sont pas affichés. Consultez l\'encadré ci-dessus et la section Paiements / Frais.'
                   : 'Les bulletins apparaîtront ici une fois générés par l\'administration'
@@ -208,7 +205,7 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredReportCards.map((reportCard: any) => (
+          {filteredReportCards.map((reportCard) => (
             <Card key={reportCard.id} hover>
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
@@ -240,17 +237,17 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
                       {reportCard.average.toFixed(2)}/20
                     </span>
                   </div>
-                  {reportCard.rank && (
+                  {reportCard.rank ? (
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <span className="text-sm text-gray-600">Rang</span>
                       <span className="text-lg font-bold text-gray-900">{reportCard.rank}</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
-                {reportCard.comments && (
+                {reportCard.comments ? (
                   <p className="text-sm text-gray-600 line-clamp-2">{reportCard.comments}</p>
-                )}
+                ) : null}
 
                 {reportCard.parentAcknowledgedAt ? (
                   <p className="text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-1">
@@ -277,7 +274,8 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => exportToPDF(reportCard)}
+                    disabled={pdfBusyId === reportCard.id}
+                    onClick={() => void exportOfficialPdf(reportCard)}
                   >
                     <FiDownload className="w-4 h-4" />
                   </Button>
@@ -288,8 +286,7 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
         </div>
       )}
 
-      {/* Modal de détails */}
-      {showDetailsModal && selectedReportCard && (
+      {showDetailsModal && selectedReportCard ? (
         <Modal
           isOpen={showDetailsModal}
           onClose={() => {
@@ -314,28 +311,61 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
                   {selectedReportCard.average.toFixed(2)}/20
                 </p>
               </div>
-              {selectedReportCard.rank && (
+              {selectedReportCard.rank ? (
                 <div className="p-3 bg-orange-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Rang</p>
                   <p className="text-2xl font-bold text-gray-900">{selectedReportCard.rank}</p>
                 </div>
-              )}
+              ) : null}
             </div>
 
-            {selectedReportCard.comments && (
+            {officialLoading ? (
+              <p className="text-sm text-gray-500">Chargement des matières…</p>
+            ) : officialCourses.length > 0 ? (
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Notes par matière</p>
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {officialCourses.map((course) => {
+                    const avg = officialAverages[course.id]?.average;
+                    return (
+                      <div key={course.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900">{course.name}</p>
+                          {course.teacherName ? (
+                            <p className="text-xs text-gray-500">{course.teacherName}</p>
+                          ) : null}
+                        </div>
+                        <span className="font-bold text-gray-900">
+                          {typeof avg === 'number' ? `${avg.toFixed(2)}/20` : '—'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {official?.student.absences ? (
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <p className="text-gray-600">Absences : <strong>{official.student.absences.total}</strong></p>
+                <p className="text-gray-600">Retards : <strong>{official.student.absences.late}</strong></p>
+              </div>
+            ) : null}
+
+            {selectedReportCard.comments ? (
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">Commentaires</p>
                 <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">
                   {selectedReportCard.comments}
                 </p>
               </div>
-            )}
+            ) : null}
 
-            {selectedReportCard.publishedAt && (
+            {selectedReportCard.publishedAt ? (
               <div className="text-sm text-gray-600">
                 Publié le: {format(new Date(selectedReportCard.publishedAt), 'dd MMMM yyyy', { locale: fr })}
               </div>
-            )}
+            ) : null}
 
             {selectedReportCard.parentAcknowledgedAt ? (
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-900">
@@ -370,20 +400,18 @@ const ChildReportCards = ({ studentId }: ChildReportCardsProps) => {
             <div className="flex justify-end space-x-3 pt-4">
               <Button
                 variant="primary"
-                onClick={() => exportToPDF(selectedReportCard)}
+                disabled={pdfBusyId === selectedReportCard.id}
+                onClick={() => void exportOfficialPdf(selectedReportCard)}
               >
                 <FiDownload className="w-4 h-4 mr-2" />
-                Télécharger PDF
+                Télécharger le bulletin officiel
               </Button>
             </div>
           </div>
         </Modal>
-      )}
+      ) : null}
     </div>
   );
 };
 
 export default ChildReportCards;
-
-
-

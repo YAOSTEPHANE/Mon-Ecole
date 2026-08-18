@@ -127,7 +127,7 @@ export function downloadJobDescriptionPdf(job: JobDescriptionPdfPayload): void {
   if (job.code?.trim()) meta.push(`Code : ${job.code.trim()}`);
   const category = resolveCategoryLabel(job);
   if (category) meta.push(`Catégorie : ${category}`);
-  meta.push(`Statut : ${job.isActive === false ? 'Inactive' : 'Active'}`);
+  meta.push(`Statut : ${job.isActive === false ? 'Désactivée' : 'Activée'}`);
   meta.push(`Édition : ${format(new Date(), 'dd MMMM yyyy', { locale: fr })}`);
 
   doc.setFont('helvetica', 'normal');

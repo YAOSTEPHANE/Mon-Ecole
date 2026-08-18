@@ -1,3 +1,2 @@
-Photographies (Unsplash — licence ouverte) :
-- hero-platform, pillar-*, split-campus, role-* : banque Unsplash, téléchargées pour l’interface « Gestion Scolaire ».
-Conservez ce dossier si vous publiez l’application ; pour crédit visible, voir https://unsplash.com/fr/licence
+Photographies d’ambiance générées pour la vitrine publique (campus, classes, communauté).
+Les établissements peuvent les remplacer depuis Administration → images de la page d’accueil.

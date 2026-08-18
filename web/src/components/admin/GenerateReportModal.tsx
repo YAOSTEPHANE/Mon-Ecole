@@ -146,7 +146,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({ isOpen, onClo
       // Header
       doc.setFontSize(20);
       doc.setTextColor(59, 130, 246);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(100, 100, 100);
       doc.text(`Rapport généré le ${currentDate}`, 14, 28);

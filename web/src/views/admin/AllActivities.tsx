@@ -316,7 +316,7 @@ const AllActivities = () => {
       const headers = ['Type', 'Titre', 'Description', 'Utilisateur', 'Date', 'Adresse IP'];
       const csvContent =
         '\ufeff' +
-        '# School Manager - Toutes les Activités\n' +
+        '# École à jour - Toutes les Activités\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         headers.join(';') +
@@ -352,7 +352,7 @@ const AllActivities = () => {
   const exportToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: filteredActivities.length,
@@ -401,7 +401,7 @@ const AllActivities = () => {
       doc.setTextColor(59, 130, 246);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');

@@ -90,7 +90,7 @@ const StudentScheduleCalendar: React.FC<StudentScheduleCalendarProps> = ({ sched
       doc.setTextColor(139, 92, 246);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');

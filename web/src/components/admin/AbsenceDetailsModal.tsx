@@ -122,7 +122,7 @@ const AbsenceDetailsModal: React.FC<AbsenceDetailsModalProps> = ({
               {absence.student?.class?.name || 'Classe non assignée'}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              ID: {absence.student?.studentId || 'N/A'}
+              N° élève : {absence.student?.studentId || '—'}
             </p>
           </div>
         </div>

@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${jakarta.variable} ${cormorant.variable}`}>
+    <html lang="fr" data-scroll-behavior="smooth" className={`${jakarta.variable} ${cormorant.variable}`}>
       <body className="premium-body premium-body-v2 premium-body-v3 min-h-full font-sans antialiased text-base text-stone-900">
         <Providers>{children}</Providers>
       </body>

@@ -35,6 +35,8 @@ type FneMatriculeVerifyActionsProps = {
 
 type FneOptionsResponse = {
   years: Array<{ value: string; label: string }>;
+  portalYears?: Array<{ value: string; label: string }>;
+  preferredYear?: string | null;
   schools: Array<{ id: string; name: string }>;
   defaultEtablissementId: string | null;
   defaultEtablissementName: string | null;
@@ -73,13 +75,13 @@ export default function FneMatriculeVerifyActions({
   useEffect(() => {
     if (!options) return;
     if (!annee && options.years.length > 0) {
-      const preferred = options.years[options.years.length - 1];
-      if (preferred) setAnnee(preferred.value);
+      const preferred =
+        options.preferredYear ||
+        options.portalYears?.[options.portalYears.length - 1]?.value ||
+        options.years[options.years.length - 1]?.value;
+      if (preferred) setAnnee(preferred);
     }
-    if (!etablissement && options.defaultEtablissementId) {
-      setEtablissement(options.defaultEtablissementId);
-    }
-  }, [options, annee, etablissement]);
+  }, [options, annee]);
 
   const lookupMutation = useMutation({
     mutationFn: () =>
@@ -136,6 +138,9 @@ export default function FneMatriculeVerifyActions({
           <p className="text-[10px] text-stone-600">
             Recherche via le portail officiel SIGFNE (secondaire par défaut pour le collège). Les
             résultats viennent du MENA — cliquez pour remplir le matricule.
+            {options?.portalYears && options.portalYears.length > 0
+              ? ` Fichiers actuellement ouverts sur le portail : ${options.portalYears.map((y) => y.label.replace(/^Fichier\s+/i, '')).join(', ')}.`
+              : ''}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -160,6 +165,7 @@ export default function FneMatriculeVerifyActions({
                 value={annee}
                 onChange={setAnnee}
                 years={options?.years || []}
+                portalYears={options?.portalYears || []}
                 disabled={loadingOptions}
                 inputClassName="mt-1 flex w-full items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-left text-sm disabled:opacity-60"
               />
@@ -209,10 +215,26 @@ export default function FneMatriculeVerifyActions({
             </label>
           </div>
 
-          {options?.defaultEtablissementName && (
+          {options?.defaultEtablissementName && options.defaultEtablissementId && (
             <p className="text-[10px] text-emerald-900/80">
-              Établissement détecté : {options.defaultEtablissementName}
-              {options.defaultEtablissementId ? ` (${options.defaultEtablissementId})` : ''}
+              {etablissement === options.defaultEtablissementId ? (
+                <>
+                  Filtre établissement : {options.defaultEtablissementName} (
+                  {options.defaultEtablissementId}). Retirez-le si aucun résultat.
+                </>
+              ) : (
+                <>
+                  Établissement détecté : {options.defaultEtablissementName} (
+                  {options.defaultEtablissementId}).{' '}
+                  <button
+                    type="button"
+                    className="font-semibold underline-offset-2 hover:underline"
+                    onClick={() => setEtablissement(options.defaultEtablissementId!)}
+                  >
+                    Restreindre
+                  </button>
+                </>
+              )}
             </p>
           )}
 

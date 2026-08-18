@@ -9,4 +9,8 @@ export const colors = {
   danger: '#be123c',
   success: '#047857',
   dark: '#1c1917',
+  navy: '#0018A8',
+  gold: '#EBB02D',
+  dock: '#0c0a09',
+  dockMuted: '#a8a29e',
 };

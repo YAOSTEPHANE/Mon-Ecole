@@ -43,7 +43,7 @@ export function createApp(): express.Express {
   void initObservability();
 
   const apiPrefix = process.env.VERCEL === '1' ? '' : '/api';
-  const healthJson = { status: 'OK', message: 'School Manager API is running' };
+  const healthJson = { status: 'OK', message: 'API École à jour opérationnelle' };
 
   /** Liveness — avant middlewares lourds (diagnostic prod / load balancer). */
   app.get('/health', (_req, res) => res.json(healthJson));

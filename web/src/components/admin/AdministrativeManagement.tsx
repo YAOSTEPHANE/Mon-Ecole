@@ -87,7 +87,7 @@ const AdministrativeManagement = () => {
       const headers = ['ID', 'Nom', 'Prénom', 'Email', 'Téléphone', 'Classe', 'Niveau', 'Année scolaire'];
       const csvContent =
         '\ufeff' + // BOM for UTF-8
-        '# School Manager - Rapport des Élèves\n' +
+        '# École à jour - Rapport des Élèves\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         headers.join(';') +
@@ -124,7 +124,7 @@ const AdministrativeManagement = () => {
   const exportStudentsToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: students?.length || 0,
@@ -175,7 +175,7 @@ const AdministrativeManagement = () => {
       doc.setTextColor(59, 130, 246);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
@@ -226,7 +226,7 @@ const AdministrativeManagement = () => {
       const headers = ['Nom', 'Niveau', 'Année scolaire', 'Nombre d\'élèves', 'Enseignant principal'];
       const csvContent =
         '\ufeff' +
-        '# School Manager - Rapport des Classes\n' +
+        '# École à jour - Rapport des Classes\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         headers.join(';') +
@@ -260,7 +260,7 @@ const AdministrativeManagement = () => {
   const exportClassesToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: classes?.length || 0,
@@ -307,7 +307,7 @@ const AdministrativeManagement = () => {
       doc.setTextColor(139, 92, 246);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
@@ -358,7 +358,7 @@ const AdministrativeManagement = () => {
       const headers = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Spécialité', 'Classes assignées'];
       const csvContent =
         '\ufeff' +
-        '# School Manager - Rapport du Personnel\n' +
+        '# École à jour - Rapport du Personnel\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         headers.join(';') +
@@ -393,7 +393,7 @@ const AdministrativeManagement = () => {
   const exportTeachersToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: teachers?.length || 0,
@@ -439,7 +439,7 @@ const AdministrativeManagement = () => {
       doc.setTextColor(99, 102, 241);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
@@ -488,7 +488,7 @@ const AdministrativeManagement = () => {
     try {
       const csvContent =
         '\ufeff' +
-        '# School Manager - Rapport Global Administratif\n' +
+        '# École à jour - Rapport Global Administratif\n' +
         `# Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}\n` +
         '#\n' +
         '=== RAPPORT GLOBAL ADMINISTRATIF ===\n' +
@@ -545,7 +545,7 @@ const AdministrativeManagement = () => {
   const exportGlobalToJSON = () => {
     try {
       const jsonData = {
-        application: 'School Manager',
+        application: 'École à jour',
         logo: 'SM',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         statistiques: {
@@ -607,7 +607,7 @@ const AdministrativeManagement = () => {
       doc.setTextColor(139, 92, 246);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');

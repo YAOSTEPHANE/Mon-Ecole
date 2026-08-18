@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authorize, type AuthRequest } from '../middleware/auth.middleware';
 import {
   buildPublicApiBase,
   CLEAR_INTEGRATION_VALUE,
@@ -11,8 +11,11 @@ import {
 
 const router = express.Router();
 
-router.use(authenticate);
-router.use(authorize('ADMIN', 'SUPER_ADMIN'));
+/** Ne pas appliquer ADMIN à tout `/admin` : ce router est monté sans préfixe. */
+router.use((req, res, next) => {
+  if (!req.path.startsWith('/integrations/settings')) return next();
+  return authorize('ADMIN', 'SUPER_ADMIN')(req as AuthRequest, res, next);
+});
 
 function parseOptionalString(value: unknown): string | null | undefined {
   if (value === undefined) return undefined;

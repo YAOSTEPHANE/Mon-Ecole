@@ -21,10 +21,10 @@ const Input: React.FC<InputProps> = ({ label, error, icon, className = '', ...pr
           </div>
         )}
         <input
-          className={`w-full rounded-xl border bg-white/95 px-4 py-3 text-stone-900 shadow-sm placeholder:text-stone-400 transition-all duration-200 ease-premium focus:outline-none focus:ring-2 focus:ring-cptb-gold/40 focus:ring-offset-2 focus:ring-offset-white hover:border-cptb-gold/40 ${
+          className={`w-full rounded-xl border bg-white px-4 py-3 text-stone-900 shadow-[inset_0_1px_2px_rgba(28,39,76,0.04)] placeholder:text-stone-400 transition-all duration-200 ease-premium focus:outline-none focus:ring-2 focus:ring-[#0018A8]/20 focus:ring-offset-2 focus:ring-offset-white hover:border-[#cfd7ea] ${
             error
               ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30'
-              : 'border-stone-200/90 focus:border-cptb-gold/55'
+              : 'border-[#e4e8f2] focus:border-[#0018A8]/45'
           } ${icon ? 'pl-10' : ''} ${className}`}
           {...props}
         />

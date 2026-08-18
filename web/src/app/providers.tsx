@@ -15,7 +15,6 @@ import OfflineBanner from "@/components/OfflineBanner";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
 import { ensureStaffPedagogyApiInterceptor } from "@/lib/staffPedagogyApi";
 import { isOffline } from "@/lib/offline-api";
-import "@/utils/debug";
 import PublicVisitorBootstrap from "@/components/public/PublicVisitorBootstrap";
 
 const PushNotificationsBootstrap = dynamic(
@@ -48,6 +47,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
             networkMode: "offlineFirst",
             retry: (failureCount, error) => {
               if (typeof window !== "undefined" && isOffline()) return false;
+              const status =
+                error && typeof error === "object" && "response" in error
+                  ? Number((error as { response?: { status?: number } }).response?.status)
+                  : NaN;
+              if (status === 401 || status === 403 || status === 404) return false;
               const code =
                 error && typeof error === "object" && "code" in error
                   ? String((error as { code?: string }).code)
@@ -86,9 +90,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
               toastOptions={{
                 duration: 4200,
                 className:
-                  "!font-sans !bg-white/95 !backdrop-blur-xl !border !border-stone-200/85 !shadow-[0_24px_48px_-16px_rgba(12,10,9,0.14)] !rounded-2xl !text-stone-900 !px-4 !py-3.5 !ring-1 !ring-amber-900/8",
+                  "!font-sans !bg-white/96 !backdrop-blur-xl !border !border-[#e4e8f2] !shadow-[0_24px_48px_-16px_rgba(28,39,76,0.22)] !rounded-2xl !text-stone-900 !px-4 !py-3.5 !ring-1 !ring-[#0018A8]/8",
                 success: {
-                  iconTheme: { primary: "#b45309", secondary: "#fff" },
+                  iconTheme: { primary: "#0018A8", secondary: "#fff" },
                 },
                 error: {
                   iconTheme: { primary: "#be123c", secondary: "#fff" },

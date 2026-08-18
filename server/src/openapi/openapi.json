@@ -9,8 +9,8 @@
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health check",
-        "responses": { "200": { "description": "OK" } }
+        "summary": "Contrôle de santé",
+        "responses": { "200": { "description": "Service opérationnel" } }
       }
     },
     "/payments/webhooks/mobile-money": {
@@ -51,7 +51,7 @@
     },
     "/payments/webhooks/cinetpay": {
       "post": {
-        "summary": "Webhook CinetPay notify_url",
+        "summary": "Webhook CinetPay (URL de notification)",
         "responses": { "200": { "description": "Traité" } }
       }
     },
@@ -65,7 +65,7 @@
       "get": {
         "summary": "État des connecteurs paiement",
         "security": [{ "bearerAuth": [] }],
-        "responses": { "200": { "description": "Liste providers" } }
+        "responses": { "200": { "description": "Liste des prestataires" } }
       }
     },
     "/admin/campus/transport/routes/{id}/tracking": {
@@ -75,7 +75,7 @@
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
-        "responses": { "200": { "description": "Tracking" } }
+        "responses": { "200": { "description": "Suivi GPS" } }
       },
       "post": {
         "summary": "Enregistrer un ping GPS",
@@ -90,14 +90,14 @@
       "get": {
         "summary": "Prévision encaissements (régression linéaire)",
         "security": [{ "bearerAuth": [] }],
-        "responses": { "200": { "description": "Historique + forecast" } }
+        "responses": { "200": { "description": "Historique et prévision" } }
       }
     },
     "/admin/schedule/optimize": {
       "post": {
         "summary": "Optimiser un créneau EDT",
         "security": [{ "bearerAuth": [] }],
-        "responses": { "200": { "description": "Meilleur créneau scoré" } }
+        "responses": { "200": { "description": "Meilleur créneau noté" } }
       }
     }
   },

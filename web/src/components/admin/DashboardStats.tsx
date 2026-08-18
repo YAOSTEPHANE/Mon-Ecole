@@ -138,7 +138,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
   const totalStudents = stats?.totalStudents ?? 0;
   const totalStaff = (stats?.totalTeachers ?? 0) + (stats?.totalEducators ?? 0);
 
-  if (isLoading) {
+  if (isLoading || !schoolReady) {
     return (
       <div className="space-y-4">
         <div className="h-16 bg-gray-100 rounded-lg animate-pulse" />

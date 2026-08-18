@@ -29,14 +29,14 @@ const Avatar: React.FC<AvatarProps> = ({ src, name, size = 'md', className = '' 
       <img
         src={src}
         alt={name || 'Avatar'}
-        className={`${sizes[size]} rounded-full object-cover border-2 border-white shadow-md ${className}`}
+        className={`${sizes[size]} rounded-full object-cover ring-2 ring-white shadow-[0_8px_18px_-10px_rgba(28,39,76,0.45)] ${className}`}
       />
     );
   }
 
   return (
     <div
-      className={`${sizes[size]} rounded-full bg-gradient-to-br from-[#0018A8] via-[#001270] to-[#07081a] flex items-center justify-center text-amber-50 font-semibold shadow-md ring-1 ring-cptb-gold/35 ${className}`}
+      className={`${sizes[size]} rounded-full bg-gradient-to-br from-[#0018A8] via-[#001270] to-[#07081a] flex items-center justify-center text-amber-50 font-semibold shadow-[0_8px_18px_-10px_rgba(0,24,168,0.55)] ring-2 ring-white ${className}`}
     >
       {name ? getInitials(name) : '?'}
     </div>

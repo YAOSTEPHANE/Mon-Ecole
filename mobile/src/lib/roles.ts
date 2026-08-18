@@ -46,3 +46,23 @@ export function canUseAssistant(role: string): boolean {
     normalizeRole(role),
   );
 }
+
+export function canTakeAttendance(role: string): boolean {
+  return ['TEACHER', 'EDUCATOR'].includes(normalizeRole(role));
+}
+
+export function canViewAcademics(role: string): boolean {
+  return ['STUDENT', 'PARENT'].includes(normalizeRole(role));
+}
+
+export function canViewAdminOps(role: string): boolean {
+  return ['ADMIN', 'SUPER_ADMIN'].includes(normalizeRole(role));
+}
+
+export function canViewStaffOps(role: string): boolean {
+  return normalizeRole(role) === 'STAFF';
+}
+
+export function canViewParentOps(role: string): boolean {
+  return normalizeRole(role) === 'PARENT';
+}

@@ -36,17 +36,17 @@ function Table<T extends { id?: string }>({
   dense = false,
 }: TableProps<T>) {
   const thClass = dense
-    ? 'px-4 py-2.5 text-left text-[10px] font-semibold text-amber-50/90 uppercase tracking-[0.14em]'
-    : 'px-6 py-3.5 text-left text-xs font-semibold text-amber-50 uppercase tracking-[0.12em]';
+    ? 'px-4 py-2.5 text-left text-[10px] font-semibold text-stone-500 uppercase tracking-[0.14em]'
+    : 'px-6 py-3.5 text-left text-xs font-semibold text-stone-500 uppercase tracking-[0.12em]';
   const tdClass = dense
     ? 'px-4 py-2 whitespace-nowrap text-xs text-stone-800'
     : 'px-6 py-4 whitespace-nowrap text-sm text-stone-800';
   const emptyTdClass = dense ? 'px-4 py-6 text-center text-stone-500 text-xs' : 'px-6 py-8 text-center text-stone-500';
 
   return (
-    <div className="overflow-x-auto rounded-2xl shadow-dash-card ring-1 ring-stone-200/70">
-      <table className="min-w-full divide-y divide-stone-200/70">
-        <thead className="border-b border-cptb-gold/25 bg-gradient-to-r from-[#0a0f2e] via-[#001270] to-stone-950">
+    <div className="premium-surface overflow-x-auto">
+      <table className="min-w-full divide-y divide-[#e4e8f2]">
+        <thead className="border-b border-[#e4e8f2] bg-[#f7f8fc]">
           <tr>
             {columns.map((column) => (
               <th key={column.key} className={thClass}>
@@ -55,7 +55,7 @@ function Table<T extends { id?: string }>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-stone-100/90 bg-white/96">
+        <tbody className="divide-y divide-[#e4e8f2] bg-white">
           {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className={emptyTdClass}>
@@ -67,8 +67,8 @@ function Table<T extends { id?: string }>({
               <tr
                 key={item.id || index}
                 onClick={() => onRowClick?.(item)}
-                className={`transition-colors duration-200 hover:bg-amber-50/50 ${onRowClick ? 'cursor-pointer' : ''} ${
-                  index % 2 === 1 ? 'bg-stone-50/60' : ''
+                className={`transition-colors duration-200 hover:bg-[#eef2ff]/70 ${onRowClick ? 'cursor-pointer' : ''} ${
+                  index % 2 === 1 ? 'bg-[#f8f9fd]' : ''
                 }`}
               >
                 {columns.map((column) => (

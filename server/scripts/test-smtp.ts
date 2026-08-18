@@ -16,7 +16,7 @@ async function main() {
   const from = process.env.EMAIL_FROM?.trim() || user;
   const testTo = process.env.SMTP_TEST_TO?.trim() || user;
 
-  console.log('=== Test SMTP School Manager ===\n');
+  console.log('=== Test SMTP École à jour ===\n');
   console.log(`NODE_ENV: ${process.env.NODE_ENV ?? '(non défini)'}`);
   console.log(`isSmtpConfigured(): ${isSmtpConfigured()}`);
   console.log(`SMTP_HOST: ${host || '(vide)'}`);
@@ -52,7 +52,7 @@ async function main() {
     process.exit(0);
   }
 
-  const subject = `[Test SMTP] School Manager — ${new Date().toISOString()}`;
+  const subject = `[Test SMTP] École à jour — ${new Date().toISOString()}`;
   const text = 'Ceci est un e-mail de test depuis scripts/test-smtp.ts. Si vous le recevez, le SMTP fonctionne.';
   const html = `<p>${text}</p><p><small>${new Date().toLocaleString('fr-FR')}</small></p>`;
 

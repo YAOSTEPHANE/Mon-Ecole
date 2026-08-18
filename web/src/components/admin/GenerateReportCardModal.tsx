@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/api';
 import Modal from '../ui/Modal';
@@ -10,6 +10,8 @@ import { useAppBranding } from '@/contexts/AppBrandingContext';
 import {
   generateSchoolReportCardPdf,
   SCHOOL_REPORT_CARD_DEFAULT_BRANDING,
+  REPORT_CARD_DISTINCTION_OPTIONS,
+  REPORT_CARD_SANCTION_OPTIONS,
 } from '@/lib/schoolReportCardPdf';
 import { getCurrentAcademicYear, getCurrentTrimester } from '@/lib/academicCalendar';
 import { resolveUploadFetchUrl } from '@/lib/uploadsPublicUrl';
@@ -50,6 +52,9 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
   const [isGenerating, setIsGenerating] = useState(false);
   /** Après génération PDF : enregistrer en base et rendre visible aux élèves / familles */
   const [publishAfterSave, setPublishAfterSave] = useState(false);
+  const [mentionsByStudent, setMentionsByStudent] = useState<
+    Record<string, { distinction: string; sanctions: string[] }>
+  >({});
 
   // Fetch classes
   const { data: classes } = useQuery({
@@ -70,6 +75,21 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
   });
 
   const reportCardStudents = reportCardPayload?.students ?? [];
+
+  useEffect(() => {
+    const students = reportCardPayload?.students as
+      | Array<{ studentId: string; distinctions?: string[]; sanctions?: string[] }>
+      | undefined;
+    if (!students) return;
+    const next: Record<string, { distinction: string; sanctions: string[] }> = {};
+    for (const student of students) {
+      next[student.studentId] = {
+        distinction: student.distinctions?.[0] ?? '',
+        sanctions: student.sanctions ?? [],
+      };
+    }
+    setMentionsByStudent(next);
+  }, [reportCardPayload]);
 
   const pdfBranding = useMemo(
     () => ({
@@ -112,8 +132,18 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
 
       // Generate PDF for each student
       for (const studentData of reportCardPayload.students) {
+        const row = studentData as {
+          studentId: string;
+          distinctions?: string[];
+          sanctions?: string[];
+        };
+        const draft = mentionsByStudent[row.studentId];
         await generateSchoolReportCardPdf(
-          studentData as Parameters<typeof generateSchoolReportCardPdf>[0],
+          {
+            ...(studentData as Parameters<typeof generateSchoolReportCardPdf>[0]),
+            distinctions: draft?.distinction ? [draft.distinction] : [],
+            sanctions: draft?.sanctions ?? [],
+          },
           {
             periodLabel,
             periodKey: selectedPeriod,
@@ -121,6 +151,39 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
             branding: pdfBranding,
           },
         );
+      }
+
+      try {
+        const councils = (await adminApi.getClassCouncils({
+          classId: selectedClass,
+          period: selectedPeriod,
+          academicYear: selectedAcademicYear,
+        })) as Array<{ id: string }>;
+        let councilId = councils[0]?.id;
+        if (!councilId) {
+          const created = (await adminApi.createClassCouncil({
+            classId: selectedClass,
+            period: selectedPeriod,
+            academicYear: selectedAcademicYear,
+            meetingDate: new Date().toISOString(),
+            title: `Mentions bulletins — ${periodLabel}`,
+          })) as { id: string };
+          councilId = created.id;
+        }
+        await adminApi.updateClassCouncilOpinions(
+          councilId,
+          reportCardPayload.students.map((studentData: { studentId: string }) => {
+            const draft = mentionsByStudent[studentData.studentId];
+            return {
+              studentId: studentData.studentId,
+              councilDecision: draft?.distinction || (draft?.sanctions?.[0] ?? ''),
+              distinctions: draft?.distinction ? [draft.distinction] : [],
+              sanctions: draft?.sanctions ?? [],
+            };
+          }),
+        );
+      } catch (mentionError) {
+        console.error('Enregistrement des mentions bulletin:', mentionError);
       }
 
       let saveResult: { message?: string; skippedPending?: number } | null = null;
@@ -223,6 +286,7 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
     setSelectedPeriod(getCurrentTrimester());
     setSelectedAcademicYear(getCurrentAcademicYear());
     setPublishAfterSave(false);
+    setMentionsByStudent({});
     onClose();
   };
 
@@ -258,7 +322,9 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
                 Sélectionnez une classe, une période et une année scolaire. Le PDF reprend le modèle officiel
                 Bulletin scolaire (colonnes Trim. 1–3, bilans lettres/sciences, résumé, distinctions, signatures).
                 Pour le <strong>3e trimestre</strong>, les moyennes et rangs des trimestres précédents sont
-                inclus automatiquement. L’enregistrement des moyennes en base passe par le{' '}
+                inclus automatiquement. Cochez les <strong>mentions du conseil de classe</strong> (distinctions
+                et sanctions) pour chaque élève avant de générer : elles apparaissent comme cases cochées sur
+                le PDF. L’enregistrement des moyennes en base passe par le{' '}
                 <strong>circuit de validation</strong> (prof. principal → éducateur → directeur des
                 études). La publication aux familles intervient après approbation.
               </p>
@@ -339,6 +405,90 @@ const GenerateReportCardModal: React.FC<GenerateReportCardModalProps> = ({ isOpe
                 Classe: {classes.find((c: any) => c.id === selectedClass)?.name}
               </p>
             )}
+          </div>
+        )}
+
+        {reportCardStudents.length > 0 && (
+          <div className="border border-gray-200 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-1">Mentions du conseil de classe</h3>
+            <p className="text-xs text-gray-600 mb-3">
+              Une distinction par élève, sanctions cumulables. Prérempli depuis le conseil de classe et le
+              dossier disciplinaire s’ils existent.
+            </p>
+            <div className="max-h-64 overflow-auto space-y-3">
+              {reportCardStudents.map((student: {
+                studentId: string;
+                user?: { firstName?: string; lastName?: string };
+                average?: number;
+              }) => {
+                const draft = mentionsByStudent[student.studentId] ?? { distinction: '', sanctions: [] };
+                const name = `${student.user?.lastName ?? ''} ${student.user?.firstName ?? ''}`.trim() || 'Élève';
+                return (
+                  <div key={student.studentId} className="rounded-lg bg-gray-50 p-3 text-sm">
+                    <div className="flex items-baseline justify-between gap-2 mb-2">
+                      <p className="font-semibold text-gray-900">{name}</p>
+                      {typeof student.average === 'number' ? (
+                        <span className="text-xs text-gray-500">{student.average.toFixed(2)}/20</span>
+                      ) : null}
+                    </div>
+                    <p className="text-[11px] font-medium text-gray-500 mb-1">Distinctions</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2">
+                      <label className="inline-flex items-center gap-1 text-xs">
+                        <input
+                          type="radio"
+                          name={`distinction-${student.studentId}`}
+                          checked={!draft.distinction}
+                          onChange={() =>
+                            setMentionsByStudent((prev) => ({
+                              ...prev,
+                              [student.studentId]: { ...draft, distinction: '' },
+                            }))
+                          }
+                        />
+                        Aucune
+                      </label>
+                      {REPORT_CARD_DISTINCTION_OPTIONS.map((label) => (
+                        <label key={label} className="inline-flex items-center gap-1 text-xs">
+                          <input
+                            type="radio"
+                            name={`distinction-${student.studentId}`}
+                            checked={draft.distinction === label}
+                            onChange={() =>
+                              setMentionsByStudent((prev) => ({
+                                ...prev,
+                                [student.studentId]: { ...draft, distinction: label },
+                              }))
+                            }
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-[11px] font-medium text-gray-500 mb-1">Sanctions</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                      {REPORT_CARD_SANCTION_OPTIONS.map((label) => (
+                        <label key={label} className="inline-flex items-center gap-1 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={draft.sanctions.includes(label)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...draft.sanctions, label]
+                                : draft.sanctions.filter((item) => item !== label);
+                              setMentionsByStudent((prev) => ({
+                                ...prev,
+                                [student.studentId]: { ...draft, sanctions: next },
+                              }));
+                            }}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

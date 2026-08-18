@@ -155,10 +155,10 @@ const Login = () => {
       <div className="w-full max-w-md relative z-10">
         <div className="relative">
           {/* Glow effect derrière la carte */}
-          <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-r from-cptb-blue/25 via-cptb-gold/30 to-amber-500/30 opacity-45 blur-3xl" aria-hidden />
+          <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-r from-cptb-blue/20 via-cptb-gold/25 to-amber-400/20 opacity-50 blur-3xl" aria-hidden />
           
           {/* Carte principale */}
-          <div className="premium-card-surface relative rounded-[1.5rem] border border-white/85 p-5 shadow-premium ring-1 ring-cptb-gold/15 sm:rounded-[1.75rem] sm:p-8 lg:p-10 animate-dash-enter">
+          <div className="premium-surface relative border-white/85 p-5 shadow-premium sm:rounded-[1.75rem] sm:p-8 lg:p-10 animate-dash-enter">
             {/* Logo */}
             <div className="text-center mb-8">
               <div className="relative inline-block mb-4">
@@ -207,7 +207,7 @@ const Login = () => {
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <FiMail className={`w-5 h-5 transition-colors ${email ? 'text-amber-700' : 'text-stone-400'}`} aria-hidden />
+                      <FiMail className={`w-5 h-5 transition-colors ${email ? 'text-[#0018A8]' : 'text-stone-400'}`} aria-hidden />
                     </div>
                     <input
                       id="login-email"
@@ -219,7 +219,7 @@ const Login = () => {
                       placeholder="email@exemple.com ou matricule"
                       autoFocus
                       autoComplete="username"
-                      className="w-full pl-12 pr-4 py-4 bg-white/90 border-2 border-stone-200 rounded-xl shadow-sm transition-all duration-200 text-stone-900 placeholder:text-stone-400 hover:border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
+                      className="w-full pl-12 pr-4 py-4 bg-white border border-[#e4e8f2] rounded-xl shadow-[inset_0_1px_2px_rgba(28,39,76,0.04)] transition-all duration-200 text-stone-900 placeholder:text-stone-400 hover:border-[#cfd7ea] focus:outline-none focus:ring-2 focus:ring-[#0018A8]/18 focus:border-[#0018A8]/40"
                     />
                   </div>
                   <p className="text-xs text-stone-500">
@@ -255,7 +255,7 @@ const Login = () => {
                         <button
                           type="button"
                           onClick={() => startOAuth('google')}
-                          className="w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-300 hover:bg-stone-50"
+                          className="w-full rounded-full border border-[#e4e8f2] bg-white px-4 py-3 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-[#cfd7ea] hover:bg-[#f7f8fc]"
                         >
                           Google
                         </button>
@@ -264,7 +264,7 @@ const Login = () => {
                         <button
                           type="button"
                           onClick={() => startOAuth('microsoft')}
-                          className="w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-300 hover:bg-stone-50"
+                          className="w-full rounded-full border border-[#e4e8f2] bg-white px-4 py-3 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-[#cfd7ea] hover:bg-[#f7f8fc]"
                         >
                           Microsoft
                         </button>
@@ -280,7 +280,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={handleBackToEmail}
-                  className="text-sm font-medium text-amber-900/90 hover:text-stone-900 transition-colors flex items-center gap-1.5 mb-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 px-1 -ml-1"
+                  className="text-sm font-medium text-[#0018A8] hover:text-[#001066] transition-colors flex items-center gap-1.5 mb-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0018A8]/35 px-1 -ml-1"
                 >
                   <FiArrowRight className="w-4 h-4 rotate-180 shrink-0" aria-hidden />
                   Changer d&apos;email
@@ -289,7 +289,7 @@ const Login = () => {
                 {/* Email affiché (non éditable) */}
                 <div className="space-y-2">
                   <span className="block text-sm font-semibold text-stone-800">
-                    Adresse email
+                    Adresse e-mail
                   </span>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -316,7 +316,7 @@ const Login = () => {
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <FiLock className={`w-5 h-5 transition-colors ${password ? 'text-amber-700' : 'text-stone-400'}`} aria-hidden />
+                      <FiLock className={`w-5 h-5 transition-colors ${password ? 'text-[#0018A8]' : 'text-stone-400'}`} aria-hidden />
                     </div>
                     <input
                       id="login-password"
@@ -327,12 +327,12 @@ const Login = () => {
                       placeholder="Entrez votre mot de passe"
                       autoFocus
                       autoComplete="current-password"
-                      className="w-full pl-12 pr-12 py-4 bg-white/90 border-2 border-stone-200 rounded-xl shadow-sm transition-all duration-200 text-stone-900 placeholder:text-stone-400 hover:border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
+                      className="w-full pl-12 pr-12 py-4 bg-white border border-[#e4e8f2] rounded-xl shadow-[inset_0_1px_2px_rgba(28,39,76,0.04)] transition-all duration-200 text-stone-900 placeholder:text-stone-400 hover:border-[#cfd7ea] focus:outline-none focus:ring-2 focus:ring-[#0018A8]/18 focus:border-[#0018A8]/40"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute inset-y-0 right-0 z-10 flex items-center pr-3 pl-2 text-stone-500 hover:text-amber-900 hover:bg-stone-100/80 rounded-r-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                      className="absolute inset-y-0 right-0 z-10 flex items-center pr-3 pl-2 text-stone-500 hover:text-[#0018A8] hover:bg-stone-100/80 rounded-r-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0018A8]/35"
                       aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                       title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     >
@@ -359,7 +359,7 @@ const Login = () => {
                       value={twoFactorCode}
                       onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
                       placeholder="123456"
-                      className="w-full px-4 py-4 bg-white/90 border-2 border-stone-200 rounded-xl shadow-sm transition-all duration-200 text-stone-900 placeholder:text-stone-400 hover:border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/60"
+                      className="w-full px-4 py-4 bg-white border border-[#e4e8f2] rounded-xl shadow-[inset_0_1px_2px_rgba(28,39,76,0.04)] transition-all duration-200 text-stone-900 placeholder:text-stone-400 hover:border-[#cfd7ea] focus:outline-none focus:ring-2 focus:ring-[#0018A8]/18 focus:border-[#0018A8]/40"
                     />
                   </div>
                 )}
@@ -371,7 +371,7 @@ const Login = () => {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-5 h-5 rounded border-stone-300 text-amber-700 focus:ring-amber-500/50 cursor-pointer bg-white"
+                      className="w-5 h-5 rounded border-stone-300 text-[#0018A8] focus:ring-[#0018A8]/40 cursor-pointer bg-white"
                     />
                     <span className="ml-3 text-sm font-medium text-stone-700 group-hover:text-stone-900 transition-colors">
                       Se souvenir de moi

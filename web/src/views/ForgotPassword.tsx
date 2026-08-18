@@ -43,7 +43,7 @@ const ForgotPassword = () => {
             aria-hidden
           />
 
-          <div className="relative premium-card-surface rounded-[1.5rem] sm:rounded-[1.75rem] p-5 sm:p-8 lg:p-10 border border-white/80 shadow-premium ring-1 ring-amber-900/10">
+          <div className="premium-surface relative p-5 shadow-premium sm:rounded-[1.75rem] sm:p-8 lg:p-10">
             <Link
               href="/login"
               className="inline-flex items-center gap-2 text-sm font-medium text-amber-900/90 hover:text-stone-900 mb-6 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 px-1 -ml-1"

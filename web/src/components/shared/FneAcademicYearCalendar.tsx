@@ -46,6 +46,8 @@ type FneAcademicYearCalendarProps = {
   value: string;
   onChange: (fneCode: string) => void;
   years?: FneYearOption[];
+  /** Années réellement proposées par SIGFNE (surlignées dans le calendrier). */
+  portalYears?: FneYearOption[];
   disabled?: boolean;
   className?: string;
   inputClassName?: string;
@@ -59,11 +61,16 @@ export default function FneAcademicYearCalendar({
   value,
   onChange,
   years = [],
+  portalYears = [],
   disabled = false,
   className = '',
   inputClassName = '',
 }: FneAcademicYearCalendarProps) {
   const { min, max } = useMemo(() => rangeFromOptions(years), [years]);
+  const portalCodes = useMemo(
+    () => new Set(portalYears.map((y) => y.value)),
+    [portalYears]
+  );
   const selectedStart = fneCodeToAcademicStartYear(value);
   const [open, setOpen] = useState(false);
   const [decadeStart, setDecadeStart] = useState(() => {
@@ -159,6 +166,7 @@ export default function FneAcademicYearCalendar({
             {cells.map((y) => {
               const inRange = y >= min && y <= max;
               const active = selectedStart === y;
+              const onPortal = portalCodes.has(academicStartYearToFneCode(y));
               return (
                 <button
                   key={y}
@@ -171,9 +179,11 @@ export default function FneAcademicYearCalendar({
                   className={`rounded-xl px-2 py-2 text-sm font-semibold transition ${
                     active
                       ? 'bg-cptb-blue text-white shadow-sm'
-                      : inRange
-                        ? 'text-stone-800 hover:bg-stone-100'
-                        : 'cursor-not-allowed text-stone-300'
+                      : onPortal
+                        ? 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100'
+                        : inRange
+                          ? 'text-stone-800 hover:bg-stone-100'
+                          : 'cursor-not-allowed text-stone-300'
                   }`}
                 >
                   {y}
@@ -184,6 +194,9 @@ export default function FneAcademicYearCalendar({
 
           <p className="mt-2 text-[10px] leading-snug text-stone-500">
             Année choisie = début du fichier scolaire (ex. 1990 → fichier 1990-1991).
+            {portalYears.length > 0
+              ? ' Les années en vert sont celles actuellement ouvertes sur le portail public SIGFNE.'
+              : ''}
           </p>
         </div>
       )}

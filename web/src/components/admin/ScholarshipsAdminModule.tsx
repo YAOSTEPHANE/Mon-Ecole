@@ -286,7 +286,7 @@ export default function ScholarshipsAdminModule() {
                             : 'bg-stone-100 text-stone-500'
                         }`}
                       >
-                        {row.isActive !== false ? 'Active' : 'Inactive'}
+                        {row.isActive !== false ? 'Activée' : 'Désactivée'}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-right">

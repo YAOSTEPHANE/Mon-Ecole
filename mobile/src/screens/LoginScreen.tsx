@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const { login, acceptSession } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -69,17 +71,17 @@ export default function LoginScreen() {
       const error = url.searchParams.get('error');
       const code = url.searchParams.get('code');
       if (error) {
-        Alert.alert('SSO', error);
+        Alert.alert('Connexion unique', error);
         return;
       }
       if (!code) {
-        Alert.alert('SSO', 'Code manquant');
+        Alert.alert('Connexion unique', 'Code manquant');
         return;
       }
       const { token } = await authApi.exchangeOAuthCode(code);
       await acceptSession(token);
     } catch (e: unknown) {
-      Alert.alert('SSO', e instanceof Error ? e.message : 'Échec SSO');
+      Alert.alert('Connexion unique', e instanceof Error ? e.message : 'Échec de la connexion unique');
     }
   };
 
@@ -88,11 +90,14 @@ export default function LoginScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.card}>
+      <View style={styles.hero}>
+        <View style={styles.goldLine} />
         <Text style={styles.brand}>École à jour</Text>
         <Text style={styles.title}>Connexion</Text>
         <Text style={styles.sub}>Espace mobile enseignants, parents et élèves</Text>
+      </View>
 
+      <View style={styles.card}>
         <Text style={styles.label}>E-mail</Text>
         <TextInput
           style={styles.input}
@@ -106,15 +111,32 @@ export default function LoginScreen() {
         />
 
         <Text style={styles.label}>Mot de passe</Text>
-        <TextInput
-          style={styles.input}
-          secureTextEntry
-          autoComplete="password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          placeholderTextColor={colors.muted}
-        />
+        <View style={styles.passwordWrap}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            secureTextEntry={!showPassword}
+            autoComplete="password"
+            textContentType="password"
+            autoCorrect={false}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="••••••••"
+            placeholderTextColor={colors.muted}
+          />
+          <Pressable
+            style={styles.passwordToggle}
+            onPress={() => setShowPassword((visible) => !visible)}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={22}
+              color={colors.gold}
+            />
+          </Pressable>
+        </View>
 
         {twoFactorRequired ? (
           <>
@@ -137,7 +159,7 @@ export default function LoginScreen() {
           disabled={loading || !email || !password}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.gold} />
           ) : (
             <Text style={styles.btnText}>Se connecter</Text>
           )}
@@ -168,33 +190,44 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.dock,
     justifyContent: 'center',
     padding: 20,
   },
+  hero: {
+    marginBottom: 18,
+    paddingHorizontal: 4,
+  },
+  goldLine: {
+    width: 42,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.gold,
+    marginBottom: 14,
+  },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 22,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(235,176,45,0.28)',
   },
   brand: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.accent,
-    letterSpacing: 0.4,
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.gold,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
     marginBottom: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
-    color: colors.ink,
+    color: '#fffdf9',
   },
   sub: {
-    marginTop: 6,
-    marginBottom: 20,
-    color: colors.muted,
+    marginTop: 8,
+    color: colors.dockMuted,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -215,15 +248,34 @@ const styles = StyleSheet.create({
     color: colors.ink,
     backgroundColor: '#fff',
   },
+  passwordWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 4,
+    top: 0,
+    bottom: 0,
+    width: 44,
+    zIndex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   btn: {
     marginTop: 22,
-    backgroundColor: colors.dark,
+    backgroundColor: colors.dock,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(235,176,45,0.35)',
   },
   btnDisabled: { opacity: 0.55 },
-  btnText: { color: '#fef3c7', fontWeight: '700', fontSize: 16 },
+  btnText: { color: colors.gold, fontWeight: '800', fontSize: 16 },
   oauthBlock: { marginTop: 18, gap: 8 },
   or: {
     textAlign: 'center',

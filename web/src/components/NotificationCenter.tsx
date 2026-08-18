@@ -36,11 +36,13 @@ interface NotificationCenterProps {
   role: NotificationRole;
   /** Pour ADMIN : filtre les notifications sur l’utilisateur connecté */
   currentUserId?: string | null;
+  variant?: "default" | "ghost";
 }
 
 export default function NotificationCenter({
   role,
   currentUserId,
+  variant = "default",
 }: NotificationCenterProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -157,7 +159,11 @@ export default function NotificationCenter({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-300/70 bg-white/85 text-stone-700 shadow-sm backdrop-blur-sm transition hover:bg-amber-50/50 hover:border-amber-300/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2"
+        className={
+          variant === "ghost"
+            ? "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+            : "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-300/70 bg-white/85 text-stone-700 shadow-sm backdrop-blur-sm transition hover:bg-amber-50/50 hover:border-amber-300/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2"
+        }
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label="Notifications"
@@ -181,7 +187,7 @@ export default function NotificationCenter({
           <div
             role="dialog"
             aria-label="Centre de notifications"
-            className="absolute right-0 z-[60] mt-2 w-[min(calc(100vw-1.5rem),22rem)] overflow-hidden rounded-2xl border border-stone-200/90 bg-white/98 shadow-lux-soft backdrop-blur-xl ring-1 ring-amber-900/5 animate-fade-in"
+            className="premium-surface absolute right-0 z-[60] mt-2 w-[min(calc(100vw-1.5rem),22rem)] bg-white/98 shadow-lux-soft backdrop-blur-xl animate-fade-in"
           >
             <div className="flex items-center justify-between border-b border-stone-200/70 px-4 py-3 bg-gradient-to-r from-amber-50/90 to-stone-50/80">
               <p className="text-sm font-bold text-stone-900">Notifications</p>

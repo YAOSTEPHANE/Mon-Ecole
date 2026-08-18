@@ -6,7 +6,7 @@ import { FiAward } from 'react-icons/fi';
 import { useAppBranding } from '@/contexts/AppBrandingContext';
 import { resolveDirectorMessageContent } from '@/lib/homeDirectorMessage';
 
-const DEFAULT_DIRECTOR_PHOTO = '/home/directrice-etudes.png';
+const DEFAULT_DIRECTOR_PHOTO = '/home/directrice-etudes.jpg';
 
 export default function HomeDirectorSection() {
   const { branding, studiesDirectorPhotoAbsolute } = useAppBranding();

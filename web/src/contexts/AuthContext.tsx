@@ -62,6 +62,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TRANSIENT_SESSION_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
+function isTransientSessionError(error: unknown): boolean {
+  const err = error as { response?: { status?: number }; code?: string; message?: string };
+  const status = err.response?.status;
+  if (typeof status === 'number' && TRANSIENT_SESSION_STATUSES.has(status)) return true;
+  return (
+    err.code === 'ERR_NETWORK' ||
+    err.code === 'ECONNREFUSED' ||
+    err.code === 'ECONNABORTED' ||
+    err.code === 'ETIMEDOUT' ||
+    err.message === 'Network Error'
+  );
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -107,10 +122,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
     applyDocumentTheme(uiPreferences.theme);
-    document.documentElement.lang = uiPreferences.language;
-  }, [user, uiPreferences.theme, uiPreferences.language]);
+    document.documentElement.lang = 'fr';
+  }, [user, uiPreferences.theme]);
 
-  const fetchUser = async () => {
+  const fetchUser = async (attempt = 0) => {
     try {
       const userData = await authApi.getMe();
       if (userData) {
@@ -122,16 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await saveUserSnapshot(u);
       }
     } catch (error: unknown) {
-      const err = error as {
-        response?: { status?: number };
-        code?: string;
-        message?: string;
-      };
+      const err = error as { response?: { status?: number } };
       const status = err.response?.status;
-      const network =
-        err.code === 'ERR_NETWORK' ||
-        err.code === 'ECONNREFUSED' ||
-        err.message === 'Network Error';
 
       if (status === 401) {
         // Session absente ou expirée — comportement attendu au démarrage sans connexion.
@@ -142,19 +149,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      if (network) {
-        const offlineUser = await loadUserSnapshot<User>();
-        if (offlineUser?.id) {
-          setUser(offlineUser);
-          return;
-        }
+      // Next.js renvoie 500 si le rewrite /api échoue (API en redémarrage, ECONNREFUSED).
+      if (isTransientSessionError(error) && attempt < 1) {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        await fetchUser(1);
+        return;
       }
 
-      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
-      localStorage.removeItem('token');
-      setMemoryAccessToken(null);
-      setToken(null);
-      setUser(null);
+      const offlineUser = await loadUserSnapshot<User>();
+      if (offlineUser?.id) {
+        setUser(offlineUser);
+      }
     } finally {
       setLoading(false);
     }
@@ -167,23 +172,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(userData as User);
         await saveUserSnapshot(userData);
       }
-    } catch (error: any) {
-      console.error('Erreur refreshUser:', error);
-      const network =
-        error.code === 'ERR_NETWORK' ||
-        error.code === 'ECONNREFUSED' ||
-        error.message === 'Network Error';
-      if (network) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number } };
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        setMemoryAccessToken(null);
+        setToken(null);
+        setUser(null);
+        return;
+      }
+      if (isTransientSessionError(error)) {
         const offlineUser = await loadUserSnapshot<User>();
         if (offlineUser?.id) {
           setUser(offlineUser);
-          return;
         }
-      }
-      if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
       }
     }
   };
@@ -331,7 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth doit être utilisé dans un AuthProvider');
   }
   return context;
 }

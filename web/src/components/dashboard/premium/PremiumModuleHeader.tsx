@@ -24,44 +24,37 @@ export default function PremiumModuleHeader({
   actions,
 }: PremiumModuleHeaderProps) {
   return (
-    <div
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-r ${gradient} p-px shadow-[0_24px_56px_-24px_rgba(15,23,42,0.45)] ring-1 ring-white/20`}
-    >
-      <div className="relative overflow-hidden rounded-[15px] bg-white/[0.98] backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_85%_at_100%_0%,rgba(255,255,255,0.72),transparent_58%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(0,24,168,0.03),transparent_42%,rgba(235,176,45,0.04))]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/40 to-transparent" />
-        <div className="relative flex min-w-0 flex-col gap-2.5 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
-            <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-white shadow-[0_12px_28px_-10px_rgba(0,0,0,0.45)] ring-1 ring-white/35 sm:h-11 sm:w-11`}
-            >
-              <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" aria-hidden />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="font-display text-sm font-bold tracking-tight text-stone-900 sm:text-lg">
-                {title}
-              </h2>
-              {description && (
-                <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-stone-600 sm:mt-1 sm:text-sm">
-                  {description}
-                </p>
-              )}
-            </div>
+    <div className="premium-surface p-4 sm:p-5">
+      <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-[0_8px_16px_-8px_rgba(0,24,168,0.4)] sm:h-11 sm:w-11`}
+          >
+            <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" aria-hidden />
           </div>
-          <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:flex-wrap sm:items-center">
-            {badge && (
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-stone-200/80 bg-gradient-to-r from-stone-50 to-amber-50/80 px-2.5 py-1 text-[11px] font-semibold text-stone-700 shadow-sm sm:text-xs">
-                <BadgeIcon className="h-3.5 w-3.5 shrink-0 text-amber-800/90" aria-hidden />
-                {badge}
-              </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-sm font-bold tracking-tight text-stone-900 sm:text-lg">
+              {title}
+            </h2>
+            {description && (
+              <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-stone-500 sm:mt-1 sm:text-sm">
+                {description}
+              </p>
             )}
-            {actions ? (
-              <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                {actions}
-              </div>
-            ) : null}
           </div>
+        </div>
+        <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:flex-wrap sm:items-center">
+          {badge && (
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-semibold text-stone-700 sm:text-xs">
+              <BadgeIcon className="h-3.5 w-3.5 shrink-0 text-[#0018A8]" aria-hidden />
+              {badge}
+            </span>
+          )}
+          {actions ? (
+            <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+              {actions}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

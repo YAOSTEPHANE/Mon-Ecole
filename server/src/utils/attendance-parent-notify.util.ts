@@ -145,7 +145,7 @@ export async function notifyParentsOfAttendanceChange(
       ? punchEventLabel(params.punchPhase!, params.status)
       : null;
 
-    const senderName = process.env.SCHOOL_NAME?.trim() || 'School Manager';
+    const senderName = process.env.SCHOOL_NAME?.trim() || 'École à jour';
     const latePart =
       params.status === 'LATE' && params.minutesLate != null && params.minutesLate > 0
         ? ` (retard ~${params.minutesLate} min)`

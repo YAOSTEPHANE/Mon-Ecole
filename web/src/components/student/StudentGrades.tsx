@@ -25,11 +25,27 @@ import { fr } from 'date-fns/locale';
 import { getEvaluationTypeLabel } from '@/lib/evaluationTypes';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
+import { useAppBranding } from '@/contexts/AppBrandingContext';
+import {
+  downloadOfficialReportCardPdf,
+  type OfficialReportCardResponse,
+} from '@/lib/officialReportCardClient';
 
 const StudentGrades = ({ searchQuery = '', searchCategory = 'all', searchDateRange = 'all' }: { searchQuery?: string; searchCategory?: string; searchDateRange?: string }) => {
+  const { branding, navigationLogoAbsolute, loginLogoAbsolute } = useAppBranding();
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
-  const [selectedReportCard, setSelectedReportCard] = useState<any>(null);
+  const [selectedReportCard, setSelectedReportCard] = useState<{
+    id: string;
+    period: string;
+    academicYear: string;
+    average?: number;
+    rank?: number | null;
+    createdAt?: string;
+    subjects?: Record<string, { average?: number }>;
+  } | null>(null);
   const [showReportCardModal, setShowReportCardModal] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['student-grades'],
@@ -39,6 +55,12 @@ const StudentGrades = ({ searchQuery = '', searchCategory = 'all', searchDateRan
   const { data: reportPayload } = useQuery({
     queryKey: ['student-report-cards'],
     queryFn: () => studentApi.getReportCards(),
+  });
+
+  const { data: official } = useQuery({
+    queryKey: ['student-official-report-card', selectedReportCard?.id],
+    queryFn: () => studentApi.getOfficialReportCard(selectedReportCard!.id) as Promise<OfficialReportCardResponse>,
+    enabled: showReportCardModal && Boolean(selectedReportCard?.id),
   });
 
   const tuitionBlock = data?.tuitionBlock as
@@ -164,7 +186,7 @@ const StudentGrades = ({ searchQuery = '', searchCategory = 'all', searchDateRan
     // Header
     doc.setFontSize(20);
     doc.setTextColor(147, 51, 234);
-    doc.text('School Manager', 14, 20);
+    doc.text('École à jour', 14, 20);
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.text('Relevé de Notes', 14, 30);
@@ -222,6 +244,27 @@ const StudentGrades = ({ searchQuery = '', searchCategory = 'all', searchDateRan
     });
 
     doc.save(`notes_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const exportOfficialBulletin = async () => {
+    if (!selectedReportCard?.id) return;
+    setPdfBusy(true);
+    try {
+      const payload = (official ??
+        (await studentApi.getOfficialReportCard(selectedReportCard.id))) as OfficialReportCardResponse;
+      await downloadOfficialReportCardPdf(payload, branding, {
+        navigationLogoAbsolute,
+        loginLogoAbsolute,
+      });
+    } catch (error) {
+      const axiosMessage =
+        typeof error === 'object' && error !== null && 'response' in error
+          ? (error as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined;
+      toast.error(axiosMessage || (error instanceof Error ? error.message : 'Téléchargement impossible'));
+    } finally {
+      setPdfBusy(false);
+    }
   };
 
   return (
@@ -560,11 +603,30 @@ const StudentGrades = ({ searchQuery = '', searchCategory = 'all', searchDateRan
                 <p className="font-semibold">{selectedReportCard.rank || 'N/A'}</p>
               </div>
             </div>
-            {selectedReportCard.subjects && (
+            {official?.student.allCourses?.length ? (
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2">Notes par matière :</p>
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {official.student.allCourses.map((course) => {
+                    const avg = official.student.courseAverages?.[course.id]?.average;
+                    return (
+                      <div key={course.id} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">{course.name}</span>
+                          <span className="font-bold">
+                            {typeof avg === 'number' ? `${avg.toFixed(2)}/20` : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : selectedReportCard.subjects ? (
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-2">Notes par matière :</p>
                 <div className="space-y-2">
-                  {Object.entries(selectedReportCard.subjects).map(([subject, data]: [string, any]) => (
+                  {Object.entries(selectedReportCard.subjects).map(([subject, data]) => (
                     <div key={subject} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center">
                         <span className="font-medium">{subject}</span>
@@ -574,7 +636,13 @@ const StudentGrades = ({ searchQuery = '', searchCategory = 'all', searchDateRan
                   ))}
                 </div>
               </div>
-            )}
+            ) : null}
+            <div className="flex justify-end pt-2">
+              <Button variant="primary" size="sm" disabled={pdfBusy} onClick={() => void exportOfficialBulletin()}>
+                <FiDownload className="w-4 h-4 mr-2" />
+                Télécharger le bulletin officiel
+              </Button>
+            </div>
           </div>
         )}
       </Modal>

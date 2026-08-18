@@ -20,6 +20,8 @@ type FneResult = {
 
 type FneOptionsResponse = {
   years: Array<{ value: string; label: string }>;
+  portalYears?: Array<{ value: string; label: string }>;
+  preferredYear?: string | null;
   schools: Array<{ id: string; name: string }>;
   defaultEtablissementId: string | null;
   defaultEtablissementName: string | null;
@@ -50,14 +52,13 @@ export default function HomeFneMatriculeLookup() {
   useEffect(() => {
     if (!options) return;
     if (!annee && options.years.length > 0) {
-      // Plus récente année d’abord (liste triée croissant)
-      const preferred = options.years[options.years.length - 1];
-      if (preferred) setAnnee(preferred.value);
+      const preferred =
+        options.preferredYear ||
+        options.portalYears?.[options.portalYears.length - 1]?.value ||
+        options.years[options.years.length - 1]?.value;
+      if (preferred) setAnnee(preferred);
     }
-    if (!etablissement && options.defaultEtablissementId) {
-      setEtablissement(options.defaultEtablissementId);
-    }
-  }, [options, annee, etablissement]);
+  }, [options, annee]);
 
   const lookupMutation = useMutation({
     mutationFn: () =>
@@ -150,6 +151,7 @@ export default function HomeFneMatriculeLookup() {
                 value={annee}
                 onChange={setAnnee}
                 years={options?.years || []}
+                portalYears={options?.portalYears || []}
                 disabled={loadingOptions}
               />
             </label>
@@ -200,9 +202,29 @@ export default function HomeFneMatriculeLookup() {
             </label>
           </div>
 
-          {options?.defaultEtablissementName && (
+          {options?.defaultEtablissementName && options.defaultEtablissementId && (
             <p className="mt-3 text-[11px] text-stone-500">
-              Établissement proposé : {options.defaultEtablissementName}
+              {etablissement === options.defaultEtablissementId ? (
+                <>Filtre établissement : {options.defaultEtablissementName}. Retirez-le si aucun résultat.</>
+              ) : (
+                <>
+                  Établissement de l’école : {options.defaultEtablissementName}.{' '}
+                  <button
+                    type="button"
+                    className="font-semibold text-tran-mauve-800 underline-offset-2 hover:underline"
+                    onClick={() => setEtablissement(options.defaultEtablissementId!)}
+                  >
+                    Restreindre la recherche
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+          {options?.portalYears && options.portalYears.length > 0 && (
+            <p className="mt-2 text-[11px] text-stone-500">
+              Le portail public n’ouvre souvent que quelques fichiers (actuellement{' '}
+              {options.portalYears.map((y) => y.label.replace(/^Fichier\s+/i, '')).join(', ')}
+              ). Une année hors de cette liste peut être refusée par SIGFNE.
             </p>
           )}
 

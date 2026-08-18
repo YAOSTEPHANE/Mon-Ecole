@@ -15,7 +15,7 @@ const Pricing = () => {
   const plans = [
     {
       id: 'starter',
-      name: 'Starter',
+      name: 'Essentiel',
       price: '49',
       period: 'mois',
       description: 'Parfait pour les petites écoles',
@@ -44,7 +44,7 @@ const Pricing = () => {
       features: [
         "Jusqu'à 500 élèves",
         "Jusqu'à 50 enseignants",
-        'Toutes les fonctionnalités Starter',
+        'Toutes les fonctionnalités Essentiel',
         'Module financier',
         'Notifications SMS',
         'Stockage 50GB',
@@ -155,7 +155,7 @@ const Pricing = () => {
               <thead>
                 <tr className="border-b border-amber-200/60">
                   <th className="px-4 py-3 text-left font-semibold text-stone-700">Fonctionnalité</th>
-                  <th className="px-4 py-3 text-center font-semibold text-stone-700">Starter</th>
+                  <th className="px-4 py-3 text-center font-semibold text-stone-700">Essentiel</th>
                   <th className="px-4 py-3 text-center font-semibold text-stone-700">Professionnel</th>
                   <th className="px-4 py-3 text-center font-semibold text-stone-700">Entreprise</th>
                 </tr>
@@ -181,7 +181,7 @@ const Pricing = () => {
                 </tr>
                 <tr className="border-b border-stone-100">
                   <td className="px-4 py-3">Support</td>
-                  <td className="px-4 py-3 text-center">Email</td>
+                  <td className="px-4 py-3 text-center">E-mail</td>
                   <td className="px-4 py-3 text-center">Prioritaire</td>
                   <td className="px-4 py-3 text-center">24/7</td>
                 </tr>

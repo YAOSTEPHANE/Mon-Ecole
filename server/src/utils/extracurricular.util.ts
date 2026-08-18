@@ -24,6 +24,35 @@ export async function buildPortalOfferingWhere(
   };
 }
 
+const extraRegOfferingSelect = {
+  id: true,
+  title: true,
+  kind: true,
+  category: true,
+  startAt: true,
+  endAt: true,
+  location: true,
+  academicYear: true,
+} as const;
+
+/** Inscriptions d’un élève, sans filtre relationnel MongoDB (évite un 500 Prisma). */
+export async function listStudentExtracurricularRegistrations(
+  studentId: string,
+  academicYear?: string
+) {
+  const year = academicYear?.trim() ?? '';
+  const rows = await prisma.extracurricularRegistration.findMany({
+    where: {
+      studentId,
+      offering: { is: {} },
+    },
+    orderBy: { createdAt: 'desc' },
+    include: { offering: { select: extraRegOfferingSelect } },
+  });
+  if (!year) return rows;
+  return rows.filter((row) => row.offering.academicYear === year);
+}
+
 export async function registerStudentForExtracurricular(
   studentId: string,
   offeringId: string

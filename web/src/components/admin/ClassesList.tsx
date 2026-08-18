@@ -279,7 +279,7 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
         ].join(';')
       );
       const csv =
-        '\ufeff# School Manager - Export Classes\n' +
+        '\ufeff# École à jour - Export Classes\n' +
         `# ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })}\n` +
         headers.join(';') +
         '\n' +
@@ -299,7 +299,7 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
   const exportToJSON = () => {
     try {
       const data = {
-        application: 'School Manager',
+        application: 'École à jour',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: filteredClasses?.length || 0,
         classes: (filteredClasses || []).map((c: any) => ({
@@ -338,7 +338,7 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
       doc.text('SM', 34, 18, { align: 'center' });
       doc.setTextColor(124, 58, 237);
       doc.setFontSize(20);
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Liste des Classes', 60, 25);

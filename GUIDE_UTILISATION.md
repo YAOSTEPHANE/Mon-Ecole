@@ -70,14 +70,14 @@ Chaque utilisateur doit se connecter avec son email et son mot de passe.
 
 Apres connexion, l'application redirige automatiquement vers l'espace correspondant au role :
 
-| Role | Espace |
+| Rôle | Espace |
 | --- | --- |
 | Administrateur | `/admin` |
 | Direction | `/directeur` |
-| Personnel / metiers | `/staff` |
+| Personnel / métiers | `/staff` |
 | Enseignant | `/teacher` |
-| Educateur | `/educator` |
-| Eleve | `/student` |
+| Éducateur | `/educator` |
+| Élève | `/student` |
 | Parent | `/parent` |
 | Super administrateur | `/super-admin` |
 
@@ -439,6 +439,8 @@ Les utilisateurs doivent consulter regulierement leur tableau de bord pour ne pa
 - Verifier `NEXT_PUBLIC_UPLOADS_ORIGIN` si le frontend et le backend sont sur des domaines differents.
 
 ## 19. Checklist de demarrage pour un nouvel etablissement
+
+La version complete (local, metier, production, paiements) est dans `CHECKLIST_MISE_EN_SERVICE.md`.
 
 1. Verifier la connexion a la base de donnees.
 2. Creer ou verifier le compte administrateur.

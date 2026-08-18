@@ -73,6 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      /* ignore */
+    }
     await clearStoredToken();
     setToken(null);
     setUser(null);
@@ -93,6 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error('useAuth doit être utilisé dans un AuthProvider');
   return ctx;
 }

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { assistantStatus, chatAssistant } from '../api/assistant';
 import { colors } from '../theme';
+import { PremiumPageHeader, screenPad } from '../components/premium/PremiumUi';
 
 type Turn = { role: 'user' | 'assistant'; content: string };
 
@@ -26,7 +27,7 @@ export default function AssistantScreen() {
     void (async () => {
       try {
         const s = await assistantStatus();
-        setMode(s.llmConfigured ? `IA · ${s.model}` : 'Mode local (sans clé API)');
+        setMode(s.llmConfigured ? `Assistant IA · ${s.model}` : 'Mode local (sans clé API)');
       } catch {
         setMode('Indisponible');
       }
@@ -42,7 +43,7 @@ export default function AssistantScreen() {
     setHistory(next);
     try {
       const res = await chatAssistant({ prompt: text, history: next.slice(-10) });
-      setMode(res.mode === 'llm' ? `IA · ${res.model || 'llm'}` : 'Mode local');
+      setMode(res.mode === 'llm' ? `Assistant IA · ${res.model || 'modèle'}` : 'Mode local');
       setHistory((h) => [...h, { role: 'assistant', content: res.reply }]);
     } catch {
       setHistory((h) => h.slice(0, -1));
@@ -55,11 +56,11 @@ export default function AssistantScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.root}
+      style={screenPad.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={88}
+      keyboardVerticalOffset={12}
     >
-      <Text style={styles.mode}>{mode}</Text>
+      <PremiumPageHeader eyebrow="Pédagogie" title="Assistant" subtitle={mode} />
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollInner}>
         {history.length === 0 ? (
           <Text style={styles.hint}>
@@ -71,7 +72,7 @@ export default function AssistantScreen() {
               key={`${m.role}-${i}`}
               style={[styles.bubble, m.role === 'user' ? styles.user : styles.bot]}
             >
-              <Text style={styles.bubbleText}>{m.content}</Text>
+              <Text style={[styles.bubbleText, m.role === 'user' && styles.userText]}>{m.content}</Text>
             </View>
           ))
         )}
@@ -91,9 +92,9 @@ export default function AssistantScreen() {
           disabled={!prompt.trim() || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.gold} />
           ) : (
-            <Text style={styles.sendText}>OK</Text>
+            <Text style={styles.sendText}>Envoyer</Text>
           )}
         </Pressable>
       </View>
@@ -102,21 +103,24 @@ export default function AssistantScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  mode: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: '600',
-  },
   scroll: { flex: 1 },
-  scrollInner: { padding: 16, gap: 10 },
+  scrollInner: { padding: 16, gap: 10, paddingBottom: 24 },
   hint: { color: colors.muted, lineHeight: 20, fontSize: 14 },
-  bubble: { borderRadius: 14, padding: 12, maxWidth: '92%' },
-  user: { alignSelf: 'flex-end', backgroundColor: colors.accentSoft },
-  bot: { alignSelf: 'flex-start', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  bubble: { borderRadius: 16, padding: 12, maxWidth: '92%' },
+  user: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.dock,
+    borderWidth: 1,
+    borderColor: 'rgba(235,176,45,0.28)',
+  },
+  bot: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   bubbleText: { color: colors.ink, fontSize: 14, lineHeight: 20 },
+  userText: { color: '#fffdf9' },
   composer: {
     flexDirection: 'row',
     gap: 8,
@@ -141,10 +145,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 44,
     borderRadius: 12,
-    backgroundColor: colors.dark,
+    backgroundColor: colors.dock,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(235,176,45,0.35)',
   },
   sendDisabled: { opacity: 0.4 },
-  sendText: { color: '#fef3c7', fontWeight: '800' },
+  sendText: { color: colors.gold, fontWeight: '800' },
 });
+

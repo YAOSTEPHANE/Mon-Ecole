@@ -28,6 +28,18 @@ const eventTypeLabel: Record<string, string> = {
   OTHER: 'Événement',
 };
 
+function isTechnicalTitle(title: string | null | undefined): boolean {
+  const value = (title || '').trim();
+  if (!value) return true;
+  return /^(persist|seed|test|id)[-_]/i.test(value) || /^[A-Z0-9_-]{18,}$/.test(value);
+}
+
+function humanizeTitle(title: string | null | undefined, fallback: string): string {
+  const value = (title || '').trim();
+  if (isTechnicalTitle(value)) return fallback;
+  return value;
+}
+
 function PortalSchoolFeed({ role, compact }: { role: 'parent' | 'student'; compact?: boolean }) {
   const api = role === 'parent' ? parentApi : studentApi;
   const [filter, setFilter] = useState<FeedFilter>('all');
@@ -55,6 +67,8 @@ function PortalSchoolFeed({ role, compact }: { role: 'parent' | 'student'; compa
     });
   }, [items, filter]);
 
+  const visible = compact ? filtered.slice(0, 3) : filtered;
+
   const chips: { id: FeedFilter; label: string }[] = [
     { id: 'all', label: 'Tout' },
     { id: 'circular', label: 'Circulaires' },
@@ -63,50 +77,52 @@ function PortalSchoolFeed({ role, compact }: { role: 'parent' | 'student'; compa
     { id: 'photos', label: 'Galerie' },
   ];
 
-  return (
-    <Card className={`border border-slate-200/90 shadow-sm ${compact ? 'p-3' : 'p-4'}`}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-        <div>
-          <h3 className={`font-semibold text-slate-900 ${compact ? 'text-sm' : 'text-base'}`}>
-            Annonces & vie de l’école
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            Circulaires officielles, actualités, événements du calendrier et photos publiées par l’administration.
-          </p>
+  const body = (
+    <>
+      <div className="mb-3">
+        <h3 className={`font-semibold text-slate-900 ${compact ? 'text-sm' : 'text-base'}`}>
+          Vie de l’école
+        </h3>
+        <p className="mt-0.5 text-[11px] text-slate-500">
+          {compact
+            ? 'Prochains événements et annonces'
+            : 'Circulaires, actualités, calendrier et photos publiées par l’administration.'}
+        </p>
+      </div>
+      {!compact ? (
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {chips.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setFilter(c.id)}
+              className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                filter === c.id
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
-      </div>
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        {chips.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => setFilter(c.id)}
-            className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-              filter === c.id
-                ? 'bg-slate-900 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
+      ) : null}
 
       {isLoading && (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
           ))}
         </div>
       )}
 
-      {!isLoading && filtered.length === 0 && (
-        <p className="text-sm text-slate-500 py-6 text-center">Aucun contenu pour ce filtre pour le moment.</p>
+      {!isLoading && visible.length === 0 && (
+        <p className="py-6 text-center text-sm text-slate-500">Aucun contenu pour le moment.</p>
       )}
 
-      {!isLoading && filtered.length > 0 && (
-        <ul className="space-y-3 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
-          {filtered.map((it) => {
+      {!isLoading && visible.length > 0 && (
+        <ul className={`space-y-2.5 pr-1 ${compact ? '' : 'max-h-[min(70vh,520px)] overflow-y-auto'}`}>
+          {visible.map((it) => {
             if (it.kind === 'calendar') {
               const e = it.data as {
                 id: string;
@@ -115,29 +131,27 @@ function PortalSchoolFeed({ role, compact }: { role: 'parent' | 'student'; compa
                 type?: string;
                 startDate: string;
                 endDate: string;
-                academicYear: string;
               };
+              const typeLabel = eventTypeLabel[e.type || 'OTHER'] || 'Événement';
               return (
-                <li
-                  key={`cal-${e.id}`}
-                  className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex gap-3"
-                >
-                  <div className="shrink-0 w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
-                    <FiCalendar className="w-4 h-4" />
+                <li key={`cal-${e.id}`} className="flex gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white">
+                    <FiCalendar className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-indigo-800">
-                      {eventTypeLabel[e.type || 'OTHER'] || 'Événement'}
+                      {typeLabel}
                     </span>
-                    <p className="font-medium text-slate-900 text-sm">{e.title}</p>
-                    <p className="text-[11px] text-slate-600 mt-0.5">
+                    <p className="text-sm font-medium text-slate-900">{humanizeTitle(e.title, typeLabel)}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-600">
                       {format(new Date(e.startDate), 'd MMM yyyy', { locale: fr })}
                       {' — '}
                       {format(new Date(e.endDate), 'd MMM yyyy', { locale: fr })}
-                      {e.academicYear ? ` · ${e.academicYear}` : ''}
                     </p>
-                    {e.description ? (
-                      <p className="text-xs text-slate-600 mt-1 line-clamp-3 whitespace-pre-wrap">{e.description}</p>
+                    {!compact && e.description ? (
+                      <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-slate-600">
+                        {e.description}
+                      </p>
                     ) : null}
                   </div>
                 </li>
@@ -154,19 +168,23 @@ function PortalSchoolFeed({ role, compact }: { role: 'parent' | 'student'; compa
               return (
                 <li
                   key={`gal-${g.id}`}
-                  className="rounded-xl border border-emerald-100 bg-white overflow-hidden shadow-sm"
+                  className="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-sm"
                 >
-                  <div className="relative aspect-[16/9] max-h-48 bg-slate-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={g.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  </div>
-                  <div className="p-3 flex gap-2">
-                    <FiImage className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  {!compact ? (
+                    <div className="relative aspect-[16/9] max-h-48 bg-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={g.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    </div>
+                  ) : null}
+                  <div className="flex gap-2 p-3">
+                    <FiImage className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                     <div>
                       <span className="text-[10px] font-semibold uppercase text-emerald-800">Galerie</span>
-                      {g.title ? <p className="font-medium text-slate-900 text-sm">{g.title}</p> : null}
-                      {g.caption ? (
-                        <p className="text-xs text-slate-600 mt-0.5 whitespace-pre-wrap">{g.caption}</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {humanizeTitle(g.title, 'Photo de l’établissement')}
+                      </p>
+                      {!compact && g.caption ? (
+                        <p className="mt-0.5 whitespace-pre-wrap text-xs text-slate-600">{g.caption}</p>
                       ) : null}
                     </div>
                   </div>
@@ -199,49 +217,41 @@ function PortalSchoolFeed({ role, compact }: { role: 'parent' | 'student'; compa
                   : 'bg-sky-100 text-sky-900';
 
             return (
-              <li
-                key={`ann-${a.id}`}
-                className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
-              >
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${badgeClass}`}>
+              <li key={`ann-${a.id}`} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeClass}`}>
                     {label}
                   </span>
                   {a.targetClass?.name ? (
                     <span className="text-[10px] text-slate-500">Classe : {a.targetClass.name}</span>
                   ) : null}
                 </div>
-                <p className="font-semibold text-slate-900 text-sm">{a.title}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-sm font-semibold text-slate-900">{humanizeTitle(a.title, label)}</p>
+                <p className="mt-0.5 text-[11px] text-slate-500">
                   {format(new Date(a.publishedAt || a.createdAt), "d MMMM yyyy 'à' HH:mm", { locale: fr })}
-                  {a.author
-                    ? ` · ${a.author.firstName || ''} ${a.author.lastName || ''}`.trim()
-                    : ''}
                 </p>
-                {a.coverImageUrl ? (
-                  <div className="mt-2 rounded-lg overflow-hidden border border-slate-100 max-h-40">
+                {!compact && a.coverImageUrl ? (
+                  <div className="mt-2 max-h-40 overflow-hidden rounded-lg border border-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={a.coverImageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    <img src={a.coverImageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
                   </div>
                 ) : null}
-                <p className="text-xs text-slate-700 mt-2 line-clamp-4 whitespace-pre-wrap">{a.content}</p>
-                {Array.isArray(a.imageUrls) && a.imageUrls.length > 0 ? (
-                  <div className="mt-2 grid grid-cols-3 gap-1">
-                    {a.imageUrls.slice(0, 6).map((url, idx) => (
-                      <div key={idx} className="aspect-square rounded-md overflow-hidden bg-slate-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
+                <p className={`mt-2 whitespace-pre-wrap text-xs text-slate-700 ${compact ? 'line-clamp-2' : 'line-clamp-4'}`}>
+                  {a.content}
+                </p>
               </li>
             );
           })}
         </ul>
       )}
-    </Card>
+    </>
   );
+
+  if (compact) {
+    return <div>{body}</div>;
+  }
+
+  return <Card className="border border-slate-200/90 p-4 shadow-sm">{body}</Card>;
 }
 
 export default PortalSchoolFeed;

@@ -34,7 +34,28 @@ export const parentApi = {
       accountNumber,
       reference,
     });
-    return response.data;
+    return response.data as {
+      payment?: { id?: string; paymentMethod?: string; status?: string };
+      checkoutUrl?: string | null;
+      provider?: string | null;
+      mode?: 'live' | 'sandbox' | null;
+      ussdHint?: string | null;
+      message?: string;
+    };
+  },
+  getChildPayment: async (studentId: string, paymentId: string) => {
+    const response = await api.get(`/parent/children/${studentId}/payments/${paymentId}`);
+    return response.data as {
+      id: string;
+      status: string;
+      amount: number;
+      paymentMethod?: string | null;
+      checkoutUrl?: string | null;
+      receiptUrl?: string | null;
+      receiptNumber?: string | null;
+      paymentReference?: string | null;
+      paidAt?: string | null;
+    };
   },
   getPaymentSettings: async () => {
     const response = await api.get('/parent/payment-settings');
@@ -108,6 +129,12 @@ export const parentApi = {
   },
   getChildReportCards: async (studentId: string) => {
     const response = await api.get(`/parent/children/${studentId}/report-cards`);
+    return response.data;
+  },
+  getChildOfficialReportCard: async (studentId: string, reportCardId: string) => {
+    const response = await api.get(
+      `/parent/children/${studentId}/report-cards/${reportCardId}/official`,
+    );
     return response.data;
   },
   acknowledgeReportCard: async (

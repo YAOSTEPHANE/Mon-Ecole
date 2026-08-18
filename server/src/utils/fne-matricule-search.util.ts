@@ -45,6 +45,10 @@ const PRIMARY = {
   postPath: '/edit/recherche-matricule-eleve/',
 } as const;
 
+/** UA navigateur : le portail SIGFNE peut renvoyer 500 sur un User-Agent applicatif. */
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 /** Certificat du portail primaire souvent invalide côté Node. */
 const insecureTlsAgent = new Agent({ connect: { rejectUnauthorized: false } });
 
@@ -88,6 +92,41 @@ export function mergeFneYearOptions(
   return [...byValue.values()].sort((a, b) => a.value.localeCompare(b.value));
 }
 
+/** Dernière année réellement exposée par SIGFNE, sinon la plus récente de la plage locale. */
+export function pickPreferredFneYear(
+  portalYears: FneYearOption[],
+  allYears: FneYearOption[]
+): string {
+  return portalYears[portalYears.length - 1]?.value || allYears[allYears.length - 1]?.value || '';
+}
+
+export function fneUnavailableYearNote(annee: string, portalYears: FneYearOption[]): string {
+  const list = portalYears.map((y) => y.label || y.value).join(', ');
+  if (list) {
+    return `Le portail public SIGFNE n’a pas accepté le fichier ${annee}. Fichiers actuellement exposés : ${list}. Choisissez l’une de ces années.`;
+  }
+  return `Le portail FNE a refusé la recherche (fichier ${annee}). Réessayez plus tard ou ouvrez le site officiel.`;
+}
+
+export function emptyFneLookupNote(input: {
+  cycle: FneCycle;
+  annee: string;
+  portalYears: FneYearOption[];
+  etablissement?: string;
+}): string {
+  const yearOnPortal = input.portalYears.some((y) => y.value === input.annee);
+  if (input.portalYears.length > 0 && !yearOnPortal) {
+    return fneUnavailableYearNote(input.annee, input.portalYears);
+  }
+  if (input.cycle === 'secondary') {
+    if (input.etablissement) {
+      return 'Aucun résultat pour cet établissement. Essayez « Tous / non précisé », vérifiez l’orthographe, la date (jj-mm-aaaa) et le fichier année.';
+    }
+    return 'Aucun résultat. Vérifiez l’orthographe, la date (jj-mm-aaaa) et le fichier année. Le portail secondaire public n’expose parfois que d’anciens fichiers.';
+  }
+  return 'Aucun résultat sur le fichier primaire pour ces critères.';
+}
+
 const DEFAULT_SECONDARY_YEARS: FneYearOption[] = buildFneYearOptions();
 const DEFAULT_PRIMARY_YEARS: FneYearOption[] = buildFneYearOptions();
 
@@ -124,7 +163,7 @@ async function fetchText(
   if (cycle === 'primary') {
     const res = await undiciFetch(url, {
       method: init?.method ?? 'GET',
-      headers: init?.headers,
+      headers: { 'User-Agent': BROWSER_USER_AGENT, ...init?.headers },
       body: init?.body,
       dispatcher: insecureTlsAgent,
       redirect: 'follow',
@@ -136,7 +175,7 @@ async function fetchText(
 
   const res = await fetch(url, {
     method: init?.method ?? 'GET',
-    headers: init?.headers,
+    headers: { 'User-Agent': BROWSER_USER_AGENT, ...init?.headers },
     body: init?.body,
     redirect: 'follow',
   });
@@ -237,6 +276,8 @@ export function toFneDateFormat(raw: string | null | undefined): string {
 export async function getFneFormOptions(cycle: FneCycle = 'secondary'): Promise<{
   cycle: FneCycle;
   years: FneYearOption[];
+  portalYears: FneYearOption[];
+  preferredYear: string;
   schools: FneSchoolOption[];
   formUrl: string;
 }> {
@@ -246,17 +287,36 @@ export async function getFneFormOptions(cycle: FneCycle = 'secondary'): Promise<
   try {
     const page = await fetchText(cycle, formUrl);
     if (page.status >= 400) {
-      return { cycle, years: fallbackYears, schools: [], formUrl };
+      return {
+        cycle,
+        years: fallbackYears,
+        portalYears: [],
+        preferredYear: pickPreferredFneYear([], fallbackYears),
+        schools: [],
+        formUrl,
+      };
     }
-    const scraped = parseYearOptions(page.text, []);
+    const scraped = parseYearOptions(page.text, []).sort((a, b) =>
+      a.value.localeCompare(b.value)
+    );
+    const years = mergeFneYearOptions(scraped, fallbackYears);
     return {
       cycle,
-      years: mergeFneYearOptions(scraped, fallbackYears),
+      years,
+      portalYears: scraped,
+      preferredYear: pickPreferredFneYear(scraped, years),
       schools: parseSchoolOptions(page.text),
       formUrl,
     };
   } catch {
-    return { cycle, years: fallbackYears, schools: [], formUrl };
+    return {
+      cycle,
+      years: fallbackYears,
+      portalYears: [],
+      preferredYear: pickPreferredFneYear([], fallbackYears),
+      schools: [],
+      formUrl,
+    };
   }
 }
 
@@ -292,39 +352,85 @@ export async function searchFneMatricule(input: {
   }
 
   const cookie = page.setCookie.map((c) => c.split(';')[0]).join('; ');
-  const body = new URLSearchParams({
-    annee,
-    nom,
-    prenoms,
-    datenaiss,
-    etablissement,
-  }).toString();
+  const portalYears = parseYearOptions(page.text, []).sort((a, b) =>
+    a.value.localeCompare(b.value)
+  );
+  const yearKnownOnPortal = portalYears.some((y) => y.value === annee);
 
-  const post = await fetchText(cycle, postUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Origin: ep.origin,
-      Referer: formUrl,
-      'User-Agent': 'SchoolManager/1.0 (FNE matricule lookup)',
-      ...(cookie ? { Cookie: cookie } : {}),
-    },
-    body,
-  });
-
-  if (post.status >= 400) {
-    throw new Error(`Recherche FNE refusée (HTTP ${post.status}).`);
+  // Le secondaire n’ouvre souvent que 2016–2019 : poster 2024-2026 provoque un 500 SIGFNE.
+  if (portalYears.length > 0 && !yearKnownOnPortal) {
+    return {
+      cycle,
+      query: { annee, nom, prenoms, datenaiss, etablissement },
+      results: [],
+      truncated: false,
+      sourceUrl: formUrl,
+      note: fneUnavailableYearNote(annee, portalYears),
+    };
   }
 
-  const results = parseFneSearchResults(post.text, annee);
-  const truncated = /10 premières personnes/i.test(post.text);
+  const postSearch = (etab: string) =>
+    fetchText(cycle, postUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Origin: ep.origin,
+        Referer: formUrl,
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+      body: new URLSearchParams({
+        annee,
+        nom,
+        prenoms,
+        datenaiss,
+        etablissement: etab,
+      }).toString(),
+    });
+
+  const post = await postSearch(etablissement);
+
+  if (post.status >= 400) {
+    if (post.status >= 500 && !yearKnownOnPortal) {
+      return {
+        cycle,
+        query: { annee, nom, prenoms, datenaiss, etablissement },
+        results: [],
+        truncated: false,
+        sourceUrl: formUrl,
+        note: fneUnavailableYearNote(annee, portalYears),
+      };
+    }
+    throw new Error(
+      post.status >= 500
+        ? `Portail FNE indisponible (HTTP ${post.status}). Réessayez dans un instant.`
+        : `Recherche FNE refusée (HTTP ${post.status}).`
+    );
+  }
+
+  let results = parseFneSearchResults(post.text, annee);
+  let html = post.text;
+  let widenedWithoutSchool = false;
+
+  if (results.length === 0 && etablissement) {
+    const retry = await postSearch('');
+    if (retry.status < 400) {
+      const retryResults = parseFneSearchResults(retry.text, annee);
+      if (retryResults.length > 0) {
+        results = retryResults;
+        html = retry.text;
+        widenedWithoutSchool = true;
+      }
+    }
+  }
+
+  const truncated = /10 premières personnes/i.test(html);
 
   let note: string | null = null;
   if (results.length === 0) {
+    note = emptyFneLookupNote({ cycle, annee, portalYears, etablissement });
+  } else if (widenedWithoutSchool) {
     note =
-      cycle === 'secondary'
-        ? 'Aucun résultat. Vérifiez l’orthographe, la date (jj-mm-aaaa) et le fichier année. Le portail secondaire public n’expose parfois que d’anciens fichiers.'
-        : 'Aucun résultat sur le fichier primaire pour ces critères.';
+      'Aucun élève dans l’établissement filtré. Résultats affichés sans filtre établissement.';
   } else if (truncated) {
     note = 'Le portail FNE ne renvoie que les 10 premiers résultats — affinez la recherche si besoin.';
   }

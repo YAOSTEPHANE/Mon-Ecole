@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { studentApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -34,6 +34,12 @@ import {
   mobileMoneyPhoneHint,
   mobileMoneyPhonePlaceholder,
 } from '../../utils/mobileMoneyPhone';
+import {
+  applyOnlinePaymentStart,
+  pollPaymentUntilSettled,
+  type OnlinePaymentStartResult,
+} from '../../lib/onlinePaymentCheckout';
+import MobileMoneyLiveHint from '../payments/MobileMoneyLiveHint';
 import dynamic from 'next/dynamic';
 
 const PaymentsCharts = dynamic(() => import('../payments/PaymentsCharts'), {
@@ -57,6 +63,7 @@ const StudentPayments = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
   const [filterMethod, setFilterMethod] = useState<'all' | 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH'>('all');
+  const [waitingPaymentId, setWaitingPaymentId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: tuitionFees, isLoading } = useQuery({
@@ -79,7 +86,30 @@ const StudentPayments = () => {
     queryFn: () => studentApi.getPaymentSettings(),
     staleTime: 5 * 60 * 1000,
   });
-  const countryCode = paymentSettings?.defaultCountryCode?.replace(/\D/g, '') || '237';
+  const countryCode = paymentSettings?.defaultCountryCode?.replace(/\D/g, '') || '225';
+
+  useEffect(() => {
+    if (!waitingPaymentId) return;
+    const ac = new AbortController();
+    void (async () => {
+      const outcome = await pollPaymentUntilSettled(
+        () => studentApi.getPayment(waitingPaymentId),
+        { signal: ac.signal },
+      );
+      if (ac.signal.aborted) return;
+      if (outcome === 'COMPLETED') {
+        toast.success('Paiement confirmé. Le reçu est disponible.');
+      } else if (outcome === 'FAILED') {
+        toast.error('Paiement non abouti. Vous pouvez réessayer.');
+      } else {
+        toast('Le reçu arrivera dès confirmation de l’opérateur.');
+      }
+      setWaitingPaymentId(null);
+      queryClient.invalidateQueries({ queryKey: ['student-tuition-fees'] });
+      queryClient.invalidateQueries({ queryKey: ['student-payments'] });
+    })();
+    return () => ac.abort();
+  }, [waitingPaymentId, queryClient]);
 
   // Fonctions utilitaires (définies avant les useMemo qui les utilisent)
   const getPaymentMethodIcon = (method: string) => {
@@ -115,9 +145,9 @@ const StudentPayments = () => {
   const getPaymentMethodDescription = (method: string) => {
     switch (method) {
       case 'CARD':
-        return 'Paiement par carte — confirmation automatique (webhook) ou validation admin / économat';
+        return 'Paiement par carte — redirection sécurisée, reçu automatique';
       case 'MOBILE_MONEY':
-        return 'Mobile Money — confirmation automatique (webhook) ou validation admin / économat';
+        return 'Wave, Orange, MTN, Moov — confirmation et reçu automatiques';
       case 'BANK_TRANSFER':
         return 'Virement — déclaration en ligne, validation par l\'économe après réception';
       case 'CASH':
@@ -168,7 +198,7 @@ const StudentPayments = () => {
         accountNumber,
         reference,
       ),
-    onSuccess: (data: { payment?: { paymentMethod?: string } }) => {
+    onSuccess: (data: OnlinePaymentStartResult) => {
       const method = data.payment?.paymentMethod;
       setShowPaymentModal(false);
       if (method === 'CASH' || method === 'BANK_TRANSFER') {
@@ -181,9 +211,9 @@ const StudentPayments = () => {
         queryClient.invalidateQueries({ queryKey: ['student-payments'] });
         return;
       }
-      toast.success(
-        'Paiement enregistré. Il restera en attente jusqu’à validation sécurisée.',
-      );
+      applyOnlinePaymentStart(data, {
+        onWaitForWebhook: (id) => setWaitingPaymentId(id),
+      });
       queryClient.invalidateQueries({ queryKey: ['student-tuition-fees'] });
       queryClient.invalidateQueries({ queryKey: ['student-payments'] });
     },
@@ -359,7 +389,7 @@ const StudentPayments = () => {
       doc.setTextColor(139, 92, 246);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
@@ -390,7 +420,7 @@ const StudentPayments = () => {
       // Afficher le numéro de téléphone du profil ou celui utilisé pour le paiement
       let displayPhone = studentPhone;
       if (payment.notes) {
-        // Essayer d'extraire le numéro de téléphone des notes (format: "phoneNumber: +237 6XX XXX XXX")
+        // Extraire le numéro de téléphone des notes (format: "phoneNumber: +225 …")
         const phoneMatch = payment.notes.match(/phoneNumber:\s*([+\d\s]+)/i);
         if (phoneMatch && phoneMatch[1]) {
           displayPhone = phoneMatch[1].trim();
@@ -472,6 +502,11 @@ const StudentPayments = () => {
 
   return (
     <div className="space-y-6">
+      {waitingPaymentId ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Paiement en cours de confirmation opérateur… le reçu apparaîtra automatiquement.
+        </div>
+      ) : null}
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500">
@@ -1012,68 +1047,12 @@ const StudentPayments = () => {
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Code de transaction (optionnel)
-                    </label>
-                    <input
-                      type="text"
-                      value={paymentDetails.transactionCode || ''}
-                      onChange={(e) => setPaymentDetails({ ...paymentDetails, transactionCode: e.target.value })}
-                      placeholder="Code reçu après le paiement"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  {paymentDetails.operator ? (
+                    <MobileMoneyLiveHint
+                      operator={paymentDetails.operator}
+                      amountLabel={formatFCFA(parseFloat(paymentAmount) || selectedFee?.amount || 0)}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Saisissez le code de confirmation reçu par SMS après avoir effectué le paiement
-                    </p>
-                  </div>
-
-                  {/* Instructions selon l'opérateur */}
-                  {paymentDetails.operator && (
-                    <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
-                      <p className="text-sm font-semibold text-gray-900 mb-2">Instructions de paiement :</p>
-                      {paymentDetails.operator === 'ORANGE_MONEY' && (
-                        <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
-                          <li>Composez *144# sur votre téléphone Orange</li>
-                          <li>Sélectionnez "Payer une facture" ou "Payer un service"</li>
-                          <li>Entrez le numéro de compte: <strong>{countryCode} …</strong></li>
-                          <li>Entrez le montant: <strong>{formatFCFA(selectedFee.amount)}</strong></li>
-                          <li>Confirmez avec votre code PIN</li>
-                          <li>Entrez le code de transaction reçu ci-dessus</li>
-                        </ol>
-                      )}
-                      {paymentDetails.operator === 'MTN_MOBILE_MONEY' && (
-                        <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
-                          <li>Composez *126# sur votre téléphone MTN</li>
-                          <li>Sélectionnez "Paiement de facture"</li>
-                          <li>Entrez le numéro de compte: <strong>{countryCode} …</strong></li>
-                          <li>Entrez le montant: <strong>{formatFCFA(selectedFee.amount)}</strong></li>
-                          <li>Confirmez avec votre code PIN</li>
-                          <li>Entrez le code de transaction reçu ci-dessus</li>
-                        </ol>
-                      )}
-                      {paymentDetails.operator === 'MOOV_MONEY' && (
-                        <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
-                          <li>Composez *155# sur votre téléphone Moov</li>
-                          <li>Sélectionnez "Paiement"</li>
-                          <li>Entrez le numéro de compte: <strong>{countryCode} …</strong></li>
-                          <li>Entrez le montant: <strong>{formatFCFA(selectedFee.amount)}</strong></li>
-                          <li>Confirmez avec votre code PIN</li>
-                          <li>Entrez le code de transaction reçu ci-dessus</li>
-                        </ol>
-                      )}
-                      {paymentDetails.operator === 'WAVE' && (
-                        <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
-                          <li>Ouvrez l&apos;application Wave sur votre téléphone</li>
-                          <li>Sélectionnez &quot;Payer&quot; ou &quot;Envoyer&quot;</li>
-                          <li>Entrez le numéro de compte de l&apos;école</li>
-                          <li>Entrez le montant: <strong>{formatFCFA(selectedFee.amount)}</strong></li>
-                          <li>Confirmez avec votre code PIN</li>
-                          <li>Entrez le code de transaction reçu ci-dessus</li>
-                        </ol>
-                      )}
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               )}
 

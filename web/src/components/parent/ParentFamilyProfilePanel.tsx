@@ -245,7 +245,7 @@ const ParentFamilyProfilePanel: React.FC = () => {
             onChange={(e) => setDraft((d) => ({ ...d, profession: e.target.value }))}
           />
           <Input
-            label="Langue / locale (ex. fr)"
+            label="Langue préférée (ex. français)"
             value={draft.preferredLocale}
             onChange={(e) => setDraft((d) => ({ ...d, preferredLocale: e.target.value }))}
           />

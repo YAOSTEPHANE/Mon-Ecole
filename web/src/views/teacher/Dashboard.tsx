@@ -25,15 +25,12 @@ import {
   FiClipboard,
   FiUserCheck,
   FiFileText,
-  FiSearch,
-  FiTrendingUp,
   FiShield,
   FiUser,
   FiCalendar,
   FiLayers,
   FiStar,
   FiSun,
-  FiCommand,
   FiClock,
   FiMessageCircle,
   FiCheckCircle,
@@ -42,12 +39,9 @@ import {
   FiTarget,
 } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
-import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
-import { TEACHER_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
+import PortalSpaceHeader from '../../components/dashboard/PortalSpaceHeader';
 import MockExamsManagementPanel from '../../components/admin/MockExamsManagementPanel';
 import TeacherLessonLogsPanel from '../../components/teacher/TeacherLessonLogsPanel';
 
@@ -74,6 +68,15 @@ const VALID_TAB_IDS = [
 
 type TabId = (typeof VALID_TAB_IDS)[number];
 
+const MOBILE_PRIMARY_TABS: TabId[] = [
+  'overview',
+  'grades',
+  'attendance',
+  'assignments',
+  'schedule',
+  'messaging',
+];
+
 type TabDef = {
   id: TabId;
   label: string;
@@ -88,6 +91,7 @@ const TeacherDashboard = () => {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const tabs: TabDef[] = useMemo(
     () => [
@@ -152,6 +156,7 @@ const TeacherDashboard = () => {
 
   const changeTab = (tabId: TabId) => {
     setActiveTab(tabId);
+    setSidebarOpen(false);
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', tabId);
     router.replace(`/teacher?${params.toString()}`);
@@ -160,18 +165,24 @@ const TeacherDashboard = () => {
   const activeMeta = tabs.find((t) => t.id === activeTab) ?? tabs[0];
   const ActiveTabIcon = activeMeta.icon;
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
-    return 'Bonsoir';
-  };
-
   return (
-    <Layout user={user} onLogout={logout} role="TEACHER">
+    <Layout user={user} onLogout={logout} role="TEACHER" hideHeader>
       <PremiumPortalShell variant="teacher">
       <div className="flex dash-min-h-under-header w-full items-stretch">
-        <aside className="relative z-50 hidden shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl lg:sticky dash-sticky-under-header lg:flex dash-h-under-header lg:w-64 lg:self-start">
+        {sidebarOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 z-[55] cursor-default border-0 bg-slate-900/40 p-0 backdrop-blur-sm lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Fermer la navigation"
+          />
+        ) : null}
+        <aside
+          className={`w-64 shrink-0 flex-col border-r border-stone-200/90 bg-white/92 shadow-[0_12px_40px_-20px_rgba(12,10,9,0.12)] backdrop-blur-xl
+            fixed left-0 top-0 z-[60] h-dvh max-h-dvh
+            ${sidebarOpen ? 'flex' : 'hidden'}
+            lg:sticky lg:flex dash-sticky-under-header dash-h-under-header lg:self-start lg:z-50`}
+        >
           <div className="flex min-h-0 flex-1 flex-col p-2.5">
             <p className="shrink-0 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500">
               Enseignant
@@ -205,94 +216,36 @@ const TeacherDashboard = () => {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="dash-command-bar sticky dash-sticky-under-header z-20 shrink-0">
-            <div className="px-3 sm:px-6 py-2 sm:py-3">
-              <div className="flex flex-col gap-2 sm:gap-3">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
-                  <div className="min-w-0">
-                    <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight leading-snug">
-                      {getGreeting()}, {user?.firstName}
-                    </h1>
-                    <p className="text-stone-600 text-xs mt-0.5 line-clamp-1 max-w-md">
-                      Vos classes et votre journée
-                    </p>
-                    <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
-                      {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
-                    </p>
-                  </div>
-                  <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs font-semibold shrink-0 ring-1 ring-emerald-900/5">
-                    <FiTrendingUp className="w-3.5 h-3.5 text-emerald-700" aria-hidden />
-                    Enseignant
-                  </div>
-                </div>
-
-                <div className="dash-mobile-tabs scrollbar-hide">
-                  {tabs.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => changeTab(tab.id)}
-                        aria-label={tab.label}
-                        title={tab.label}
-                        className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
-                          isActive
-                            ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
-                            : 'bg-stone-100 text-stone-700'
-                        }`}
-                      >
-                        <Icon
-                          className={`w-3.5 h-3.5 shrink-0 ${
-                            isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
-                          }`}
-                        />
-                        <span className="dash-mobile-tab-label">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="relative w-full max-w-xl">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                    <FiSearch className="w-4 h-4" aria-hidden />
-                  </div>
-                  <input
-                    type="search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher cours, élèves, devoirs…"
-                    className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
-                    aria-label="Recherche dans l’espace enseignant"
-                  />
-                </div>
-              </div>
-            </div>
-          </header>
+          <PortalSpaceHeader
+            user={user}
+            role="TEACHER"
+            onLogout={logout}
+            title="Espace enseignant"
+            onMenuClick={() => setSidebarOpen((open) => !open)}
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Rechercher…"
+            searchAriaLabel="Recherche dans l’espace enseignant"
+            mobileTabs={tabs.filter((tab) => MOBILE_PRIMARY_TABS.includes(tab.id))}
+            activeTab={activeTab}
+            onTabChange={(id) => changeTab(id as TabId)}
+          />
 
           <main className="dash-workspace flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-5 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] scroll-smooth">
             <div className="mx-auto max-w-[1240px] space-y-5 sm:space-y-6">
               <TeacherSelfAttendance />
-                            <PremiumModuleHeader
-                title={activeMeta.label}
-                description={activeMeta.description}
-                icon={ActiveTabIcon}
-                gradient={activeMeta.color}
-                badge="Enseignant"
-              />
+              {activeTab !== 'overview' ? (
+                <PremiumModuleHeader
+                  title={activeMeta.label}
+                  description={activeMeta.description}
+                  icon={ActiveTabIcon}
+                  gradient={activeMeta.color}
+                  badge="Enseignant"
+                />
+              ) : null}
 
               <div className="animate-slide-up">
-                {activeTab === 'overview' && (
-                  <>
-                    <TeacherOverview />
-                    <PortalRoleModulesHub
-                      tabs={tabs}
-                      categories={TEACHER_MODULE_CATEGORIES}
-                      onNavigate={(id) => changeTab(id as TabId)}
-                    />
-                  </>
-                )}
+                {activeTab === 'overview' && <TeacherOverview />}
                 {activeTab === 'appointments' && <TeacherAppointmentsPanel />}
                 {activeTab === 'profile' && <TeacherPersonalProfile />}
                 {activeTab === 'schedule' && <TeacherScheduleTab />}

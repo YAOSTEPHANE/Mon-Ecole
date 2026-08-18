@@ -1,4 +1,4 @@
-import type { Role } from '@prisma/client';
+import type { Prisma, Role } from '@prisma/client';
 import type { Request } from 'express';
 import prisma from './prisma';
 import { ensureDefaultSchool, SchoolPrismaNotReadyError } from './ensure-default-school.util';
@@ -175,23 +175,31 @@ export async function resolveActiveSchoolForRequest(
   return { schoolId: def.id, school: def };
 }
 
-/** MongoDB : champ absent ≠ null — inclure les deux pour les données legacy. */
+/** MongoDB : champ absent ≠ null — inclure `isSet: false` pour les données legacy. */
 function schoolIdMatchesActive(schoolId: string, includeLegacyOrphans: boolean) {
   if (!includeLegacyOrphans) {
     return { schoolId };
   }
   return {
-    OR: [{ schoolId }, { schoolId: null }],
+    OR: [{ schoolId }, { schoolId: null }, { schoolId: { isSet: false } }],
   };
 }
 
-/** Filtre élèves pour l’établissement actif */
-export function studentScopeWhere(schoolId: string, isDefaultSchool = false) {
-  const schoolMatch = schoolIdMatchesActive(schoolId, isDefaultSchool);
-  const classMatch = schoolIdMatchesActive(schoolId, isDefaultSchool);
-  return {
-    OR: [schoolMatch, { class: classMatch }],
-  };
+/**
+ * Filtre élèves pour l’établissement actif.
+ * Relation `class` : utiliser `is` (filtre to-one Prisma). `{ class: { schoolId } }`
+ * est rejeté par Prisma Mongo et renvoyait une liste vide / 500.
+ */
+export function studentScopeWhere(
+  schoolId: string,
+  isDefaultSchool = false,
+): Prisma.StudentWhereInput {
+  const clauses: Prisma.StudentWhereInput[] = [{ schoolId }];
+  if (isDefaultSchool) {
+    clauses.push({ schoolId: null }, { schoolId: { isSet: false } });
+  }
+  clauses.push({ class: { is: { schoolId } } });
+  return { OR: clauses };
 }
 
 export function classScopeWhere(schoolId: string, isDefaultSchool = false) {

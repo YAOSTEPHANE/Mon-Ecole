@@ -49,7 +49,7 @@ export const testConnection = async () => {
       console.error('❌ Erreur de connexion:', loginData);
       return false;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Erreur lors du test:', error);
     console.error('💡 Vérifiez que:');
     console.error('   - Le serveur backend est démarré (port 5000)');
@@ -59,10 +59,8 @@ export const testConnection = async () => {
   }
 };
 
-// Fonction pour tester la connexion depuis la console du navigateur
-if (typeof window !== 'undefined') {
-  (window as any).testConnection = testConnection;
-  console.log('💡 Utilisez testConnection() dans la console pour tester la connexion');
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as Window & { testConnection?: typeof testConnection }).testConnection = testConnection;
 }
 
 

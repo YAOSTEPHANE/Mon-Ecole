@@ -59,7 +59,7 @@ const Help = () => {
     <UltraPremiumPageShell
       navLabel="Ressources"
       title="Centre d'aide"
-      description="Tout ce qu'il faut pour prendre en main School Manager, au même endroit."
+      description="Tout ce qu'il faut pour prendre en main École à jour, au même endroit."
     >
       <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="-mt-10 mb-12">

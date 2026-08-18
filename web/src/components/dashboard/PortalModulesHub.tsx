@@ -25,6 +25,7 @@ type PortalModulesHubProps = {
   title?: string;
   subtitle?: string;
   excludeIds?: string[];
+  embedded?: boolean;
 };
 
 export default function PortalModulesHub({
@@ -34,6 +35,7 @@ export default function PortalModulesHub({
   title = 'Annuaire des modules',
   subtitle = 'Accès rapide à toutes les fonctions, groupées par domaine. Filtrez par nom ou mot-clé.',
   excludeIds = [],
+  embedded = false,
 }: PortalModulesHubProps) {
   const [q, setQ] = useState('');
   const exclude = useMemo(() => new Set(excludeIds), [excludeIds]);
@@ -65,7 +67,10 @@ export default function PortalModulesHub({
   const showEmptySearch = Boolean(normalizedQ) && filteredCategories.length === 0;
 
   return (
-    <section className="dash-section-panel space-y-5" aria-labelledby="portal-modules-hub-title">
+    <section
+      className={embedded ? 'space-y-5' : 'dash-section-panel space-y-5'}
+      aria-labelledby="portal-modules-hub-title"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h3
@@ -74,7 +79,7 @@ export default function PortalModulesHub({
           >
             {title}
           </h3>
-          <div className="mt-2 h-0.5 w-12 rounded-full bg-gradient-to-r from-cptb-blue to-cptb-gold" />
+          <div className="mt-2 h-0.5 w-12 rounded-full bg-[#0018A8]" />
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-600">{subtitle}</p>
         </div>
         <div className="relative w-full sm:w-72">
@@ -94,7 +99,7 @@ export default function PortalModulesHub({
             <button
               type="button"
               onClick={() => setQ('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0018A8]/35"
               aria-label="Effacer la recherche"
             >
               <FiX className="h-4 w-4" aria-hidden />
@@ -105,7 +110,7 @@ export default function PortalModulesHub({
 
       {showEmptySearch ? (
         <div
-          className="rounded-2xl border border-dashed border-stone-300/90 bg-white/80 px-4 py-10 text-center"
+          className="premium-empty"
           role="status"
         >
           <p className="text-sm font-semibold text-stone-800">Aucun module ne correspond</p>
@@ -115,7 +120,7 @@ export default function PortalModulesHub({
           <button
             type="button"
             onClick={() => setQ('')}
-            className="mt-4 text-sm font-semibold text-amber-900/90 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 rounded"
+            className="mt-4 text-sm font-semibold text-[#0018A8] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0018A8]/35 rounded"
           >
             Réinitialiser la recherche
           </button>
@@ -138,12 +143,12 @@ export default function PortalModulesHub({
                       key={t.id}
                       type="button"
                       onClick={() => onNavigate(t.id)}
-                      className="group rounded-2xl border border-stone-200/75 bg-white/[0.98] text-left shadow-dash-card transition-all duration-300 ease-premium hover:-translate-y-0.5 hover:border-cptb-gold/45 hover:shadow-dash-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-stone-50"
+                      className="dash-action-tile group rounded-[1.25rem] border border-[#e4e8f2] bg-white text-left shadow-[0_12px_32px_-20px_rgba(28,39,76,0.28)] transition-all duration-200 hover:border-[#c5cfe4] hover:shadow-[0_16px_36px_-18px_rgba(28,39,76,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0018A8]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f6f7fb]"
                     >
                       <Card hover={false} className="border-0 bg-transparent p-3.5 shadow-none sm:p-4">
                         <div className="flex items-start gap-3">
                           <div
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${t.color} text-white shadow-md ring-1 ring-white/25 transition-transform duration-300 group-hover:scale-105`}
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${t.color} text-white`}
                           >
                             <Icon className="h-[18px] w-[18px]" aria-hidden />
                           </div>
@@ -151,7 +156,7 @@ export default function PortalModulesHub({
                             <div className="flex items-start justify-between gap-2">
                               <span className="text-sm font-semibold leading-snug text-stone-900">{t.label}</span>
                               <FiArrowRight
-                                className="mt-0.5 h-4 w-4 shrink-0 -translate-x-0.5 text-amber-700/70 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100"
+                                className="mt-0.5 h-4 w-4 shrink-0 -translate-x-0.5 text-[#0018A8] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100"
                                 aria-hidden
                               />
                             </div>

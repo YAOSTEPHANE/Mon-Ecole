@@ -34,4 +34,12 @@ export const authApi = {
     const { data } = await api.post('/auth/oauth/exchange', { code });
     return data as { token: string };
   },
+
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      /* la session locale est quand même effacée */
+    }
+  },
 };

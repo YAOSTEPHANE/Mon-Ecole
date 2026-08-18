@@ -141,7 +141,7 @@ const AdminSidebar = ({
                       collapsed ? 'lg:justify-center lg:px-1.5 lg:gap-0' : ''
                     } ${
                       isActive
-                        ? `bg-gradient-to-r ${tab.color} text-white shadow-[0_0_28px_-8px_rgba(251,191,36,0.5)] ring-1 ring-cptb-gold/35`
+                        ? `bg-gradient-to-r ${tab.color} text-white shadow-sm`
                         : 'text-zinc-400 hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]'
                     }`}
                   >
@@ -176,7 +176,7 @@ const AdminSidebar = ({
                           collapsed ? 'lg:justify-center lg:px-1.5 lg:gap-0' : ''
                         } ${
                           isActive
-                            ? `bg-gradient-to-r ${tab.color} text-white shadow-[0_0_24px_-8px_rgba(251,191,36,0.45)] ring-1 ring-cptb-gold/30`
+                            ? `bg-gradient-to-r ${tab.color} text-white shadow-sm`
                             : 'text-zinc-400 hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]'
                         }`}
                       >

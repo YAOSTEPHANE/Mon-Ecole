@@ -576,7 +576,7 @@ const CommunicationManagement: React.FC<CommunicationManagementProps> = ({
       
       doc.setFontSize(20);
       doc.setTextColor(236, 72, 153);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Rapport des Messages', 14, 30);
@@ -706,7 +706,7 @@ const CommunicationManagement: React.FC<CommunicationManagementProps> = ({
       
       doc.setFontSize(20);
       doc.setTextColor(236, 72, 153);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Rapport des Annonces', 14, 30);
@@ -833,7 +833,7 @@ const CommunicationManagement: React.FC<CommunicationManagementProps> = ({
       
       doc.setFontSize(20);
       doc.setTextColor(236, 72, 153);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Rapport des Notifications', 14, 30);
@@ -1600,7 +1600,7 @@ const CommunicationManagement: React.FC<CommunicationManagementProps> = ({
                   }}
                   className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
                 />
-                <span className="text-sm text-gray-700">Email</span>
+                <span className="text-sm text-gray-700">E-mail</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input

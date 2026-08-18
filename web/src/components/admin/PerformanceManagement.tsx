@@ -122,6 +122,8 @@ const PerformanceManagement = () => {
     queryKey: ['admin-system-metrics'],
     queryFn: adminApi.getSystemMetrics,
     refetchInterval: refreshInterval,
+    refetchOnMount: 'always',
+    retry: 2,
   });
 
   const usageData = [

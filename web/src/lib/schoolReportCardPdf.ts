@@ -280,6 +280,19 @@ export type TermHistoryEntry = {
   bilanSciences?: { average: number; rank: number };
 };
 
+export const REPORT_CARD_DISTINCTION_OPTIONS = [
+  "Tableau d'honneur + Félicitation",
+  "Tableau d'honneur + Encouragements",
+  "Tableau d'honneur",
+] as const;
+
+export const REPORT_CARD_SANCTION_OPTIONS = [
+  'Avertissement travail',
+  'Avertissement conduite',
+  'Blâme travail',
+  'Blâme conduite',
+] as const;
+
 export type ReportCardStudentPayload = {
   studentIdNumber?: string;
   /** Avatar profil ou pièce « photo d'identité » (chemin relatif ou URL). */
@@ -1276,17 +1289,8 @@ function drawMentionsAndSignatures(
   let y = startY;
   const distinctions = studentData.distinctions ?? [];
   const sanctions = studentData.sanctions ?? [];
-  const distinctionOptions = [
-    'Tableau d\'honneur + Félicitation',
-    'Tableau d\'honneur + Encouragements',
-    'Tableau d\'honneur',
-  ];
-  const sanctionOptions = [
-    'Avertissement travail',
-    'Avertissement conduite',
-    'Blâme travail',
-    'Blâme conduite',
-  ];
+  const distinctionOptions = [...REPORT_CARD_DISTINCTION_OPTIONS];
+  const sanctionOptions = [...REPORT_CARD_SANCTION_OPTIONS];
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(BULLETIN_FS.mentionsTitle);

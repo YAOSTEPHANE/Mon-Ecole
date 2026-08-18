@@ -183,6 +183,7 @@ router.get('/students', async (req: SchoolContextRequest, res) => {
     res.setHeader('X-Page-Size', String(pageSize));
     res.json(decryptStudentRows(students as unknown as Record<string, unknown>[]));
   } catch (error: any) {
+    console.error('GET /admin/students:', error);
     res.status(500).json({ error: error.message });
   }
 });

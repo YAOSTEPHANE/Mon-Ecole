@@ -88,7 +88,7 @@ const FAQ = () => {
       id: 9,
       question: 'Quels navigateurs sont supportés ?',
       answer:
-        'School Manager fonctionne sur tous les navigateurs modernes : Chrome, Firefox, Safari, Edge (versions récentes). Pour une expérience optimale, nous recommandons d’utiliser la dernière version de votre navigateur.',
+        'École à jour fonctionne sur tous les navigateurs modernes : Chrome, Firefox, Safari, Edge (versions récentes). Pour une expérience optimale, nous recommandons d’utiliser la dernière version de votre navigateur.',
       category: 'technique',
     },
     {
@@ -143,7 +143,7 @@ const FAQ = () => {
     <UltraPremiumPageShell
       navLabel="Support"
       title="FAQ"
-      description="Trouvez rapidement les réponses à vos questions sur School Manager."
+      description="Trouvez rapidement les réponses à vos questions sur École à jour."
     >
       <div className="mx-auto max-w-4xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="-mt-10 mb-10">

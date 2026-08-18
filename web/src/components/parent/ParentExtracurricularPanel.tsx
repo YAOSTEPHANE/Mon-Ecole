@@ -57,18 +57,24 @@ export default function ParentExtracurricularPanel({ studentId }: { studentId: s
     [academicYear]
   );
 
-  const { data: offerings = [], isLoading: loadOff } = useQuery({
+  const { data: offerings, isLoading: loadOff, isError: errOff } = useQuery({
     queryKey: ["parent-extracurricular-offerings", studentId, params],
     queryFn: () => parentApi.getChildExtracurricularOfferings(studentId, params),
+    enabled: Boolean(studentId),
+    retry: 2,
   });
 
-  const { data: registrations = [], isLoading: loadReg } = useQuery({
+  const { data: registrations, isLoading: loadReg, isError: errReg } = useQuery({
     queryKey: ["parent-extracurricular-regs", studentId, params],
     queryFn: () => parentApi.getChildExtracurricularRegistrations(studentId, params),
+    enabled: Boolean(studentId),
+    retry: 2,
   });
 
-  const offRows = offerings as PortalOffering[];
-  const regRows = registrations as RegistrationRow[];
+  const offRows = Array.isArray(offerings) ? (offerings as PortalOffering[]) : [];
+  const regRows = Array.isArray(registrations)
+    ? (registrations as RegistrationRow[]).filter((row) => row?.offering?.id)
+    : [];
 
   const byOfferingId = useMemo(() => {
     const m = new Map<string, RegistrationRow>();
@@ -169,6 +175,8 @@ export default function ParentExtracurricularPanel({ studentId }: { studentId: s
           <h4 className="text-sm font-semibold text-stone-900 mb-3">Offres disponibles</h4>
           {loadOff ? (
             <p className="text-sm text-stone-500">Chargement…</p>
+          ) : errOff ? (
+            <p className="text-sm text-rose-700">Impossible de charger les activités. Réessayez dans un instant.</p>
           ) : offRows.length === 0 ? (
             <p className="text-sm text-stone-500">Aucune activité ouverte aux inscriptions.</p>
           ) : (
@@ -245,6 +253,8 @@ export default function ParentExtracurricularPanel({ studentId }: { studentId: s
           <h4 className="text-sm font-semibold text-stone-900 mb-3">Mes inscriptions</h4>
           {loadReg ? (
             <p className="text-sm text-stone-500">Chargement…</p>
+          ) : errReg ? (
+            <p className="text-sm text-rose-700">Impossible de charger les inscriptions. Réessayez dans un instant.</p>
           ) : regRows.length === 0 ? (
             <p className="text-sm text-stone-500">Aucune inscription en cours.</p>
           ) : (

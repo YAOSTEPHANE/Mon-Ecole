@@ -28,6 +28,7 @@ import {
 } from '../utils/parent-teacher-appointment.util';
 import {
   buildPortalOfferingWhere,
+  listStudentExtracurricularRegistrations,
   registerStudentForExtracurricular,
 } from '../utils/extracurricular.util';
 import {
@@ -39,6 +40,7 @@ import {
   getAcademicYearsWithTuitionBlockForParents,
   parentTuitionBlockFromYears,
 } from '../utils/parent-academic-result-access.util';
+import { getOfficialPublishedReportCard } from '../utils/report-card.util';
 import {
   absenceWhereRelationsExist,
   gradeWhereRelationsExist,
@@ -1539,13 +1541,14 @@ router.post('/children/:studentId/payments', async (req: AuthRequest, res) => {
     } = payment;
     if (paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') {
       const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0]?.trim();
-      const checkoutPayment = await attachOnlineCheckout(prisma, payment.id, {
+      const { payment: checkoutPayment, checkout } = await attachOnlineCheckout(prisma, payment.id, {
         method: paymentMethod,
         phoneNumber,
         operator,
         customerEmail: req.user?.email,
         customerName: req.user?.email ?? '',
         returnUrl: `${frontend}/parent?tab=payments`,
+        cancelUrl: `${frontend}/parent?tab=payments`,
       });
       onlinePayment = {
         ...payment,
@@ -1559,12 +1562,21 @@ router.post('/children/:studentId/payments', async (req: AuthRequest, res) => {
           phoneNumber,
           'Paiement initié',
           `Réf. ${payment.paymentReference} — ${paymentAmount.toLocaleString('fr-FR')} FCFA. ${
-            onlinePayment.checkoutUrl
-              ? `Ouvrez : ${onlinePayment.checkoutUrl}`
-              : 'Validez sur votre téléphone ou attendez la confirmation.'
+            checkout.checkoutUrl
+              ? `Ouvrez : ${checkout.checkoutUrl}`
+              : checkout.ussdHint || 'Validez sur votre téléphone. Le reçu arrivera automatiquement.'
           }`
         ).catch((e) => console.error('whatsapp payment:', e));
       }
+      return res.status(201).json({
+        payment: onlinePayment,
+        paymentUrl: checkout.checkoutUrl || `/payment/process/${payment.id}`,
+        checkoutUrl: checkout.checkoutUrl || null,
+        provider: checkout.provider,
+        mode: checkout.mode,
+        ussdHint: checkout.ussdHint || null,
+        message: checkout.message,
+      });
     }
 
     res.status(201).json({
@@ -1653,6 +1665,39 @@ router.get('/children/:studentId/payments', async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/children/:studentId/payments/:id', async (req: AuthRequest, res) => {
+  try {
+    const { studentId, id } = req.params;
+    const parent = await prisma.parent.findFirst({
+      where: { userId: req.user!.id },
+      include: { students: { where: { studentId } } },
+    });
+    if (!parent || parent.students.length === 0) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    const payment = await prisma.payment.findFirst({
+      where: { id, studentId },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        paymentMethod: true,
+        paymentProvider: true,
+        checkoutUrl: true,
+        receiptUrl: true,
+        receiptNumber: true,
+        paymentReference: true,
+        paidAt: true,
+      },
+    });
+    if (!payment) return res.status(404).json({ error: 'Paiement introuvable' });
+    res.json(payment);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(500).json({ error: message });
+  }
+});
+
 // ========== BULLETINS ==========
 
 // Obtenir les bulletins d'un enfant
@@ -1705,6 +1750,26 @@ router.get('/children/:studentId/report-cards', async (req: AuthRequest, res) =>
       error: error.message || 'Erreur serveur',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// Bulletin officiel (même modèle PDF que l’admin)
+router.get('/children/:studentId/report-cards/:reportCardId/official', async (req: AuthRequest, res) => {
+  try {
+    const { studentId, reportCardId } = req.params;
+    const blockedAcademicYears = await getAcademicYearsWithTuitionBlockForParent(prisma, studentId);
+    const result = await getOfficialPublishedReportCard({ studentId, reportCardId });
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    const ay = (result.payload.academicYear ?? '').trim();
+    if (ay && blockedAcademicYears.has(ay)) {
+      return res.status(403).json({ error: 'Bulletin masqué tant que la scolarité n’est pas régularisée' });
+    }
+    res.json(result.payload);
+  } catch (error: unknown) {
+    console.error('GET parent official report card:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 
@@ -2085,27 +2150,7 @@ router.get('/children/:studentId/extracurricular-registrations', async (req: Aut
     await assertParentOwnsStudent(parentId, studentId);
     const academicYear =
       typeof req.query.academicYear === 'string' ? req.query.academicYear : undefined;
-    const rows = await prisma.extracurricularRegistration.findMany({
-      where: {
-        studentId,
-        ...(academicYear?.trim() ? { offering: { academicYear: academicYear.trim() } } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        offering: {
-          select: {
-            id: true,
-            title: true,
-            kind: true,
-            category: true,
-            startAt: true,
-            endAt: true,
-            location: true,
-            academicYear: true,
-          },
-        },
-      },
-    });
+    const rows = await listStudentExtracurricularRegistrations(studentId, academicYear);
     res.json(rows);
   } catch (error: unknown) {
     console.error('GET /parent/children/:studentId/extracurricular-registrations:', error);

@@ -273,7 +273,7 @@ export const sendMessageEmail = async (
 ): Promise<{ success: boolean; messageId?: string; error?: string }> => {
   try {
     const transporter = await getTransporter();
-    const subj = subject || 'Message de School Manager';
+    const subj = subject || 'Message d’École à jour';
 
     if (transporter) {
       const info = await transporter.sendMail({

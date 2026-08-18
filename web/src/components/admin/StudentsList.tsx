@@ -106,11 +106,12 @@ const StudentsList: React.FC<StudentsListProps> = ({
   const { activeSchoolId, activeSchool } = useSchool();
   const schoolReady = useSchoolReady();
 
-  const { data: students, isLoading } = useQuery({
+  const { data: studentsRaw, isLoading, isError, error, refetch } = useQuery({
     queryKey: schoolQueryKey(['students'], activeSchoolId),
-    queryFn: adminApi.getStudents,
+    queryFn: () => adminApi.getStudents(),
     enabled: schoolReady,
   });
+  const students = Array.isArray(studentsRaw) ? studentsRaw : [];
 
   const { data: classesForFilter } = useQuery({
     queryKey: schoolQueryKey(['classes'], activeSchoolId),
@@ -158,13 +159,13 @@ const StudentsList: React.FC<StudentsListProps> = ({
     }
   };
 
-  const filteredStudents = students?.filter((student: any) => {
+  const filteredStudents = students.filter((student: any) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
-      student.user.firstName.toLowerCase().includes(term) ||
-      student.user.lastName.toLowerCase().includes(term) ||
-      student.user.email.toLowerCase().includes(term) ||
-      (student.studentId && student.studentId.toLowerCase().includes(term));
+      String(student.user?.firstName ?? '').toLowerCase().includes(term) ||
+      String(student.user?.lastName ?? '').toLowerCase().includes(term) ||
+      String(student.user?.email ?? '').toLowerCase().includes(term) ||
+      (student.studentId && String(student.studentId).toLowerCase().includes(term));
     const es = (student.enrollmentStatus as EnrollmentStatusValue) || 'ACTIVE';
     const matchesStatus =
       statusFilter === 'all' ||
@@ -323,7 +324,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
           s.isActive ? 'Fiche active' : 'Fiche inactive',
         ].join(';');
       });
-      const csv = '\ufeff# School Manager - Export Élèves\n' + `# ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })}\n` + headers.join(';') + '\n' + rows.join('\n');
+      const csv = '\ufeff# École à jour - Export Élèves\n' + `# ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })}\n` + headers.join(';') + '\n' + rows.join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
@@ -339,7 +340,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
   const exportToJSON = () => {
     try {
       const data = {
-        application: 'School Manager',
+        application: 'École à jour',
         dateExport: format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr }),
         total: filteredStudents?.length || 0,
         élèves: (filteredStudents || []).map((s: any) => ({
@@ -380,7 +381,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
       doc.text('SM', 34, 18, { align: 'center' });
       doc.setTextColor(37, 99, 235);
       doc.setFontSize(20);
-      doc.text('School Manager', 60, 18);
+      doc.text('École à jour', 60, 18);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Liste des Élèves', 60, 25);
@@ -548,7 +549,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
     },
   ];
 
-  if (isLoading) {
+  if (isLoading || !schoolReady) {
     return (
       <div className={`space-y-6 ${compact ? 'text-sm' : ''}`}>
         <div>
@@ -567,6 +568,33 @@ const StudentsList: React.FC<StudentsListProps> = ({
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-amber-600/40 border-t-amber-800" />
           </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isError) {
+    const message =
+      (error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+      (error instanceof Error ? error.message : 'Impossible de charger les élèves.');
+    return (
+      <div className={`space-y-6 ${compact ? 'text-sm' : ''}`}>
+        <div>
+          <h1
+            className={
+              compact
+                ? 'font-display text-lg font-semibold tracking-[0.04em] text-stone-900'
+                : 'font-display text-xl font-semibold tracking-[0.04em] text-stone-900'
+            }
+          >
+            Élèves
+          </h1>
+          <p className="mt-1 text-sm text-rose-700">{message}</p>
+        </div>
+        <Card className="p-6">
+          <Button type="button" onClick={() => void refetch()}>
+            Réessayer
+          </Button>
         </Card>
       </div>
     );

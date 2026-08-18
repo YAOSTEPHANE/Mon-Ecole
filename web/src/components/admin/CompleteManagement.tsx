@@ -418,7 +418,7 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
       // Header
       doc.setFontSize(20);
       doc.setTextColor(59, 130, 246);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Rapport des Notes', 14, 30);
@@ -727,7 +727,7 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
       // Header
       doc.setFontSize(20);
       doc.setTextColor(59, 130, 246);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Rapport des Absences', 14, 30);
@@ -884,7 +884,7 @@ const CompleteManagement: React.FC<CompleteManagementProps> = ({
       // Header
       doc.setFontSize(20);
       doc.setTextColor(59, 130, 246);
-      doc.text('School Manager', 14, 20);
+      doc.text('École à jour', 14, 20);
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text('Rapport des Devoirs', 14, 30);

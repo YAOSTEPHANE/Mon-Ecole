@@ -17,11 +17,11 @@ const Badge: React.FC<BadgeProps> = ({
 }) => {
   const variants = {
     success: 'bg-emerald-50 text-emerald-800 ring-emerald-200/80',
-    warning: 'bg-amber-50 text-amber-950 ring-amber-300/80',
+    warning: 'bg-amber-50 text-amber-950 ring-amber-300/70',
     danger: 'bg-rose-50 text-rose-800 ring-rose-200/80',
-    info: 'bg-blue-50 text-cptb-blue ring-blue-200/80',
-    default: 'bg-stone-100 text-stone-800 ring-stone-200/80',
-    secondary: 'bg-gradient-to-r from-stone-50 to-amber-50/60 text-stone-800 ring-amber-200/50',
+    info: 'bg-[#eef2ff] text-[#0018A8] ring-[#c7d2fe]/90',
+    default: 'bg-[#f4f5f9] text-stone-800 ring-[#e4e8f2]',
+    secondary: 'bg-stone-100 text-stone-700 ring-stone-200/70',
   };
 
   const sizes = {

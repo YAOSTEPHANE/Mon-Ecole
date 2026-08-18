@@ -1,18 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '../../components/Layout';
+import AccountHeaderControls from '../../components/AccountHeaderControls';
 import { PremiumPortalShell, PremiumModuleHeader } from '../../components/dashboard/premium';
-import PortalRoleModulesHub from '../../components/dashboard/PortalRoleModulesHub';
 import DashboardTabLoading from '../../components/dashboard/DashboardTabLoading';
-import { PARENT_MODULE_CATEGORIES } from '@/lib/portalModuleCategories';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 import ParentSidebar, { type ParentNavItem } from '../../components/parent/ParentSidebar';
 import Card from '../../components/ui/Card';
+import Avatar from '../../components/ui/Avatar';
 import { parentApi } from '../../services/api';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import {
   FiSearch,
   FiHeart,
@@ -27,7 +26,6 @@ import {
   FiLayout,
   FiBook,
   FiMessageCircle,
-  FiCommand,
   FiClock,
   FiMap,
   FiNavigation,
@@ -39,6 +37,7 @@ import {
   FiTarget,
   FiCloud,
 } from 'react-icons/fi';
+
 
 const ParentOverview = dynamic(() => import('../../components/parent/ParentOverview'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ChildrenList = dynamic(() => import('../../components/parent/ChildrenList'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -88,6 +87,23 @@ const VALID_PARENT_TABS = [
 
 type ParentTabId = (typeof VALID_PARENT_TABS)[number];
 
+const MOBILE_PRIMARY_TABS: ParentTabId[] = [
+  'overview',
+  'grades',
+  'absences',
+  'assignments',
+  'schedule',
+  'payments',
+  'communication',
+];
+
+type ParentChildRow = {
+  id: string;
+  studentId?: string;
+  user: { firstName: string; lastName: string; avatar?: string | null };
+  class?: { name?: string } | null;
+};
+
 const ParentDashboard = () => {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -96,6 +112,23 @@ const ParentDashboard = () => {
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: children } = useQuery({
+    queryKey: ['parent-children'],
+    queryFn: parentApi.getChildren,
+  });
+  const childRows = (children ?? []) as ParentChildRow[];
+  const selectedChildData = childRows.find((child) => child.id === selectedChild);
+  const selectedChildLabel = selectedChildData
+    ? `${selectedChildData.user.firstName} ${selectedChildData.user.lastName}`
+    : null;
+
+  useEffect(() => {
+    if (!selectedChild && children && children.length > 0) {
+      const first = children[0] as ParentChildRow | undefined;
+      if (first?.id) setSelectedChild(first.id);
+    }
+  }, [children, selectedChild]);
 
   const navItems: ParentNavItem[] = useMemo(
     () => [
@@ -150,7 +183,7 @@ const ParentDashboard = () => {
 
   const tabDescriptions: Record<string, string> = useMemo(
     () => ({
-      overview: 'Vue d’ensemble de la scolarité et raccourcis utiles',
+      overview: 'Vue d’ensemble de la scolarité',
       notifications: 'Alertes paiements, notes, devoirs, présence et rendez-vous',
       communication: 'Échanges avec l’école',
       appointments: 'Entretiens avec les enseignants de vos enfants',
@@ -173,18 +206,6 @@ const ParentDashboard = () => {
       'mock-exams': 'Examens blancs et entraînements',
     }),
     []
-  );
-
-  const hubTabs = useMemo(
-    () =>
-      navItems.map((n) => ({
-        id: n.id,
-        label: n.label,
-        icon: n.icon,
-        color: n.color,
-        description: tabDescriptions[n.id] ?? n.label,
-      })),
-    [navItems, tabDescriptions]
   );
 
   useEffect(() => {
@@ -219,15 +240,8 @@ const ParentDashboard = () => {
   const ActiveTabIcon = activeMeta.icon;
   const activeDescription = tabDescriptions[activeTab] ?? tabDescriptions.overview;
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
-    return 'Bonsoir';
-  };
-
   return (
-    <Layout user={user} onLogout={logout} role="PARENT">
+    <Layout user={user} onLogout={logout} role="PARENT" hideHeader>
       <PremiumPortalShell variant="parent">
       <div className="flex dash-min-h-under-header w-full items-stretch">
         <ParentSidebar
@@ -235,108 +249,117 @@ const ParentDashboard = () => {
           activeTab={activeTab}
           onTabChange={changeTab}
           selectedChild={selectedChild}
+          selectedChildLabel={selectedChildLabel}
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="dash-command-bar sticky dash-sticky-under-header z-30 shrink-0">
-            <div className="px-3 sm:px-6 py-2 sm:py-3">
-              <div className="flex flex-col gap-2 sm:gap-3">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => setSidebarOpen(!sidebarOpen)}
-                      className="lg:hidden p-2 rounded-xl hover:bg-stone-100/90 transition-colors text-stone-700 shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 focus-visible:ring-offset-2"
-                      aria-label="Ouvrir le menu"
-                    >
-                      <FiMenu className="w-4 h-4" aria-hidden />
-                    </button>
-                    <div className="min-w-0">
-                      <h1 className="font-display text-base sm:text-lg md:text-xl font-bold text-stone-900 tracking-tight leading-snug">
-                        {getGreeting()}, {user?.firstName}
-                      </h1>
-                      <p className="text-stone-600 text-xs mt-0.5 line-clamp-1 max-w-md">
-                        Scolarité de vos enfants
-                      </p>
-                      <p className="dash-mobile-meta text-[11px] sm:text-xs text-stone-500 mt-1 tabular-nums">
-                        {format(new Date(), "EEE d MMM yyyy", { locale: fr })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200/80 text-orange-950 text-xs font-semibold shrink-0 ring-1 ring-orange-900/5">
-                    <FiHeart className="w-3.5 h-3.5 text-orange-700" aria-hidden />
-                    Parent
-                  </div>
-                </div>
+          <header className="dash-command-bar z-20 shrink-0 bg-white">
+            <div className="flex items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl text-stone-700 hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                aria-label="Ouvrir le menu"
+              >
+                <FiMenu className="h-4 w-4" aria-hidden />
+              </button>
 
-                <div className="dash-mobile-tabs scrollbar-hide">
-                  {navItems.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
+              {childRows.length > 0 ? (
+                <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto scrollbar-hide" role="tablist" aria-label="Enfant suivi">
+                  {childRows.map((child) => {
+                    const active = child.id === selectedChild;
                     return (
                       <button
-                        key={tab.id}
+                        key={child.id}
                         type="button"
-                        onClick={() => changeTab(tab.id)}
-                        aria-label={tab.label}
-                        title={tab.label}
-                        className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
-                          isActive
-                            ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
-                            : 'bg-stone-100 text-stone-700'
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setSelectedChild(child.id)}
+                        className={`flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1 text-left transition-all ${
+                          active
+                            ? 'border-amber-400 bg-amber-50 text-amber-950'
+                            : 'border-stone-200 bg-white text-stone-700 hover:border-amber-200'
                         }`}
                       >
-                        <Icon
-                          className={`w-3.5 h-3.5 shrink-0 ${
-                            isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
-                          }`}
+                        <Avatar
+                          src={child.user.avatar}
+                          name={`${child.user.firstName} ${child.user.lastName}`}
+                          size="sm"
+                          className="!h-6 !w-6 !text-[10px]"
                         />
-                        <span className="dash-mobile-tab-label">{tab.label}</span>
+                        <span className="pr-0.5 text-xs font-semibold">{child.user.firstName}</span>
                       </button>
                     );
                   })}
                 </div>
+              ) : (
+                <p className="min-w-0 flex-1 truncate text-sm text-stone-500">Espace parent</p>
+              )}
 
-                <div className="relative w-full max-w-xl">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                    <FiSearch className="w-4 h-4" aria-hidden />
-                  </div>
-                  <input
-                    type="search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher…"
-                    className="dash-search-field w-full rounded-xl pl-10 pr-3 py-2 sm:py-2.5 text-sm text-stone-900 placeholder:text-stone-400"
-                    aria-label="Recherche dans l’espace parent"
-                  />
+              <div className="relative hidden w-44 shrink-0 md:block lg:w-64">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+                  <FiSearch className="h-4 w-4" aria-hidden />
                 </div>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher…"
+                  className="dash-search-field w-full rounded-xl py-2 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
+                  aria-label="Recherche dans l’espace parent"
+                />
               </div>
+
+              <AccountHeaderControls user={user} role="PARENT" onLogout={logout} />
+            </div>
+
+            <div className="dash-mobile-tabs scrollbar-hide px-3 pb-2 lg:hidden">
+              {navItems
+                .filter((tab) => MOBILE_PRIMARY_TABS.includes(tab.id as ParentTabId))
+                .map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => changeTab(tab.id)}
+                      aria-label={tab.label}
+                      title={tab.label}
+                      className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+                        isActive
+                          ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
+                          : 'bg-stone-100 text-stone-700'
+                      }`}
+                    >
+                      <Icon
+                        className={`h-3.5 w-3.5 shrink-0 ${
+                          isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
+                        }`}
+                      />
+                      <span className="dash-mobile-tab-label">{tab.label}</span>
+                    </button>
+                  );
+                })}
             </div>
           </header>
 
           <main className="dash-workspace flex-1 px-3 sm:px-6 py-4 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-x-hidden overflow-y-auto scroll-smooth">
             <div className="max-w-[1240px] mx-auto space-y-5 sm:space-y-6">
-                            <PremiumModuleHeader
-                title={activeMeta.label}
-                description={activeDescription}
-                icon={ActiveTabIcon}
-                gradient={activeMeta.color}
-                badge="Parent"
-              />
+              {activeTab !== 'overview' ? (
+                <PremiumModuleHeader
+                  title={activeMeta.label}
+                  description={activeDescription}
+                  icon={ActiveTabIcon}
+                  gradient={activeMeta.color}
+                  badge="Parent"
+                />
+              ) : null}
 
               <div className="animate-slide-up">
-                {activeTab === 'overview' && (
-                  <>
-                    <ParentOverview />
-                    <PortalRoleModulesHub
-                      tabs={hubTabs}
-                      categories={PARENT_MODULE_CATEGORIES}
-                      onNavigate={changeTab}
-                    />
-                  </>
-                )}
+                {activeTab === 'overview' && <ParentOverview selectedChildId={selectedChild} />}
                 {activeTab === 'notifications' && <ParentNotificationsPanel />}
                 {activeTab === 'communication' && (
                   <SchoolCommunication role="parent" contextStudentId={selectedChild} />

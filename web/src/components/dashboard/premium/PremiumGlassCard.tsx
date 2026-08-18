@@ -12,11 +12,11 @@ type PremiumGlassCardProps = {
 
 const ACCENT_BORDER = {
   none: '',
-  gold: 'before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-gradient-to-b before:from-cptb-gold before:via-amber-500 before:to-cptb-gold-dark before:rounded-l-2xl',
+  gold: 'before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-[#EBB02D] before:rounded-l-[1.25rem]',
   indigo:
-    'before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-gradient-to-b before:from-cptb-blue before:via-brand-600 before:to-cptb-blue-dark before:rounded-l-2xl',
+    'before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-[#0018A8] before:rounded-l-[1.25rem]',
   emerald:
-    'before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-gradient-to-b before:from-emerald-500 before:to-teal-700 before:rounded-l-2xl',
+    'before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-emerald-500 before:rounded-l-[1.25rem]',
 } as const;
 
 const PADDING = {
@@ -35,12 +35,10 @@ export default function PremiumGlassCard({
 }: PremiumGlassCardProps) {
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-white/94 backdrop-blur-xl shadow-dash-card ring-1 ring-stone-200/70 transition-all duration-300 ease-premium ${
-        hover ? 'hover:shadow-dash-card-hover hover:-translate-y-0.5' : ''
+      className={`premium-surface ${
+        hover ? 'transition-all duration-200 ease-premium hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-18px_rgba(28,39,76,0.28)]' : ''
       } ${ACCENT_BORDER[accent]} ${className}`}
     >
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/70 via-transparent to-amber-50/25" />
-      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-cptb-gold/8 to-transparent" aria-hidden />
       <div className={`relative ${PADDING[padding]}`}>{children}</div>
     </div>
   );
