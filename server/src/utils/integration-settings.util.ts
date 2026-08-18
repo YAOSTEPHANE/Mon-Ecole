@@ -278,6 +278,16 @@ export function getPaymentEnv(name: string): string {
       return resolveFromCache('cinetpaySiteId', 'CINETPAY_SITE_ID');
     case 'PAYSTACK_SECRET_KEY':
       return resolveFromCache('paystackSecretKey', 'PAYSTACK_SECRET_KEY');
+    case 'WAVE_WEBHOOK_SECRET':
+      return (process.env.WAVE_WEBHOOK_SECRET ?? '').trim();
+    case 'MTN_MOMO_API_USER':
+      return (process.env.MTN_MOMO_API_USER ?? '').trim();
+    case 'ORANGE_MONEY_MERCHANT_KEY':
+      return (process.env.ORANGE_MONEY_MERCHANT_KEY ?? '').trim();
+    case 'ORANGE_MONEY_CLIENT_ID':
+      return (process.env.ORANGE_MONEY_CLIENT_ID ?? '').trim();
+    case 'ORANGE_MONEY_CLIENT_SECRET':
+      return (process.env.ORANGE_MONEY_CLIENT_SECRET ?? '').trim();
     case 'PAYMENT_WEBHOOK_SECRET':
       return getPaymentWebhookSecret();
     default:
@@ -294,7 +304,7 @@ export function getWhatsAppPhoneNumberId(): string {
 }
 
 export function getWhatsAppDefaultCountryCode(): string {
-  return resolveFromCache('whatsappDefaultCountryCode', 'WHATSAPP_DEFAULT_COUNTRY_CODE') || '237';
+  return resolveFromCache('whatsappDefaultCountryCode', 'WHATSAPP_DEFAULT_COUNTRY_CODE') || '225';
 }
 
 export function getSmtpHost(): string {
@@ -473,6 +483,8 @@ export function getIntegrationPublicStatus(apiBase: string) {
       paymentWave: `${apiBase}/api/payments/webhooks/wave`,
       paymentCinetpay: `${apiBase}/api/payments/webhooks/cinetpay`,
       paymentPaystack: `${apiBase}/api/payments/webhooks/paystack`,
+      paymentMtn: `${apiBase}/api/payments/webhooks/mtn-momo`,
+      paymentOrange: `${apiBase}/api/payments/webhooks/orange-money`,
     },
     mena: {
       webhookSecretConfigured: isSecretConfigured('menaPresenceWebhookSecret'),

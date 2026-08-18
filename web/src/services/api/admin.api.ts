@@ -2096,6 +2096,8 @@ export const adminApi = {
         paymentWave: string;
         paymentCinetpay: string;
         paymentPaystack: string;
+        paymentMtn: string;
+        paymentOrange: string;
       };
       mena: {
         webhookSecretConfigured: boolean;

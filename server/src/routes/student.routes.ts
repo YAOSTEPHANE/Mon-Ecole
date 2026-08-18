@@ -1962,13 +1962,14 @@ router.post('/payments', async (req: AuthRequest, res) => {
     } = payment;
     if (paymentMethod === 'MOBILE_MONEY' || paymentMethod === 'CARD') {
       const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0]?.trim();
-      const checkoutPayment = await attachOnlineCheckout(prisma, payment.id, {
+      const { payment: checkoutPayment, checkout } = await attachOnlineCheckout(prisma, payment.id, {
         method: paymentMethod,
         phoneNumber,
         operator,
         customerEmail: req.user?.email,
         customerName: req.user?.email ?? '',
         returnUrl: `${frontend}/student?tab=payments`,
+        cancelUrl: `${frontend}/student?tab=payments`,
       });
       onlinePayment = {
         ...payment,
@@ -1981,9 +1982,22 @@ router.post('/payments', async (req: AuthRequest, res) => {
         void notifyParentWhatsApp(
           phoneNumber,
           'Paiement initié',
-          `Réf. ${payment.paymentReference} — ${paymentAmount.toLocaleString('fr-FR')} FCFA.`
+          `Réf. ${payment.paymentReference} — ${paymentAmount.toLocaleString('fr-FR')} FCFA. ${
+            checkout.checkoutUrl
+              ? `Ouvrez : ${checkout.checkoutUrl}`
+              : checkout.ussdHint || 'Validez sur votre téléphone. Le reçu arrivera automatiquement.'
+          }`
         ).catch((e) => console.error('whatsapp payment:', e));
       }
+      return res.status(201).json({
+        payment: onlinePayment,
+        paymentUrl: checkout.checkoutUrl || `/payment/process/${payment.id}`,
+        checkoutUrl: checkout.checkoutUrl || null,
+        provider: checkout.provider,
+        mode: checkout.mode,
+        ussdHint: checkout.ussdHint || null,
+        message: checkout.message,
+      });
     }
 
     res.status(201).json({
@@ -2064,6 +2078,33 @@ router.get('/payments', async (req: AuthRequest, res) => {
       error: error.message || 'Erreur serveur',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+router.get('/payments/:id', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
+    const payment = await prisma.payment.findFirst({
+      where: { id: req.params.id, studentId: student.id },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        paymentMethod: true,
+        paymentProvider: true,
+        checkoutUrl: true,
+        receiptUrl: true,
+        receiptNumber: true,
+        paymentReference: true,
+        paidAt: true,
+      },
+    });
+    if (!payment) return res.status(404).json({ error: 'Paiement introuvable' });
+    res.json(payment);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    res.status(500).json({ error: message });
   }
 });
 

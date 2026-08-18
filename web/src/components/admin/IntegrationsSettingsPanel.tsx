@@ -134,7 +134,7 @@ export default function IntegrationsSettingsPanel() {
     setMenaDbQuery(data.mena.dbQuery ?? '');
     setCinetpaySiteId(data.payments.cinetpaySiteId ?? '');
     setWaPhoneId(data.whatsapp.phoneNumberId ?? '');
-    setWaCountry(data.whatsapp.defaultCountryCode ?? '237');
+    setWaCountry(data.whatsapp.defaultCountryCode ?? '225');
     setSmtpHost(data.smtp.host ?? '');
     setSmtpPort(data.smtp.port != null ? String(data.smtp.port) : '587');
     setSmtpSecure(Boolean(data.smtp.secure));
@@ -257,7 +257,9 @@ export default function IntegrationsSettingsPanel() {
                 ['Présence MENA (webhook)', settings.webhooks.menaPresence],
                 ['Paiement Mobile Money', settings.webhooks.paymentMobileMoney],
                 ['Wave', settings.webhooks.paymentWave],
-                ['CinetPay', settings.webhooks.paymentCinetpay],
+                ['CinetPay (Moov + repli)', settings.webhooks.paymentCinetpay],
+                ['MTN MoMo', settings.webhooks.paymentMtn],
+                ['Orange Money', settings.webhooks.paymentOrange],
                 ['Paystack', settings.webhooks.paymentPaystack],
               ] as const
             ).map(([label, url]) => (
@@ -454,6 +456,10 @@ export default function IntegrationsSettingsPanel() {
             }}
           />
         </div>
+        <p className="text-xs text-stone-500">
+          CinetPay couvre Moov Money et sert de repli pour Orange / MTN si les APIs natives ne sont pas configurées.
+          Collez l’URL webhook CinetPay ci-dessus dans le tableau de bord CinetPay (notify_url).
+        </p>
       </Card>
 
       <Card className="space-y-4 border border-gray-200 p-4">
@@ -486,10 +492,10 @@ export default function IntegrationsSettingsPanel() {
             setClearFlags((p) => ({ ...p, waCountry: false }));
             setWaCountry(e.target.value);
           }}
-          placeholder="237"
+          placeholder="225"
         />
         <p className="text-xs text-stone-500">
-          Ex. 237 (Cameroun), 227 (Niger) — utilisé pour les numéros Mobile Money.
+          Ex. 225 (Côte d’Ivoire) — utilisé pour les numéros Mobile Money et WhatsApp.
         </p>
       </Card>
 
