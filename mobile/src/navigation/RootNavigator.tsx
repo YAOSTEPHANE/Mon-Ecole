@@ -10,6 +10,7 @@ import HomeScreen from '../screens/HomeScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import AssistantScreen from '../screens/AssistantScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import PaymentsScreen from '../screens/PaymentsScreen';
 import { colors } from '../theme';
 
 const Stack = createNativeStackNavigator();
@@ -38,6 +39,7 @@ function MainTabs() {
       {showAssistant ? (
         <Tab.Screen name="Assistant" component={AssistantScreen} />
       ) : null}
+      <Tab.Screen name="Paiements" component={PaymentsScreen} />
       <Tab.Screen name="Profil" component={ProfileScreen} />
     </Tab.Navigator>
   );

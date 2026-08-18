@@ -173,6 +173,7 @@ export async function attachOnlineCheckout(
     customerEmail?: string;
     customerName?: string;
     returnUrl?: string;
+    cancelUrl?: string;
   }
 ) {
   const payment = await client.payment.findUnique({ where: { id: paymentId } });
@@ -188,6 +189,7 @@ export async function attachOnlineCheckout(
     customerEmail: opts.customerEmail,
     customerName: opts.customerName,
     returnUrl: opts.returnUrl,
+    cancelUrl: opts.cancelUrl,
     description: `Paiement scolarité ${payment.paymentReference || payment.id}`,
   });
 
@@ -195,7 +197,7 @@ export async function attachOnlineCheckout(
     checkout.ussdHint ? ` — ${checkout.ussdHint}` : ''
   }`;
 
-  return client.payment.update({
+  const updated = await client.payment.update({
     where: { id: paymentId },
     data: {
       paymentProvider: checkout.provider as PaymentProviderId,
@@ -205,6 +207,7 @@ export async function attachOnlineCheckout(
     },
     include: PAYMENT_INCLUDE,
   });
+  return { payment: updated, checkout };
 }
 
 export type { Payment, Role };

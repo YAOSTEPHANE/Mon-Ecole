@@ -17,6 +17,9 @@ describe('payment-providers', () => {
 
   it('résout SANDBOX sans clés', () => {
     assert.equal(resolvePaymentProvider('WAVE', 'MOBILE_MONEY'), 'SANDBOX');
+    assert.equal(resolvePaymentProvider('MOOV_MONEY', 'MOBILE_MONEY'), 'SANDBOX');
+    assert.equal(resolvePaymentProvider('ORANGE_MONEY', 'MOBILE_MONEY'), 'SANDBOX');
+    assert.equal(resolvePaymentProvider('MTN_MOBILE_MONEY', 'MOBILE_MONEY'), 'SANDBOX');
   });
 
   it('initie un checkout sandbox', async () => {
