@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { studentApi } from '../../services/api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
-import { FiBook, FiCalendar, FiClipboard, FiAward, FiAlertCircle, FiSearch, FiBookOpen, FiFileText, FiMessageSquare } from 'react-icons/fi';
+import { FiBook, FiCalendar, FiClipboard, FiAward, FiAlertCircle, FiSearch, FiBookOpen, FiFileText, FiMessageSquare, FiTruck, FiUserPlus } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import PortalSchoolFeed from '../portal/PortalSchoolFeed';
@@ -176,14 +176,17 @@ const StudentOverview = ({ searchQuery = '', searchCategory = 'all' }: { searchQ
               subtitle="Travail scolaire du jour"
               icon={FiClipboard}
             />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-3">
               {(
                 [
                   { id: 'grades', label: 'Notes', icon: FiAward, color: 'from-violet-500 to-fuchsia-600' },
+                  { id: 'report-cards', label: 'Bulletins', icon: FiBook, color: 'from-violet-600 to-purple-700' },
                   { id: 'assignments', label: 'Devoirs', icon: FiFileText, color: 'from-blue-500 to-indigo-600' },
                   { id: 'lesson-logs', label: 'Cahier', icon: FiBookOpen, color: 'from-amber-600 to-orange-700' },
                   { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, color: 'from-teal-500 to-cyan-600' },
                   { id: 'absences', label: 'Absences', icon: FiAlertCircle, color: 'from-orange-500 to-red-500' },
+                  { id: 'reenrollment', label: 'Réinscription', icon: FiUserPlus, color: 'from-cptb-blue to-cptb-blue-dark' },
+                  { id: 'campus', label: 'Cantine', icon: FiTruck, color: 'from-amber-600 to-orange-700' },
                   { id: 'messages', label: 'Messages', icon: FiMessageSquare, color: 'from-stone-500 to-stone-700' },
                 ] as const
               ).map((item) => {

@@ -3887,3 +3887,34 @@ model PhysicalExamSession {
   @@map("physical_exam_sessions")
 }
 
+/// Taux d’admission officiels (CEPE, BEPC, BAC…) saisis par l’admin pour la vitrine publique.
+model OfficialExamAdmissionStat {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  examKind      String
+  examLabel     String
+  academicYear  String
+  candidates    Int?
+  admitted      Int?
+  passRate      Float
+  displayOrder  Int      @default(0)
+  isPublished   Boolean  @default(false)
+  schoolId      String?  @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([schoolId, academicYear, isPublished])
+  @@index([academicYear, isPublished])
+  @@map("official_exam_admission_stats")
+}
+
+/// Publication du palmarès (1er de chaque classe) sur la page d’accueil.
+model PublicHonorRollSetting {
+  id           String   @id @map("_id")
+  enabled      Boolean  @default(false)
+  academicYear String?
+  period       String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("public_honor_roll_settings")
+}
+

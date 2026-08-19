@@ -2102,6 +2102,140 @@ router.get('/children/:studentId/campus/transport-routes/:routeId/tracking', asy
   }
 });
 
+router.get('/children/:studentId/health', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user!.id);
+    if (!parentId) return res.status(404).json({ error: 'Parent non trouvé' });
+    await assertParentOwnsStudent(parentId, studentId);
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        user: { select: { firstName: true, lastName: true } },
+        healthDossier: {
+          select: {
+            bloodGroup: true,
+            familyDoctorName: true,
+            familyDoctorPhone: true,
+            preferredHospital: true,
+            insuranceInfo: true,
+          },
+        },
+        allergyRecords: {
+          select: { id: true, allergen: true, severity: true, reaction: true },
+          orderBy: { allergen: 'asc' },
+        },
+        treatments: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            medication: true,
+            dosage: true,
+            schedule: true,
+            startDate: true,
+            endDate: true,
+            isActive: true,
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
+        infirmaryVisits: {
+          orderBy: { visitedAt: 'desc' },
+          take: 30,
+          select: {
+            id: true,
+            visitedAt: true,
+            motive: true,
+            careAdministered: true,
+            outcome: true,
+            parentNotified: true,
+          },
+        },
+        healthEmergencies: {
+          orderBy: { reportedAt: 'desc' },
+          take: 20,
+          select: {
+            id: true,
+            reportedAt: true,
+            severity: true,
+            description: true,
+            actionsTaken: true,
+            resolvedAt: true,
+          },
+        },
+        healthCampaignParticipations: {
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+          select: {
+            id: true,
+            status: true,
+            completedAt: true,
+            campaign: {
+              select: {
+                title: true,
+                kind: true,
+                startDate: true,
+                endDate: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!student) return res.status(404).json({ error: 'Élève introuvable' });
+
+    const decrypted = decryptStudentRecord(student as unknown as Record<string, unknown>);
+    const allergies =
+      typeof decrypted.allergies === 'string' ? decrypted.allergies : student.allergies;
+    const emergencyContact =
+      typeof decrypted.emergencyContact === 'string'
+        ? decrypted.emergencyContact
+        : student.emergencyContact;
+    const emergencyPhone =
+      typeof decrypted.emergencyPhone === 'string' ? decrypted.emergencyPhone : student.emergencyPhone;
+    const emergencyContact2 =
+      typeof decrypted.emergencyContact2 === 'string'
+        ? decrypted.emergencyContact2
+        : student.emergencyContact2;
+    const emergencyPhone2 =
+      typeof decrypted.emergencyPhone2 === 'string'
+        ? decrypted.emergencyPhone2
+        : student.emergencyPhone2;
+
+    res.json({
+      student: {
+        firstName: student.user.firstName,
+        lastName: student.user.lastName,
+        allergies,
+        emergencyContact,
+        emergencyPhone,
+        emergencyContact2,
+        emergencyPhone2,
+      },
+      dossier: student.healthDossier,
+      allergyRecords: student.allergyRecords,
+      treatments: student.treatments,
+      visits: student.infirmaryVisits,
+      emergencies: student.healthEmergencies,
+      campaigns: student.healthCampaignParticipations.map((row) => ({
+        id: row.id,
+        status: row.status,
+        completedAt: row.completedAt,
+        title: row.campaign.title,
+        kind: row.campaign.kind,
+        startDate: row.campaign.startDate,
+        endDate: row.campaign.endDate,
+      })),
+    });
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status ?? 500;
+    const msg = error instanceof Error ? error.message : 'Erreur serveur';
+    console.error('GET /parent/children/:studentId/health:', error);
+    res.status(msg.includes('associé') ? 403 : status).json({ error: msg });
+  }
+});
+
 router.get('/children/:studentId/extracurricular-offerings', async (req: AuthRequest, res) => {
   try {
     const { studentId } = req.params;

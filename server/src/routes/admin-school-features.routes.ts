@@ -7,6 +7,23 @@ import { auditTimetableConflicts } from '../utils/timetable-audit.util';
 import { billAllCampusServices } from '../utils/campus-billing.util';
 import { runAutomaticAbsenceReminders } from '../utils/absence-reminder.util';
 import { buildClassCouncilMinutesHtml } from '../utils/html-document.util';
+import { isObjectId } from '../utils/school-access-guard.util';
+import { getCurrentAcademicYear } from '../utils/report-card.util';
+import {
+  DEFAULT_EXAM_LABELS,
+  OFFICIAL_EXAM_KINDS,
+  buildHonorRoll,
+  computePassRate,
+  createExamStat,
+  deleteExamStat,
+  getExamStatById,
+  getHonorRollSetting,
+  isOfficialExamKind,
+  listExamStatsForAdmin,
+  roundPassRate,
+  updateExamStat,
+  upsertHonorRollSetting,
+} from '../utils/public-academic-showcase.util';
 
 const router = express.Router();
 
@@ -446,6 +463,219 @@ router.get('/lesson-logs', async (req, res) => {
     });
     res.json(rows);
   } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+// ——— Vitrine publique : taux d’admission + palmarès ———
+
+function parseOptionalInt(v: unknown): number | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(String(v).trim());
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return Math.round(n);
+}
+
+function parsePassRateInput(v: unknown): number | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  const n = typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0 || n > 100) return undefined;
+  return roundPassRate(n);
+}
+
+router.get('/official-exam-stats', async (req: SchoolContextRequest, res) => {
+  try {
+    const academicYear =
+      typeof req.query.academicYear === 'string' && req.query.academicYear.trim()
+        ? req.query.academicYear.trim()
+        : getCurrentAcademicYear();
+    const sid = schoolIdFrom(req);
+    const [rows, honorSetting] = await Promise.all([
+      listExamStatsForAdmin({ academicYear, schoolId: sid }),
+      sid ? getHonorRollSetting(sid) : Promise.resolve(null),
+    ]);
+    const honorYear = honorSetting?.academicYear || academicYear;
+    const honorPreview = sid
+      ? await buildHonorRoll({
+          schoolId: sid,
+          academicYear: honorYear,
+          period: honorSetting?.period,
+        })
+      : null;
+    res.json({
+      academicYear,
+      examKinds: OFFICIAL_EXAM_KINDS,
+      stats: rows,
+      honorRoll: {
+        enabled: honorSetting?.enabled ?? true,
+        academicYear: honorYear,
+        period: honorSetting?.period ?? null,
+        preview: honorPreview,
+      },
+    });
+  } catch (e) {
+    console.error('GET /admin/official-exam-stats:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.put('/honor-roll-settings', async (req: SchoolContextRequest, res) => {
+  try {
+    const sid = schoolIdFrom(req);
+    if (!sid) return res.status(400).json({ error: 'Établissement requis' });
+    const b = req.body as Record<string, unknown>;
+    const academicYear =
+      b.academicYear === undefined
+        ? undefined
+        : typeof b.academicYear === 'string' && /^\d{4}-\d{4}$/.test(b.academicYear.trim())
+          ? b.academicYear.trim()
+          : null;
+    const period =
+      b.period === undefined
+        ? undefined
+        : typeof b.period === 'string' && b.period.trim()
+          ? b.period.trim().slice(0, 24)
+          : null;
+    const row = await upsertHonorRollSetting(sid, {
+      enabled: typeof b.enabled === 'boolean' ? b.enabled : undefined,
+      academicYear,
+      period,
+    });
+    const preview = await buildHonorRoll({
+      schoolId: sid,
+      academicYear: row.academicYear,
+      period: row.period,
+    });
+    res.json({ ...row, preview });
+  } catch (e) {
+    console.error('PUT /admin/honor-roll-settings:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/official-exam-stats', async (req: AuthRequest & SchoolContextRequest, res) => {
+  try {
+    const b = req.body as Record<string, unknown>;
+    const examKindRaw = typeof b.examKind === 'string' ? b.examKind.trim().toUpperCase() : '';
+    if (!isOfficialExamKind(examKindRaw)) {
+      return res.status(400).json({ error: 'Type d’examen invalide (CEPE, BEPC, BAC ou OTHER)' });
+    }
+    const academicYear =
+      typeof b.academicYear === 'string' && /^\d{4}-\d{4}$/.test(b.academicYear.trim())
+        ? b.academicYear.trim()
+        : '';
+    if (!academicYear) {
+      return res.status(400).json({ error: 'Année scolaire requise (ex. 2025-2026)' });
+    }
+    const examLabel =
+      (typeof b.examLabel === 'string' ? b.examLabel.trim() : '') || DEFAULT_EXAM_LABELS[examKindRaw];
+    const candidates = parseOptionalInt(b.candidates);
+    const admitted = parseOptionalInt(b.admitted);
+    if (candidates === undefined || admitted === undefined) {
+      return res.status(400).json({ error: 'Candidats et admis doivent être des entiers positifs' });
+    }
+    const computed = computePassRate(candidates ?? null, admitted ?? null);
+    const passRate = parsePassRateInput(b.passRate) ?? computed;
+    if (passRate == null) {
+      return res.status(400).json({ error: 'Indiquez un pourcentage d’admission (0–100)' });
+    }
+    const displayOrder =
+      typeof b.displayOrder === 'number' && Number.isFinite(b.displayOrder)
+        ? Math.round(b.displayOrder)
+        : 0;
+    const row = await createExamStat({
+      examKind: examKindRaw,
+      examLabel: examLabel.slice(0, 80),
+      academicYear,
+      candidates: candidates ?? null,
+      admitted: admitted ?? null,
+      passRate,
+      displayOrder,
+      isPublished: b.isPublished === true,
+      schoolId: schoolIdFrom(req) ?? null,
+    });
+    res.status(201).json(row);
+  } catch (e) {
+    console.error('POST /admin/official-exam-stats:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.patch('/official-exam-stats/:id', async (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    if (!isObjectId(id)) return res.status(400).json({ error: 'Identifiant invalide' });
+    const existing = await getExamStatById(id);
+    if (!existing) return res.status(404).json({ error: 'Résultat introuvable' });
+    const b = req.body as Record<string, unknown>;
+    const data: {
+      examKind?: string;
+      examLabel?: string;
+      academicYear?: string;
+      candidates?: number | null;
+      admitted?: number | null;
+      passRate?: number;
+      displayOrder?: number;
+      isPublished?: boolean;
+    } = {};
+    if (typeof b.examKind === 'string') {
+      const kind = b.examKind.trim().toUpperCase();
+      if (!isOfficialExamKind(kind)) {
+        return res.status(400).json({ error: 'Type d’examen invalide' });
+      }
+      data.examKind = kind;
+    }
+    if (typeof b.examLabel === 'string' && b.examLabel.trim()) {
+      data.examLabel = b.examLabel.trim().slice(0, 80);
+    }
+    if (typeof b.academicYear === 'string' && /^\d{4}-\d{4}$/.test(b.academicYear.trim())) {
+      data.academicYear = b.academicYear.trim();
+    }
+    if (b.candidates !== undefined) {
+      const candidates = parseOptionalInt(b.candidates);
+      if (candidates === undefined) return res.status(400).json({ error: 'Candidats invalides' });
+      data.candidates = candidates;
+    }
+    if (b.admitted !== undefined) {
+      const admitted = parseOptionalInt(b.admitted);
+      if (admitted === undefined) return res.status(400).json({ error: 'Admis invalides' });
+      data.admitted = admitted;
+    }
+    const nextCandidates =
+      data.candidates === undefined ? existing.candidates : (data.candidates as number | null);
+    const nextAdmitted =
+      data.admitted === undefined ? existing.admitted : (data.admitted as number | null);
+    const computed = computePassRate(nextCandidates, nextAdmitted);
+    if (b.passRate !== undefined) {
+      const parsed = parsePassRateInput(b.passRate);
+      if (parsed == null) return res.status(400).json({ error: 'Pourcentage invalide (0–100)' });
+      data.passRate = parsed;
+    } else if (computed != null && (b.candidates !== undefined || b.admitted !== undefined)) {
+      data.passRate = computed;
+    }
+    if (typeof b.displayOrder === 'number' && Number.isFinite(b.displayOrder)) {
+      data.displayOrder = Math.round(b.displayOrder);
+    }
+    if (typeof b.isPublished === 'boolean') data.isPublished = b.isPublished;
+    const row = await updateExamStat(id, data);
+    res.json(row);
+  } catch (e) {
+    console.error('PATCH /admin/official-exam-stats:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.delete('/official-exam-stats/:id', async (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    if (!isObjectId(id)) return res.status(400).json({ error: 'Identifiant invalide' });
+    const existing = await getExamStatById(id);
+    if (!existing) return res.status(404).json({ error: 'Résultat introuvable' });
+    await deleteExamStat(id);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('DELETE /admin/official-exam-stats:', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });

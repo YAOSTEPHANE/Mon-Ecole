@@ -1,38 +1,27 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppBrandingProvider } from "@/contexts/AppBrandingContext";
 import { SchoolProvider } from "@/contexts/SchoolContext";
+import ClientOnly from "@/components/ClientOnly";
 import ServerConnectionError from "@/components/ServerConnectionError";
 import SentryBootstrap from "@/components/SentryBootstrap";
 import ServiceWorkerDevCleanup from "@/components/ServiceWorkerDevCleanup";
 import ServiceWorkerBootstrap from "@/components/ServiceWorkerBootstrap";
 import OfflineBanner from "@/components/OfflineBanner";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
+import PushNotificationsBootstrap from "@/components/PushNotificationsBootstrap";
+import RealtimeBootstrap from "@/components/RealtimeBootstrap";
+import AssistantPanel from "@/components/AssistantPanel";
+import OfflinePrefetch from "@/components/OfflinePrefetch";
+import SyncQueueBootstrap from "@/components/SyncQueueBootstrap";
+import PublicVisitorPanel from "@/components/public/PublicVisitorPanel";
 import { ensureStaffPedagogyApiInterceptor } from "@/lib/staffPedagogyApi";
 import { isOffline } from "@/lib/offline-api";
 import PublicVisitorBootstrap from "@/components/public/PublicVisitorBootstrap";
-
-const PushNotificationsBootstrap = dynamic(
-  () => import("@/components/PushNotificationsBootstrap"),
-  { ssr: false },
-);
-const RealtimeBootstrap = dynamic(() => import("@/components/RealtimeBootstrap"), { ssr: false });
-const AssistantPanel = dynamic(() => import("@/components/AssistantPanel"), { ssr: false });
-const OfflinePrefetch = dynamic(() => import("@/components/OfflinePrefetch"), { ssr: false });
-const SyncQueueBootstrap = dynamic(() => import("@/components/SyncQueueBootstrap"), { ssr: false });
-const PublicVisitorPanel = dynamic(
-  () => import("@/components/public/PublicVisitorPanel"),
-  { ssr: false },
-);
-
-if (typeof window !== "undefined") {
-  ensureStaffPedagogyApiInterceptor();
-}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -66,6 +55,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+
+  useEffect(() => {
+    ensureStaffPedagogyApiInterceptor();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AppBrandingProvider>
@@ -74,16 +68,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <SchoolProvider>
             <ServiceWorkerDevCleanup />
             <ServiceWorkerBootstrap />
-            <OfflinePrefetch />
-            <SyncQueueBootstrap />
+            <ClientOnly>
+              <OfflinePrefetch />
+              <SyncQueueBootstrap />
+              <PushNotificationsBootstrap />
+              <RealtimeBootstrap />
+            </ClientOnly>
             <OfflineBanner />
-            <PushNotificationsBootstrap />
-            <RealtimeBootstrap />
             <SentryBootstrap />
             <PwaInstallBanner />
             {children}
-            <AssistantPanel />
-            <PublicVisitorPanel />
+            <ClientOnly>
+              <AssistantPanel />
+              <PublicVisitorPanel />
+            </ClientOnly>
             <Toaster
               position="top-right"
               gutter={12}

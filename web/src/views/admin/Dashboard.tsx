@@ -52,6 +52,7 @@ import {
   FiClipboard,
   FiAlertTriangle,
   FiMap,
+  FiTruck,
   FiNavigation,
   FiMonitor,
   FiHome,
@@ -255,6 +256,13 @@ const AdminDashboard = () => {
       icon: FiMap,
       color: 'from-teal-600 to-emerald-700',
       description: 'Clubs, sports, culture, sorties, voyages, inscriptions et calendrier des événements',
+    },
+    {
+      id: 'campus',
+      label: 'Cantine & transport',
+      icon: FiTruck,
+      color: 'from-amber-600 to-orange-700',
+      description: 'Formules repas, lignes de bus, inscriptions et facturation campus',
     },
     {
       id: 'orientation',

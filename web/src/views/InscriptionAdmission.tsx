@@ -7,6 +7,7 @@ import { publicApi } from '../services/api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Footer from '../components/Footer';
+import PublicSectionsReveal from '../components/public/PublicSectionsReveal';
 import type { AppBrandingPayload } from '@/contexts/AppBrandingContext';
 import { resolveUploadPublicUrl } from '@/lib/uploadsPublicUrl';
 import { getCurrentAcademicYear } from '../utils/academicYear';
@@ -27,6 +28,7 @@ import {
   type AdmissionFormExportOptions,
 } from '../lib/admissionFormPrint';
 import { SCHOOL_DEFAULTS } from '../data/schoolDefaults';
+import PublicAdmissionRateInfo from '../components/public/PublicAdmissionRateInfo';
 import toast from 'react-hot-toast';
 import { extractApiErrorMessage } from '../lib/extractApiErrorMessage';
 import {
@@ -397,10 +399,20 @@ const InscriptionAdmission = () => {
             <FiArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
             Retour
           </Link>
-          <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Pré-inscription</span>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 sm:inline">
+              Pré-inscription
+            </span>
+            <PublicAdmissionRateInfo
+              variant="chip"
+              school={schoolSlug || undefined}
+              className="admission-lux-chip--compact"
+            />
+          </div>
         </div>
       </header>
 
+      <PublicSectionsReveal extraSelector="main > *">
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
         <div className="text-center space-y-4">
           {logoUrl ? (
@@ -985,6 +997,7 @@ const InscriptionAdmission = () => {
       </main>
 
       <Footer />
+      </PublicSectionsReveal>
     </div>
   );
 };

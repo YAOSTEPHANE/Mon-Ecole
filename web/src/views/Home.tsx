@@ -12,6 +12,9 @@ import HomeDirectorSection from '../components/public/HomeDirectorSection';
 import HomePageImage from '../components/public/HomePageImage';
 import PreInscriptionSchoolEntry from '../components/public/PreInscriptionSchoolEntry';
 import HomeFneMatriculeLookup from '../components/public/HomeFneMatriculeLookup';
+import HomeAcademicResultsSection from '../components/public/HomeAcademicResultsSection';
+import PublicSectionsReveal from '../components/public/PublicSectionsReveal';
+import PublicAdmissionRateInfo from '../components/public/PublicAdmissionRateInfo';
 import { getRoleDashboardPath } from '../lib/rolePaths';
 import {
   SCHOOL_MARQUEE,
@@ -49,13 +52,47 @@ import {
 } from 'react-icons/fi';
 
 const NAV_LINKS = [
+  { href: '/a-propos', label: 'À propos' },
   { href: '#etablissement', label: 'Établissement' },
+  { href: '#resultats', label: 'Résultats' },
   { href: '#galerie', label: 'Galerie' },
   { href: '#matricule-fne', label: 'Matricule FNE' },
   { href: '#parcours', label: 'Admissions' },
   { href: '#actualites', label: 'Actualités' },
   { href: '/contact', label: 'Contact' },
 ];
+
+function HomeNavItem({
+  href,
+  label,
+  className,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  className: string;
+  onClick?: () => void;
+}) {
+  if (href.startsWith('#')) {
+    return (
+      <a href={href} className={className} onClick={onClick}>
+        {label}
+      </a>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      className={className}
+      onClick={() => {
+        // Fermer le menu après le clic, sans démonter le lien trop tôt.
+        window.setTimeout(() => onClick?.(), 0);
+      }}
+    >
+      {label}
+    </Link>
+  );
+}
 
 const MARQUEE_ITEMS = [...SCHOOL_MARQUEE];
 
@@ -301,7 +338,7 @@ export default function Home() {
         <div className="mx-auto flex h-14 min-h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-6">
           <Link
             href="/"
-            className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl sm:gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45 focus-visible:ring-offset-2"
+            className="group flex min-w-0 flex-1 items-center gap-2 rounded-xl sm:gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45 focus-visible:ring-offset-2"
           >
             <div
               className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-tran-mustard-900/25 ring-2 ring-tran-mustard-400/45 transition-transform duration-300 group-hover:scale-[1.03] sm:h-11 sm:w-11 ${
@@ -337,6 +374,7 @@ export default function Home() {
           </Link>
 
           <div className="hidden items-center gap-2 sm:gap-3 md:flex">
+            <PublicAdmissionRateInfo variant="chip" />
             {user ? (
                 <Link href={getRoleDashboardPath(user.role)}>
                 <Button>Mon espace</Button>
@@ -351,42 +389,55 @@ export default function Home() {
             )}
           </div>
 
-          <button
-            type="button"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-stone-600 transition-colors hover:bg-stone-100/90 md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45"
-            aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-            onClick={() => setMenuOpen((o) => !o)}
-          >
-            {menuOpen ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5 md:hidden">
+            {!user ? (
+              <Link href="/login" className="min-w-0">
+                <Button size="sm" variant="secondary" className="px-3 py-2 text-xs">
+                  Connexion
+                </Button>
+              </Link>
+            ) : (
+              <Link href={getRoleDashboardPath(user.role)} className="min-w-0">
+                <Button size="sm" className="px-3 py-2 text-xs">
+                  Espace
+                </Button>
+              </Link>
+            )}
+            <button
+              type="button"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-stone-600 transition-colors hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tran-mustard-500/45"
+              aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              {menuOpen ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         <div className="home-nav-bar hidden md:block">
           <nav className="mx-auto flex max-w-7xl items-center justify-center gap-1 px-3 py-1.5 sm:px-6">
             {NAV_LINKS.map(({ href, label }) => (
-              <Link
+              <HomeNavItem
                 key={href}
                 href={href}
+                label={label}
                 className="home-nav-link rounded-lg px-3.5 py-2.5 text-sm font-semibold tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45"
-              >
-                {label}
-              </Link>
+              />
             ))}
           </nav>
         </div>
 
         {menuOpen && (
-          <div className="home-nav-bar px-4 py-4 md:hidden">
+          <div className="home-nav-bar max-h-[min(70svh,28rem)] overflow-y-auto px-4 py-4 md:hidden">
             <nav className="flex flex-col gap-1">
               {NAV_LINKS.map(({ href, label }) => (
-                <Link
+                <HomeNavItem
                   key={href}
                   href={href}
+                  label={label}
                   className="rounded-xl px-4 py-3 text-sm font-semibold text-white hover:bg-white/12"
                   onClick={() => setMenuOpen(false)}
-                >
-                  {label}
-                </Link>
+                />
               ))}
             </nav>
             <div className="mt-4 flex flex-col gap-2 border-t border-white/20 pt-4">
@@ -412,9 +463,10 @@ export default function Home() {
         )}
       </header>
 
+      <PublicSectionsReveal extraSelector="#resultats article, .home-stats-rail .home-stat-tile">
       <main>
         {/* Hero full-bleed — marque, promesse, CTA */}
-        <section className="home-hero-shell home-hero-shell--cinematic relative isolate min-h-[min(88vh,48rem)] overflow-hidden text-white sm:min-h-[min(92vh,54rem)]">
+        <section className="home-hero-shell home-hero-shell--cinematic relative isolate min-h-[min(72svh,36rem)] overflow-hidden text-white sm:min-h-[min(88vh,48rem)] lg:min-h-[min(92vh,54rem)]">
           <div className="absolute inset-0" aria-hidden>
             <HomePageImage
               slot="homeHeroPlatform"
@@ -427,6 +479,12 @@ export default function Home() {
             />
           </div>
           <div className="home-hero-veil absolute inset-0" aria-hidden />
+          <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-end px-3 sm:top-5 sm:px-5 md:hidden">
+            <PublicAdmissionRateInfo
+              variant="chip"
+              className="admission-lux-chip--hero pointer-events-auto"
+            />
+          </div>
           <div className="page-hero-v2__noise pointer-events-none absolute inset-0 opacity-18" aria-hidden />
           <div className="home-hero-fine-grid pointer-events-none absolute inset-0 opacity-12" aria-hidden />
           <div
@@ -437,45 +495,49 @@ export default function Home() {
             className="home-hero-orb home-hero-orb--drift-b absolute -right-24 bottom-8 h-[min(26rem,48vw)] w-[min(26rem,48vw)] bg-tran-mustard-500/12"
             aria-hidden
           />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-[8] hidden w-[min(48%,38rem)] lg:block">
+            <div className="relative isolate h-full w-full mix-blend-normal">
+              <Image
+                src="/home/hero-students-cutout.png"
+                alt="Élèves en uniforme"
+                fill
+                unoptimized
+                className="object-contain object-right-bottom drop-shadow-[0_28px_40px_rgba(0,0,0,0.5)]"
+                sizes="(min-width: 1024px) 38rem, 0px"
+                priority
+              />
+            </div>
+          </div>
 
-          <div className="relative z-10 mx-auto flex min-h-[min(88vh,48rem)] max-w-7xl flex-col justify-end px-4 pb-14 pt-24 sm:min-h-[min(92vh,54rem)] sm:px-6 sm:pb-24 sm:pt-28 lg:justify-center lg:pb-28 lg:pt-32">
+          <div className="relative z-10 mx-auto flex min-h-[min(72svh,36rem)] max-w-7xl flex-col justify-end px-4 pb-10 pt-16 sm:min-h-[min(88vh,48rem)] sm:px-6 sm:pb-20 sm:pt-24 lg:min-h-[min(92vh,54rem)] lg:justify-center lg:pb-28 lg:pt-32">
             <div className="home-section-fade max-w-3xl">
-              <p className="home-hero-brand-mark mb-3 font-display text-xl font-bold uppercase tracking-[0.18em] sm:mb-5 sm:text-3xl sm:tracking-[0.22em] lg:text-4xl">
-                {schoolShortName}
-              </p>
-              <h1 className="home-hero-h1 home-hero-title-line font-display text-[2.15rem] font-black leading-[1.05] tracking-tight text-white sm:text-5xl sm:leading-[1.02] lg:text-[4.1rem] lg:leading-[0.98]">
+              <h1 className="home-hero-h1 home-hero-title-line font-display text-[1.75rem] font-black leading-[1.12] tracking-tight text-white [overflow-wrap:anywhere] sm:text-5xl sm:leading-[1.02] lg:text-[4.1rem] lg:leading-[0.98]">
                 <span className="home-hero-h1__line">{schoolDisplayName}</span>
               </h1>
-              <p className="home-hero-sub-line mt-4 max-w-xl text-base leading-relaxed text-stone-200/95 sm:mt-6 sm:text-xl">
+              <p className="home-hero-sub-line mt-3 max-w-xl text-[0.95rem] leading-relaxed text-stone-200/95 sm:mt-6 sm:text-xl">
                 {headerTagline || SCHOOL_DEFAULTS.tagline}
               </p>
 
               {!user ? (
-                <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center">
+                <div className="mt-6 sm:mt-10">
                   <Link href="/login" className="w-full sm:w-auto">
                     <Button
                       size="lg"
                       variant="secondary"
-                      className="home-hero-cta-primary w-full border-0 bg-white px-9 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02] sm:w-auto"
+                      className="home-hero-cta-primary w-full border-0 bg-white px-5 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02] sm:w-auto sm:px-9"
                     >
                       Espace sécurisé
                       <FiArrowRight className="ml-2 inline h-5 w-5" />
                     </Button>
                   </Link>
-                  <PreInscriptionSchoolEntry
-                    variant="button"
-                    buttonVariant="secondary"
-                    buttonSize="lg"
-                    className="home-hero-cta-ghost w-full border border-white/30 bg-white/[0.08] px-9 font-semibold text-white backdrop-blur-md hover:border-tran-mustard-400/55 hover:bg-white/14 sm:w-auto"
-                  />
                 </div>
               ) : (
-                <div className="mt-8 sm:mt-10">
+                <div className="mt-6 sm:mt-10">
                   <Link href={getRoleDashboardPath(user.role)}>
                     <Button
                       size="lg"
                       variant="secondary"
-                      className="home-hero-cta-primary w-full border-0 bg-white px-9 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02] sm:w-auto"
+                      className="home-hero-cta-primary w-full border-0 bg-white px-5 font-bold text-stone-900 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] transition-transform hover:bg-tran-mustard-50 hover:scale-[1.02] sm:w-auto sm:px-9"
                     >
                       Ouvrir mon espace
                       <FiArrowRight className="ml-2 inline h-5 w-5" />
@@ -493,14 +555,22 @@ export default function Home() {
         </section>
 
         <section className="home-stats-rail relative z-10" aria-label="Chiffres clés">
-          <div className="home-stats-rail__grid mx-auto grid max-w-7xl grid-cols-3 gap-3 px-4 py-7 sm:gap-5 sm:px-6 sm:py-8">
+          <div className="home-stats-rail__grid mx-auto grid max-w-7xl grid-cols-1 gap-2 px-4 py-5 sm:grid-cols-2 sm:gap-5 sm:px-6 sm:py-8 lg:grid-cols-4">
             {SCHOOL_STATS.map((s) => (
-              <div key={s.l} className="home-stat-tile text-center sm:text-left">
-                <p className="home-stat-num font-display text-2xl font-semibold tabular-nums sm:text-3xl">{s.n}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-stone-400">{s.l}</p>
-                <p className="hidden text-xs text-stone-500 sm:block">{s.d}</p>
+              <div
+                key={s.l}
+                className="home-stat-tile flex items-center justify-between gap-3 text-left sm:block sm:text-left"
+              >
+                <p className="home-stat-num font-display text-xl font-semibold tabular-nums sm:text-3xl">{s.n}</p>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400 sm:mt-1 sm:text-[10px] sm:tracking-[0.16em]">
+                    {s.l}
+                  </p>
+                  <p className="text-[11px] text-stone-500 sm:mt-0.5 sm:block sm:text-xs">{s.d}</p>
+                </div>
               </div>
             ))}
+            <PublicAdmissionRateInfo variant="stat" />
           </div>
         </section>
 
@@ -538,11 +608,13 @@ export default function Home() {
 
         <HomeDirectorSection />
 
+        <HomeAcademicResultsSection />
+
         {/* Expérience premium */}
-        <section id="experience" className="relative z-10 px-4 py-16 sm:px-6 sm:py-20 scroll-mt-20">
+        <section id="experience" className="relative z-10 px-3 py-12 sm:px-6 sm:py-20 scroll-mt-20">
           <HomeReveal>
             <div className="mx-auto max-w-7xl">
-              <div className="home-experience-shell relative overflow-hidden rounded-[2.25rem] border border-white/80 bg-white/78 p-5 shadow-[0_40px_100px_-48px_rgba(30,31,56,0.42)] backdrop-blur-2xl ring-1 ring-tran-mustard-400/20 sm:p-8 lg:p-10">
+              <div className="home-experience-shell relative overflow-hidden rounded-3xl border border-white/80 bg-white/78 p-4 shadow-[0_40px_100px_-48px_rgba(30,31,56,0.42)] backdrop-blur-2xl ring-1 ring-tran-mustard-400/20 sm:rounded-[2.25rem] sm:p-8 lg:p-10">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(201,162,39,0.2),transparent_36%),radial-gradient(circle_at_92%_18%,rgba(0,24,168,0.12),transparent_40%)]" aria-hidden />
                 <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-tran-mustard-400/10 blur-3xl" aria-hidden />
                 <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.35fr] lg:items-end">
@@ -550,7 +622,7 @@ export default function Home() {
                     <span className="home-eyebrow">
                       Expérience scolaire premium
                     </span>
-                    <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
+                    <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
                       Un établissement pensé comme un parcours de réussite.
                     </h2>
                     <div className="home-section-accent mx-0 mt-4" aria-hidden />
@@ -598,15 +670,15 @@ export default function Home() {
         </section>
 
         {/* Bento — Piliers */}
-        <section className="relative z-10 px-4 sm:px-6">
+        <section className="relative z-10 px-3 sm:px-6">
           <HomeReveal>
-          <div className="home-bento-outer relative mx-auto max-w-7xl rounded-[2rem] border border-stone-200/90 bg-white/65 p-1.5 shadow-[0_32px_64px_-28px_rgba(12,10,9,0.22)] backdrop-blur-2xl sm:p-2">
-            <div className="home-bento-inner relative rounded-[1.65rem] bg-gradient-to-b from-white via-white to-stone-50/95 px-5 py-12 ring-1 ring-stone-900/[0.04] sm:px-8 sm:py-14 lg:px-12 lg:py-16">
+          <div className="home-bento-outer relative mx-auto max-w-7xl rounded-[1.5rem] border border-stone-200/90 bg-white/65 p-1 shadow-[0_32px_64px_-28px_rgba(12,10,9,0.22)] backdrop-blur-2xl sm:rounded-[2rem] sm:p-2">
+            <div className="home-bento-inner relative rounded-[1.25rem] bg-gradient-to-b from-white via-white to-stone-50/95 px-4 py-10 ring-1 ring-stone-900/[0.04] sm:rounded-[1.65rem] sm:px-8 sm:py-14 lg:px-12 lg:py-16">
               <div className="mb-12 flex flex-col gap-4 text-center lg:mb-14">
                 <span className="home-eyebrow mx-auto">
                   Notre projet éducatif
                 </span>
-                <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl lg:tracking-tight">
+                <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl lg:tracking-tight">
                   {SCHOOL_DEFAULTS.mottoShort}
                 </h2>
                 <div className="home-section-accent home-section-accent--glow" aria-hidden />
@@ -655,14 +727,14 @@ export default function Home() {
         </section>
 
         {/* Galerie photo */}
-        <section id="galerie" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 sm:py-20">
+        <section id="galerie" className="mx-auto max-w-7xl scroll-mt-20 px-3 py-12 sm:px-6 sm:py-20">
           <HomeReveal>
             <div className="mb-10 flex flex-col gap-4 text-center">
               <span className="home-eyebrow mx-auto">
                 <FiCamera className="mr-1.5 inline h-3.5 w-3.5" aria-hidden />
                 La vie à l’école
               </span>
-              <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
+              <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
                 Un campus, des visages, une communauté
               </h2>
               <div className="home-section-accent" aria-hidden />
@@ -692,10 +764,10 @@ export default function Home() {
         </section>
 
         {/* Établissement */}
-        <section id="etablissement" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 scroll-mt-20">
+        <section id="etablissement" className="mx-auto max-w-7xl px-3 py-12 sm:px-6 sm:py-20 scroll-mt-20">
           <HomeReveal>
-          <div className="home-campus-split group overflow-hidden rounded-[2rem] border border-stone-200/90 bg-white shadow-[0_28px_56px_-24px_rgba(12,10,9,0.18)] ring-1 ring-tran-mustard-500/15 transition-all duration-500 hover:ring-tran-mustard-500/25 lg:grid lg:grid-cols-2">
-            <div className="relative min-h-[260px] lg:min-h-[400px]">
+          <div className="home-campus-split group overflow-hidden rounded-3xl border border-stone-200/90 bg-white shadow-[0_28px_56px_-24px_rgba(12,10,9,0.18)] ring-1 ring-tran-mustard-500/15 transition-all duration-500 hover:ring-tran-mustard-500/25 sm:rounded-[2rem] lg:grid lg:grid-cols-2">
+            <div className="relative min-h-[220px] lg:min-h-[400px]">
               <HomePageImage
                 slot="homeSplitCampus"
                 defaultPath="/home/split-campus.jpg"
@@ -708,7 +780,7 @@ export default function Home() {
                 className="absolute inset-0 bg-gradient-to-r from-stone-950/50 via-stone-950/10 to-transparent lg:from-stone-950/55"
                 aria-hidden
               />
-              <div className="absolute bottom-6 left-6 right-6 z-10 rounded-2xl border border-white/15 bg-stone-950/50 p-4 backdrop-blur-md lg:max-w-xs">
+              <div className="absolute bottom-3 left-3 right-3 z-10 rounded-2xl border border-white/15 bg-stone-950/50 p-3 backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-6 sm:p-4 lg:max-w-xs">
                 <p className="text-sm font-semibold text-white">{schoolLocationLabel}</p>
                 {schoolCode ? (
                 <p className="mt-1 text-xs font-bold tabular-nums text-tran-mustard-200">
@@ -720,11 +792,11 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col justify-center p-8 sm:p-10 lg:p-14">
+            <div className="flex flex-col justify-center p-5 sm:p-10 lg:p-14">
               <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-200/80 bg-tran-mustard-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-950">
                 {schoolShortName}
               </span>
-              <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+              <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
                 {schoolDisplayName}, un établissement exigeant
               </h2>
               <div className="home-section-accent mx-0 mt-3" aria-hidden />
@@ -753,11 +825,12 @@ export default function Home() {
                   {schoolPhoneDisplay}
                 </a>
                 ) : null}
-                <PreInscriptionSchoolEntry
-                  variant="button"
-                  buttonVariant="secondary"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-300 bg-white px-7 py-4 text-sm font-bold text-stone-900 shadow-sm transition-all hover:border-tran-mustard-400 hover:bg-tran-mustard-50 sm:w-auto"
-                />
+                <Link
+                  href="/a-propos"
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-stone-300 bg-white px-7 py-4 text-sm font-bold text-stone-900 shadow-sm transition-all hover:border-tran-mustard-400 hover:bg-tran-mustard-50 sm:w-auto"
+                >
+                  À propos de nous
+                </Link>
               </div>
             </div>
           </div>
@@ -765,10 +838,10 @@ export default function Home() {
         </section>
 
         {/* Parcours d'admission */}
-        <section id="parcours" className="relative overflow-hidden border-y border-stone-200/80 bg-gradient-to-br from-tran-mauve-950 via-tran-mauve-900 to-stone-950 py-20 text-white sm:py-24 scroll-mt-20">
+        <section id="parcours" className="relative overflow-hidden border-y border-stone-200/80 bg-gradient-to-br from-tran-mauve-950 via-tran-mauve-900 to-stone-950 py-12 text-white sm:py-24 scroll-mt-20">
           <div className="page-hero-v2__glow pointer-events-none absolute inset-0 opacity-70" aria-hidden />
           <div className="home-journey-grid pointer-events-none absolute inset-0" aria-hidden />
-          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6">
             <HomeReveal>
               <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                 <div>
@@ -786,23 +859,23 @@ export default function Home() {
                   <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-300/35 bg-tran-mustard-400/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-100 backdrop-blur-md">
                     Admissions & accompagnement
                   </span>
-                  <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
                     Une inscription claire, premium et rassurante.
                   </h2>
                   <p className="mt-5 max-w-xl text-lg leading-relaxed text-stone-300">
                     Le parcours est conçu pour guider les familles avec méthode : dossier, référence de suivi,
                     échange avec l’établissement et orientation vers la bonne classe.
                   </p>
-                  <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                  <div className="mt-9 flex w-full flex-col gap-3 sm:flex-row">
                     {!user && (
                       <PreInscriptionSchoolEntry
                         variant="button"
                         buttonVariant="secondary"
-                        className="inline-flex items-center justify-center rounded-2xl border-0 bg-white px-7 py-4 text-sm font-bold text-stone-900 shadow-xl hover:bg-tran-mustard-50"
+                        className="inline-flex w-full items-center justify-center rounded-2xl border-0 bg-white px-5 py-4 text-sm font-bold text-stone-900 shadow-xl hover:bg-tran-mustard-50 sm:w-auto sm:px-7"
                       />
                     )}
-                    <Link href="/contact">
-                      <span className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-7 py-4 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-white/15">
+                    <Link href="/contact" className="w-full sm:w-auto">
+                      <span className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-5 py-4 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-white/15 sm:px-7">
                         <FiMessageSquare className="h-4 w-4" aria-hidden />
                         Demander un renseignement
                       </span>
@@ -832,13 +905,13 @@ export default function Home() {
         </section>
 
         {/* Rôles */}
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+        <section className="mx-auto max-w-7xl px-3 py-12 sm:px-6 sm:py-20">
           <HomeReveal>
           <div className="text-center">
             <span className="inline-flex items-center rounded-full border border-cptb-blue/15 bg-cptb-blue/[0.06] px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cptb-blue">
               Communauté
             </span>
-            <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
+            <h2 className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
               La communauté Mon Ecole
             </h2>
             <div className="home-section-accent mt-4" aria-hidden />
@@ -880,18 +953,18 @@ export default function Home() {
         </section>
 
         {/* Plateforme digitale */}
-        <section className="px-4 py-16 sm:px-6 sm:py-20">
+        <section className="px-3 py-12 sm:px-6 sm:py-20">
           <HomeReveal>
-            <div className="home-platform-panel relative mx-auto max-w-7xl overflow-hidden rounded-[2.25rem] border border-stone-200/90 bg-stone-950 text-white shadow-[0_34px_80px_-36px_rgba(12,10,9,0.55)]">
+            <div className="home-platform-panel relative mx-auto max-w-7xl overflow-hidden rounded-3xl border border-stone-200/90 bg-stone-950 text-white shadow-[0_34px_80px_-36px_rgba(12,10,9,0.55)] sm:rounded-[2.25rem]">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(201,162,39,0.2),transparent_34%),radial-gradient(circle_at_88%_12%,rgba(90,91,154,0.22),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_45%)]" aria-hidden />
-              <div className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:p-12">
+              <div className="relative grid gap-8 p-4 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:p-12">
                 <div className="flex flex-col justify-between gap-10">
                   <div>
                     <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-100 backdrop-blur-md">
                       <FiCpu className="h-3.5 w-3.5" aria-hidden />
                       Écosystème digital
                     </span>
-                    <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                    <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
                       Une vitrine moderne pour une gestion scolaire plus fluide.
                     </h2>
                     <p className="mt-5 max-w-2xl text-lg leading-relaxed text-stone-300">
@@ -959,13 +1032,13 @@ export default function Home() {
         </section>
 
         {/* Actualités */}
-        <section id="actualites" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 scroll-mt-20">
+        <section id="actualites" className="mx-auto max-w-7xl px-3 py-12 sm:px-6 sm:py-20 scroll-mt-20">
           <HomeReveal>
             <div className="text-center mb-12">
               <span className="home-eyebrow mx-auto">
                 Vie de l&apos;établissement
               </span>
-              <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+              <h2 className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
                 Actualités de Mon Ecole
               </h2>
               <div className="home-section-accent mt-4" aria-hidden />
@@ -997,8 +1070,8 @@ export default function Home() {
         </section>
 
         {/* Infos pratiques */}
-        <section className="border-y border-stone-200/80 bg-gradient-to-b from-tran-mustard-50/40 via-white to-stone-50/80 py-16 sm:py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <section className="border-y border-stone-200/80 bg-gradient-to-b from-tran-mustard-50/40 via-white to-stone-50/80 py-12 sm:py-20">
+          <div className="mx-auto max-w-7xl px-3 sm:px-6">
             <HomeReveal>
               <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
                 <div>
@@ -1013,7 +1086,7 @@ export default function Home() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950/40 to-transparent" />
                   </div>
-                  <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+                  <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
                     Infos pratiques
                   </h2>
                   <div className="home-section-accent mx-0 mt-3" aria-hidden />
@@ -1070,11 +1143,11 @@ export default function Home() {
         </section>
 
         {/* Points forts */}
-        <section className="border-y border-stone-200/80 bg-gradient-to-b from-stone-50/90 via-white to-tran-mustard-50/20 py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <section className="border-y border-stone-200/80 bg-gradient-to-b from-stone-50/90 via-white to-tran-mustard-50/20 py-12 sm:py-24">
+          <div className="mx-auto max-w-7xl px-3 sm:px-6">
             <HomeReveal>
             <div className="text-center">
-              <h2 className="font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+              <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
                 Pourquoi choisir Mon Ecole ?
               </h2>
               <div className="home-section-accent mt-4" aria-hidden />
@@ -1088,7 +1161,7 @@ export default function Home() {
                 <div
                   className="group relative rounded-3xl bg-gradient-to-br from-tran-mustard-400/30 via-stone-200/40 to-tran-mustard-200/20 p-[1px] shadow-lg shadow-tran-mustard-900/5 transition-transform duration-300 hover:-translate-y-1"
                 >
-                  <div className="h-full rounded-[1.4rem] bg-white/95 p-8 shadow-inner ring-1 ring-stone-900/[0.03] backdrop-blur-sm">
+                  <div className="h-full rounded-[1.4rem] bg-white/95 p-5 shadow-inner ring-1 ring-stone-900/[0.03] backdrop-blur-sm sm:p-8">
                     <div className="mb-2 text-xs font-bold uppercase tracking-wider text-tran-mustard-800/70">
                       {String(i + 1).padStart(2, '0')}
                     </div>
@@ -1107,14 +1180,14 @@ export default function Home() {
         </section>
 
         {/* Témoignages / preuve de confiance */}
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+        <section className="mx-auto max-w-7xl px-3 py-12 sm:px-6 sm:py-20">
           <HomeReveal>
             <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
-              <div className="rounded-[2rem] border border-tran-mustard-200/70 bg-gradient-to-br from-tran-mustard-50 via-white to-tran-mauve-50/40 p-8 shadow-xl shadow-tran-mauve-900/[0.05] ring-1 ring-white">
+              <div className="rounded-3xl border border-tran-mustard-200/70 bg-gradient-to-br from-tran-mustard-50 via-white to-tran-mauve-50/40 p-5 shadow-xl shadow-tran-mauve-900/[0.05] ring-1 ring-white sm:rounded-[2rem] sm:p-8">
                 <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-200/80 bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-950">
                   Confiance
                 </span>
-                <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+                <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
                   Une image d’établissement forte et cohérente.
                 </h2>
                 <p className="mt-5 text-lg leading-relaxed text-stone-600">
@@ -1132,7 +1205,7 @@ export default function Home() {
               <div className="grid gap-5 md:grid-cols-2">
                 {TESTIMONIALS.map(({ quote, author, role }, idx) => (
                   <HomeReveal key={author} delayMs={idx * 80}>
-                    <figure className="home-testimonial-card relative h-full overflow-hidden rounded-[2rem] border border-stone-200/90 bg-white p-7 shadow-xl shadow-stone-900/[0.05]">
+                    <figure className="home-testimonial-card relative h-full overflow-hidden rounded-3xl border border-stone-200/90 bg-white p-5 shadow-xl shadow-stone-900/[0.05] sm:rounded-[2rem] sm:p-7">
                       <span className="absolute -right-2 -top-8 font-display text-8xl font-black leading-none text-tran-mustard-100" aria-hidden>
                         ”
                       </span>
@@ -1152,9 +1225,9 @@ export default function Home() {
         </section>
 
         {/* Citation */}
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+        <section className="mx-auto max-w-7xl px-3 py-12 sm:px-6 sm:py-20">
           <HomeReveal>
-          <div className="home-quote-panel relative overflow-hidden rounded-[2rem] border border-tran-mustard-200/50 bg-gradient-to-br from-tran-mustard-50/95 via-white to-tran-mauve-50/40 px-6 py-14 text-center shadow-[0_28px_56px_-22px_rgba(90,91,154,0.16)] ring-1 ring-tran-mauve-200/50 sm:px-14 sm:py-16">
+          <div className="home-quote-panel relative overflow-hidden rounded-3xl border border-tran-mustard-200/50 bg-gradient-to-br from-tran-mustard-50/95 via-white to-tran-mauve-50/40 px-4 py-10 text-center shadow-[0_28px_56px_-22px_rgba(90,91,154,0.16)] ring-1 ring-tran-mauve-200/50 sm:rounded-[2rem] sm:px-14 sm:py-16">
             <span
               className="pointer-events-none absolute -left-4 top-6 z-[1] font-display text-[8rem] font-bold leading-none text-tran-mustard-200/45 sm:left-8"
               aria-hidden
@@ -1162,7 +1235,7 @@ export default function Home() {
               «
             </span>
             <FiMessageSquare className="relative z-10 mx-auto h-11 w-11 text-tran-mustard-800 drop-shadow-sm" aria-hidden />
-            <blockquote className="relative z-10 mx-auto mt-8 max-w-3xl font-display text-2xl font-medium leading-snug text-stone-900 sm:text-3xl sm:leading-snug">
+            <blockquote className="relative z-10 mx-auto mt-8 max-w-3xl font-display text-xl font-medium leading-snug text-stone-900 sm:text-3xl sm:leading-snug">
               {SCHOOL_DEFAULTS.motto}
             </blockquote>
             <p className="relative z-10 mt-8 text-sm font-semibold uppercase tracking-wider text-stone-500">
@@ -1179,15 +1252,15 @@ export default function Home() {
         </section>
 
         {/* CTA final */}
-        <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 sm:pb-28">
+        <section className="mx-auto max-w-7xl px-3 pb-16 sm:px-6 sm:pb-28">
           <HomeReveal>
-          <div className="home-cta-shell relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-tran-mauve-950 via-tran-mauve-900 to-tran-mustard-950 px-6 py-16 text-center sm:px-12 sm:py-20 lg:py-24">
+          <div className="home-cta-shell relative overflow-hidden rounded-3xl bg-gradient-to-br from-tran-mauve-950 via-tran-mauve-900 to-tran-mustard-950 px-4 py-12 text-center sm:rounded-[2rem] sm:px-12 sm:py-20 lg:py-24">
             <div className="home-cta-aurora pointer-events-none absolute inset-0 z-[1]" aria-hidden />
             <div className="relative z-10 mx-auto max-w-2xl">
               <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-white/15 to-white/[0.04] shadow-[0_12px_40px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md ring-1 ring-tran-mustard-400/20">
                 <FiClock className="h-8 w-8 text-tran-mustard-200" aria-hidden />
               </div>
-              <h2 className="font-display text-3xl font-semibold text-white sm:text-4xl lg:text-5xl">
+              <h2 className="font-display text-[1.65rem] font-semibold text-white sm:text-4xl lg:text-5xl">
                 Rejoignez {schoolDisplayName}
               </h2>
               <p className="mt-5 text-lg text-stone-400">
@@ -1203,30 +1276,30 @@ export default function Home() {
                   </>
                 ) : null}
               </p>
-              <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:mt-12 sm:items-center sm:gap-4 sm:flex-row">
                 {!user ? (
                   <>
-                    <Link href="/login">
+                    <Link href="/login" className="w-full sm:w-auto">
                       <Button
                         size="lg"
                         variant="secondary"
-                        className="min-w-[220px] border-0 bg-white font-bold text-stone-900 shadow-xl hover:bg-tran-mustard-50"
+                        className="w-full min-w-0 border-0 bg-white font-bold text-stone-900 shadow-xl hover:bg-tran-mustard-50 sm:min-w-[220px]"
                       >
                         Se connecter
                       </Button>
                     </Link>
-                    <Link href="/contact">
-                      <span className="inline-flex min-w-[220px] items-center justify-center rounded-2xl border-2 border-white/35 bg-transparent px-8 py-4 text-base font-bold text-white transition-colors hover:bg-white/10">
+                    <Link href="/contact" className="w-full sm:w-auto">
+                      <span className="inline-flex w-full min-w-0 items-center justify-center rounded-2xl border-2 border-white/35 bg-transparent px-6 py-4 text-base font-bold text-white transition-colors hover:bg-white/10 sm:min-w-[220px] sm:px-8">
                         Parler à un responsable
                       </span>
                     </Link>
                   </>
                 ) : (
-                  <Link href={getRoleDashboardPath(user.role)}>
+                  <Link href={getRoleDashboardPath(user.role)} className="w-full sm:w-auto">
                     <Button
                       size="lg"
                       variant="secondary"
-                      className="border-0 bg-white font-bold text-stone-900 shadow-xl hover:bg-tran-mustard-50"
+                      className="w-full border-0 bg-white font-bold text-stone-900 shadow-xl hover:bg-tran-mustard-50"
                     >
                       Retour à mon espace
                     </Button>
@@ -1255,6 +1328,7 @@ export default function Home() {
       </main>
 
       <Footer />
+      </PublicSectionsReveal>
     </div>
   );
 }

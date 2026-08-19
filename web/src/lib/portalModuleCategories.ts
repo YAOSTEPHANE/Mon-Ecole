@@ -26,15 +26,15 @@ export const STUDENT_MODULE_CATEGORIES: PortalModuleCategory[] = [
   },
   {
     title: 'Scolarité',
-    moduleIds: ['grades', 'schedule', 'absences', 'assignments', 'lesson-logs', 'conduct'],
+    moduleIds: ['grades', 'report-cards', 'schedule', 'absences', 'assignments', 'lesson-logs', 'conduct'],
   },
   {
     title: 'Parcours & orientation',
-    moduleIds: ['extracurricular', 'orientation'],
+    moduleIds: ['extracurricular', 'orientation', 'reenrollment'],
   },
   {
     title: 'Services & ressources',
-    moduleIds: ['payments', 'messages', 'digital-library', 'elearning', 'mock-exams'],
+    moduleIds: ['payments', 'campus', 'messages', 'digital-library', 'elearning', 'mock-exams'],
   },
 ];
 
@@ -55,6 +55,7 @@ export const PARENT_MODULE_CATEGORIES: PortalModuleCategory[] = [
       'schedule',
       'report-cards',
       'conduct',
+      'health',
     ],
   },
   {

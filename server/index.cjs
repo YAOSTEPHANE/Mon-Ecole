@@ -279799,6 +279799,50 @@ var admin_admissions_routes_default = router26;
 var import_express27 = __toESM(require_express2(), 1);
 var import_express_validator10 = __toESM(require_lib8(), 1);
 init_prisma();
+
+// src/utils/public-chat-thread.util.ts
+init_prisma();
+async function findOrCreateOpenPublicChatThread(params) {
+  const existing = await prisma_default.publicChatThread.findFirst({
+    where: {
+      publicVisitorId: params.publicVisitorId,
+      schoolId: params.schoolId
+    },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, status: true }
+  });
+  if (existing) {
+    if (existing.status !== "OPEN") {
+      await prisma_default.publicChatThread.update({
+        where: { id: existing.id },
+        data: { status: "OPEN", updatedAt: /* @__PURE__ */ new Date() }
+      });
+    }
+    return { id: existing.id, created: false };
+  }
+  const thread = await prisma_default.publicChatThread.create({
+    data: {
+      publicVisitorId: params.publicVisitorId,
+      schoolId: params.schoolId,
+      status: "OPEN"
+    },
+    select: { id: true }
+  });
+  return { id: thread.id, created: true };
+}
+function formatOrientationChatNotice(criteria) {
+  const level = String(criteria.currentLevel ?? "").trim() || "non pr\xE9cis\xE9";
+  const intentRaw = String(criteria.intent ?? "").trim();
+  const intent = intentRaw === "pre_inscription" ? "pr\xE9-inscription" : intentRaw === "orientation" ? "orientation / parcours" : intentRaw === "info" ? "informations g\xE9n\xE9rales" : intentRaw || "non pr\xE9cis\xE9e";
+  const interests = Array.isArray(criteria.interests) ? criteria.interests.map((x) => String(x)).filter(Boolean) : [];
+  const interestLine = interests.length > 0 ? `
+Centres d\u2019int\xE9r\xEAt : ${interests.join(", ")}` : "";
+  return `Demande d\u2019orientation (widget site)
+Niveau : ${level}
+Demande : ${intent}${interestLine}`;
+}
+
+// src/routes/admin-public-visitors.routes.ts
 var router27 = import_express27.default.Router();
 function schoolScope(schoolId, isDefaultSchool = false) {
   return admissionScopeWhere(schoolId, isDefaultSchool);
@@ -280147,6 +280191,51 @@ router27.patch(
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erreur serveur";
       console.error("PATCH /public-chat/threads/:threadId:", error);
+      res.status(500).json({ error: message });
+    }
+  }
+);
+router27.post(
+  "/public-recommendations/:id/reply",
+  (0, import_express_validator10.body)("content").isString().trim().notEmpty().isLength({ max: 2e3 }).withMessage("Message invalide"),
+  async (req, res) => {
+    try {
+      const errors = (0, import_express_validator10.validationResult)(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      const id = String(req.params.id || "").trim();
+      if (!isObjectId(id)) return res.status(400).json({ error: "id invalide" });
+      const schoolId = req.schoolId;
+      const scope = schoolScope(schoolId, req.school?.isDefault);
+      const request = await prisma_default.publicRecommendationRequest.findFirst({
+        where: { id, ...scope },
+        select: { id: true, publicVisitorId: true, schoolId: true }
+      });
+      if (!request) return res.status(404).json({ error: "Demande introuvable" });
+      if (!request.publicVisitorId) {
+        return res.status(400).json({ error: "Cette demande n\u2019est pas li\xE9e \xE0 un visiteur" });
+      }
+      const visitorSchoolId = request.schoolId || schoolId;
+      const { id: threadId } = await findOrCreateOpenPublicChatThread({
+        publicVisitorId: request.publicVisitorId,
+        schoolId: visitorSchoolId
+      });
+      await prisma_default.publicChatThread.update({
+        where: { id: threadId },
+        data: { status: "OPEN", updatedAt: /* @__PURE__ */ new Date() }
+      });
+      const content = String(req.body.content).trim().slice(0, 2e3);
+      const message = await prisma_default.publicChatMessage.create({
+        data: {
+          threadId,
+          senderType: "STAFF",
+          content
+        },
+        select: { id: true, senderType: true, content: true, createdAt: true }
+      });
+      res.status(201).json({ threadId, message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur serveur";
+      console.error("POST /public-recommendations/:id/reply:", error);
       res.status(500).json({ error: message });
     }
   }
@@ -281093,6 +281182,499 @@ async function runAutomaticAbsenceReminders(options) {
   return result;
 }
 
+// src/utils/public-academic-showcase.util.ts
+init_prisma();
+var OFFICIAL_EXAM_KINDS = ["CEPE", "BEPC", "BAC", "OTHER"];
+var DEFAULT_EXAM_LABELS = {
+  CEPE: "CEPE",
+  BEPC: "BEPC",
+  BAC: "Baccalaur\xE9at",
+  OTHER: "Examen"
+};
+var PERIOD_PRIORITY = {
+  trim3: 3,
+  sem2: 3,
+  trim2: 2,
+  sem1: 1,
+  trim1: 1
+};
+var HONOR_ROLL_LEVELS = [
+  "6\xE8me",
+  "5\xE8me",
+  "4\xE8me",
+  "3\xE8me",
+  "2nde",
+  "1\xE8re",
+  "Terminale"
+];
+var PLACEHOLDER_HONOR_STUDENTS = [
+  {
+    classId: "placeholder-6eme",
+    className: "6\xE8me A",
+    classLevel: "6\xE8me",
+    firstName: "Awa",
+    lastName: "Kouam\xE9",
+    average: 16.42,
+    photoUrl: "/home/news-mission.jpg",
+    isPlaceholder: true
+  },
+  {
+    classId: "placeholder-5eme",
+    className: "5\xE8me A",
+    classLevel: "5\xE8me",
+    firstName: "Yao",
+    lastName: "N'Guessan",
+    average: 16.18,
+    photoUrl: "/home/role-student.jpg",
+    isPlaceholder: true
+  },
+  {
+    classId: "placeholder-4eme",
+    className: "4\xE8me A",
+    classLevel: "4\xE8me",
+    firstName: "Mariam",
+    lastName: "Traor\xE9",
+    average: 16.75,
+    photoUrl: "/home/news-portes-ouvertes.jpg",
+    isPlaceholder: true
+  },
+  {
+    classId: "placeholder-3eme",
+    className: "3\xE8me A",
+    classLevel: "3\xE8me",
+    firstName: "Koffi",
+    lastName: "Bamba",
+    average: 17.12,
+    photoUrl: "/home/experience-academique.jpg",
+    isPlaceholder: true
+  },
+  {
+    classId: "placeholder-2nde",
+    className: "2nde A",
+    classLevel: "2nde",
+    firstName: "Aminata",
+    lastName: "Diomand\xE9",
+    average: 16.88,
+    photoUrl: "/home/news-semaine.jpg",
+    isPlaceholder: true
+  },
+  {
+    classId: "placeholder-1ere",
+    className: "1\xE8re A",
+    classLevel: "1\xE8re",
+    firstName: "Jean-Marc",
+    lastName: "Kon\xE9",
+    average: 17.04,
+    photoUrl: "/home/pillar-pedagogy.jpg",
+    isPlaceholder: true
+  },
+  {
+    classId: "placeholder-terminale",
+    className: "Terminale A",
+    classLevel: "Terminale",
+    firstName: "Fatou",
+    lastName: "Ouattara",
+    average: 17.36,
+    photoUrl: "/home/experience-familles.jpg",
+    isPlaceholder: true
+  }
+];
+function normalizeHonorLevel(level) {
+  return level.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "");
+}
+function isOfficialExamKind(value) {
+  return OFFICIAL_EXAM_KINDS.includes(value);
+}
+function computePassRate(candidates, admitted) {
+  if (candidates == null || admitted == null || candidates <= 0) return null;
+  if (admitted < 0) return null;
+  return Math.round(Math.min(admitted, candidates) / candidates * 1e3) / 10;
+}
+function roundPassRate(value) {
+  return Math.round(value * 10) / 10;
+}
+function periodRank(period) {
+  return PERIOD_PRIORITY[toPeriodKey(period)] ?? 0;
+}
+function examStatDelegate() {
+  return prisma_default.officialExamAdmissionStat;
+}
+function honorSettingDelegate() {
+  return prisma_default.publicHonorRollSetting;
+}
+function mongoCommand(command) {
+  return command;
+}
+function mongoId(doc) {
+  const id = doc._id;
+  if (typeof id === "string") return id;
+  if (id && typeof id === "object" && "$oid" in id) return String(id.$oid);
+  return String(id ?? "");
+}
+function mongoScalarId(value) {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value && "$oid" in value) {
+    return String(value.$oid);
+  }
+  return String(value);
+}
+async function mongoFind(collection, filter, sort) {
+  const result = await prisma_default.$runCommandRaw(
+    mongoCommand({
+      find: collection,
+      filter,
+      ...sort ? { sort } : {}
+    })
+  );
+  return result.cursor?.firstBatch ?? [];
+}
+function mapExamStatDoc(doc) {
+  return {
+    id: mongoId(doc),
+    examKind: String(doc.examKind ?? ""),
+    examLabel: String(doc.examLabel ?? ""),
+    academicYear: String(doc.academicYear ?? ""),
+    candidates: typeof doc.candidates === "number" ? doc.candidates : null,
+    admitted: typeof doc.admitted === "number" ? doc.admitted : null,
+    passRate: typeof doc.passRate === "number" ? doc.passRate : 0,
+    displayOrder: typeof doc.displayOrder === "number" ? doc.displayOrder : 0,
+    isPublished: doc.isPublished === true,
+    schoolId: mongoScalarId(doc.schoolId)
+  };
+}
+async function getHonorRollSetting(schoolId) {
+  const delegate = honorSettingDelegate();
+  if (delegate) {
+    return delegate.findUnique({ where: { id: schoolId } });
+  }
+  const rows = await mongoFind("public_honor_roll_settings", { _id: schoolId });
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    id: mongoId(row),
+    enabled: row.enabled === true,
+    academicYear: typeof row.academicYear === "string" ? row.academicYear : null,
+    period: typeof row.period === "string" ? row.period : null,
+    updatedAt: /* @__PURE__ */ new Date()
+  };
+}
+async function upsertHonorRollSetting(schoolId, data) {
+  const delegate = honorSettingDelegate();
+  if (delegate) {
+    const existing2 = await delegate.findUnique({ where: { id: schoolId } });
+    const payload = {};
+    if (data.enabled !== void 0) payload.enabled = data.enabled;
+    if (data.academicYear !== void 0) payload.academicYear = data.academicYear;
+    if (data.period !== void 0) payload.period = data.period;
+    if (!existing2) {
+      return delegate.create({
+        data: {
+          id: schoolId,
+          enabled: data.enabled ?? true,
+          academicYear: data.academicYear ?? null,
+          period: data.period ?? null
+        }
+      });
+    }
+    return delegate.update({
+      where: { id: schoolId },
+      data: payload
+    });
+  }
+  const existing = await getHonorRollSetting(schoolId);
+  const next = {
+    _id: schoolId,
+    enabled: data.enabled ?? existing?.enabled ?? true,
+    academicYear: data.academicYear !== void 0 ? data.academicYear : existing?.academicYear ?? null,
+    period: data.period !== void 0 ? data.period : existing?.period ?? null,
+    updatedAt: /* @__PURE__ */ new Date()
+  };
+  if (!existing) {
+    await prisma_default.$runCommandRaw(
+      mongoCommand({
+        insert: "public_honor_roll_settings",
+        documents: [next]
+      })
+    );
+  } else {
+    await prisma_default.$runCommandRaw(
+      mongoCommand({
+        update: "public_honor_roll_settings",
+        updates: [{ q: { _id: schoolId }, u: { $set: next } }]
+      })
+    );
+  }
+  return {
+    id: schoolId,
+    enabled: next.enabled,
+    academicYear: next.academicYear,
+    period: next.period,
+    updatedAt: next.updatedAt
+  };
+}
+async function listPublishedExamStats(opts) {
+  const rows = await listExamStatsForAdmin({
+    schoolId: opts.schoolId,
+    academicYear: opts.academicYear?.trim() || getCurrentAcademicYear()
+  });
+  return rows.filter((row) => row.isPublished).map((row) => ({
+    id: row.id,
+    examKind: row.examKind,
+    examLabel: row.examLabel,
+    academicYear: row.academicYear,
+    candidates: row.candidates,
+    admitted: row.admitted,
+    passRate: row.passRate
+  }));
+}
+async function listExamStatsForAdmin(opts) {
+  const delegate = examStatDelegate();
+  if (delegate) {
+    const rows = await delegate.findMany({
+      where: {
+        academicYear: opts.academicYear,
+        ...opts.schoolId ? { OR: [{ schoolId: opts.schoolId }, { schoolId: null }] } : {}
+      },
+      orderBy: [{ displayOrder: "asc" }, { examLabel: "asc" }]
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      examKind: row.examKind,
+      examLabel: row.examLabel,
+      academicYear: row.academicYear,
+      candidates: row.candidates,
+      admitted: row.admitted,
+      passRate: row.passRate,
+      displayOrder: row.displayOrder,
+      isPublished: row.isPublished,
+      schoolId: row.schoolId
+    }));
+  }
+  const docs = await mongoFind(
+    "official_exam_admission_stats",
+    { academicYear: opts.academicYear },
+    { displayOrder: 1, examLabel: 1 }
+  );
+  return docs.map(mapExamStatDoc).filter((row) => !opts.schoolId || !row.schoolId || row.schoolId === opts.schoolId);
+}
+async function createExamStat(data) {
+  const delegate = examStatDelegate();
+  if (delegate) {
+    return delegate.create({ data });
+  }
+  const now = /* @__PURE__ */ new Date();
+  const doc = {
+    ...data,
+    schoolId: data.schoolId ? { $oid: data.schoolId } : null,
+    createdAt: now,
+    updatedAt: now
+  };
+  const inserted = await prisma_default.$runCommandRaw(
+    mongoCommand({
+      insert: "official_exam_admission_stats",
+      documents: [doc]
+    })
+  );
+  if (inserted.ok === 0 || inserted.writeErrors && inserted.writeErrors.length > 0) {
+    throw new Error("Impossible d\u2019enregistrer le taux d\u2019admission");
+  }
+  const rows = await listExamStatsForAdmin({
+    schoolId: data.schoolId ?? void 0,
+    academicYear: data.academicYear
+  });
+  return rows.find((row) => row.examLabel === data.examLabel && row.examKind === data.examKind) ?? {
+    id: "",
+    ...data
+  };
+}
+async function updateExamStat(id, data) {
+  const delegate = examStatDelegate();
+  if (delegate) {
+    return delegate.update({ where: { id }, data });
+  }
+  const set = { updatedAt: /* @__PURE__ */ new Date() };
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== void 0) set[key] = value;
+  }
+  await prisma_default.$runCommandRaw(
+    mongoCommand({
+      update: "official_exam_admission_stats",
+      updates: [{ q: { _id: { $oid: id } }, u: { $set: set } }]
+    })
+  );
+  const docs = await mongoFind("official_exam_admission_stats", { _id: { $oid: id } });
+  const doc = docs[0];
+  if (!doc) throw new Error("R\xE9sultat introuvable");
+  return mapExamStatDoc(doc);
+}
+async function deleteExamStat(id) {
+  const delegate = examStatDelegate();
+  if (delegate) {
+    await delegate.delete({ where: { id } });
+    return;
+  }
+  await prisma_default.$runCommandRaw(
+    mongoCommand({
+      delete: "official_exam_admission_stats",
+      deletes: [{ q: { _id: { $oid: id } }, limit: 1 }]
+    })
+  );
+}
+async function getExamStatById(id) {
+  const delegate = examStatDelegate();
+  if (delegate) {
+    return delegate.findUnique({ where: { id } });
+  }
+  const docs = await mongoFind("official_exam_admission_stats", { _id: { $oid: id } });
+  const doc = docs[0];
+  return doc ? mapExamStatDoc(doc) : null;
+}
+function mergeHonorStudentsWithPlaceholders(real) {
+  const realByLevel = /* @__PURE__ */ new Map();
+  for (const student of real) {
+    const key = normalizeHonorLevel(student.classLevel);
+    const current = realByLevel.get(key);
+    if (!current || student.average > current.average) {
+      realByLevel.set(key, student);
+    }
+  }
+  const usedKeys = /* @__PURE__ */ new Set();
+  const merged = HONOR_ROLL_LEVELS.map((level) => {
+    const key = normalizeHonorLevel(level);
+    const fromDb = realByLevel.get(key);
+    usedKeys.add(key);
+    const placeholder = PLACEHOLDER_HONOR_STUDENTS.find(
+      (row) => normalizeHonorLevel(row.classLevel) === key
+    );
+    return fromDb ?? placeholder;
+  });
+  for (const [key, student] of realByLevel) {
+    if (!usedKeys.has(key)) merged.push(student);
+  }
+  return merged;
+}
+async function buildHonorRoll(opts) {
+  const academicYear = opts.academicYear?.trim() || getCurrentAcademicYear();
+  const requestedPeriod = opts.period?.trim() ? toPeriodKey(opts.period.trim()) : null;
+  const emptyRoll = (period2) => ({
+    academicYear,
+    period: period2,
+    periodLabel: getPeriodLabel(period2),
+    students: mergeHonorStudentsWithPlaceholders([])
+  });
+  const classes = await prisma_default.class.findMany({
+    where: { schoolId: opts.schoolId, academicYear },
+    select: { id: true, name: true, level: true }
+  });
+  if (classes.length === 0) return emptyRoll(requestedPeriod || "trim3");
+  const classById = new Map(classes.map((c) => [c.id, c]));
+  const students = await prisma_default.student.findMany({
+    where: {
+      classId: { in: classes.map((c) => c.id) },
+      isActive: true,
+      enrollmentStatus: "ACTIVE"
+    },
+    select: {
+      id: true,
+      classId: true,
+      user: { select: { firstName: true, lastName: true, avatar: true } }
+    }
+  });
+  if (students.length === 0) return emptyRoll(requestedPeriod || "trim3");
+  const studentById = new Map(students.map((s) => [s.id, s]));
+  const cards = await prisma_default.reportCard.findMany({
+    where: {
+      studentId: { in: students.map((s) => s.id) },
+      academicYear,
+      published: true
+    },
+    select: {
+      studentId: true,
+      period: true,
+      average: true,
+      rank: true,
+      publishedAt: true
+    }
+  });
+  if (cards.length === 0) return emptyRoll(requestedPeriod || "trim3");
+  let period = requestedPeriod;
+  if (!period) {
+    const latest = [...cards].sort((a, b) => {
+      const aTime = (a.publishedAt ?? /* @__PURE__ */ new Date(0)).getTime();
+      const bTime = (b.publishedAt ?? /* @__PURE__ */ new Date(0)).getTime();
+      if (bTime !== aTime) return bTime - aTime;
+      return periodRank(b.period) - periodRank(a.period);
+    })[0];
+    period = latest ? toPeriodKey(latest.period) : null;
+  }
+  if (!period) return emptyRoll("trim3");
+  const periodCards = cards.filter((card) => toPeriodKey(card.period) === period);
+  const bestByClass = /* @__PURE__ */ new Map();
+  for (const card of periodCards) {
+    const student = studentById.get(card.studentId);
+    if (!student?.classId || card.average <= 0) continue;
+    const current = bestByClass.get(student.classId);
+    const rank = card.rank ?? null;
+    if (!current) {
+      bestByClass.set(student.classId, { studentId: card.studentId, average: card.average, rank });
+      continue;
+    }
+    const betterRank = rank != null && current.rank != null ? rank < current.rank : rank != null && current.rank == null ? true : rank == null && current.rank != null ? false : card.average > current.average;
+    if (betterRank) {
+      bestByClass.set(student.classId, { studentId: card.studentId, average: card.average, rank });
+    }
+  }
+  const winnerIds = [...bestByClass.values()].map((row) => row.studentId);
+  const photoAllowed = await studentsWithImagePublicationConsent(winnerIds);
+  const studentsOut = [];
+  for (const [classId, row] of bestByClass) {
+    const cls = classById.get(classId);
+    const student = studentById.get(row.studentId);
+    if (!cls || !student) continue;
+    studentsOut.push({
+      classId,
+      className: cls.name,
+      classLevel: cls.level,
+      firstName: student.user.firstName,
+      lastName: student.user.lastName,
+      average: Math.round(row.average * 100) / 100,
+      photoUrl: photoAllowed.has(student.id) ? sanitizeBrandingAssetUrl(student.user.avatar) : null,
+      isPlaceholder: false
+    });
+  }
+  return {
+    academicYear,
+    period,
+    periodLabel: getPeriodLabel(period),
+    students: mergeHonorStudentsWithPlaceholders(studentsOut)
+  };
+}
+async function studentsWithImagePublicationConsent(studentIds) {
+  const allowed = /* @__PURE__ */ new Set();
+  if (studentIds.length === 0) return allowed;
+  const consents = await prisma_default.parentConsent.findMany({
+    where: {
+      consentType: "IMAGE_PUBLICATION",
+      granted: true,
+      OR: [{ studentId: { in: studentIds } }, { studentId: null }]
+    },
+    select: { studentId: true, parentId: true }
+  });
+  const genericParentIds = consents.filter((c) => !c.studentId).map((c) => c.parentId);
+  const childrenOfGeneric = genericParentIds.length > 0 ? await prisma_default.studentParent.findMany({
+    where: { parentId: { in: genericParentIds }, studentId: { in: studentIds } },
+    select: { studentId: true }
+  }) : [];
+  for (const consent of consents) {
+    if (consent.studentId) allowed.add(consent.studentId);
+  }
+  for (const link of childrenOfGeneric) {
+    allowed.add(link.studentId);
+  }
+  return allowed;
+}
+
 // src/routes/admin-school-features.routes.ts
 var router29 = import_express29.default.Router();
 function schoolIdFrom2(req) {
@@ -281481,6 +282063,177 @@ router29.get("/lesson-logs", async (req, res) => {
     });
     res.json(rows);
   } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
+function parseOptionalInt(v) {
+  if (v === void 0) return void 0;
+  if (v === null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(String(v).trim());
+  if (!Number.isFinite(n) || n < 0) return void 0;
+  return Math.round(n);
+}
+function parsePassRateInput(v) {
+  if (v === void 0 || v === null || v === "") return void 0;
+  const n = typeof v === "number" ? v : Number(String(v).trim().replace(",", "."));
+  if (!Number.isFinite(n) || n < 0 || n > 100) return void 0;
+  return roundPassRate(n);
+}
+router29.get("/official-exam-stats", async (req, res) => {
+  try {
+    const academicYear = typeof req.query.academicYear === "string" && req.query.academicYear.trim() ? req.query.academicYear.trim() : getCurrentAcademicYear();
+    const sid = schoolIdFrom2(req);
+    const [rows, honorSetting] = await Promise.all([
+      listExamStatsForAdmin({ academicYear, schoolId: sid }),
+      sid ? getHonorRollSetting(sid) : Promise.resolve(null)
+    ]);
+    const honorYear = honorSetting?.academicYear || academicYear;
+    const honorPreview = sid ? await buildHonorRoll({
+      schoolId: sid,
+      academicYear: honorYear,
+      period: honorSetting?.period
+    }) : null;
+    res.json({
+      academicYear,
+      examKinds: OFFICIAL_EXAM_KINDS,
+      stats: rows,
+      honorRoll: {
+        enabled: honorSetting?.enabled ?? true,
+        academicYear: honorYear,
+        period: honorSetting?.period ?? null,
+        preview: honorPreview
+      }
+    });
+  } catch (e) {
+    console.error("GET /admin/official-exam-stats:", e);
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
+router29.put("/honor-roll-settings", async (req, res) => {
+  try {
+    const sid = schoolIdFrom2(req);
+    if (!sid) return res.status(400).json({ error: "\xC9tablissement requis" });
+    const b = req.body;
+    const academicYear = b.academicYear === void 0 ? void 0 : typeof b.academicYear === "string" && /^\d{4}-\d{4}$/.test(b.academicYear.trim()) ? b.academicYear.trim() : null;
+    const period = b.period === void 0 ? void 0 : typeof b.period === "string" && b.period.trim() ? b.period.trim().slice(0, 24) : null;
+    const row = await upsertHonorRollSetting(sid, {
+      enabled: typeof b.enabled === "boolean" ? b.enabled : void 0,
+      academicYear,
+      period
+    });
+    const preview = await buildHonorRoll({
+      schoolId: sid,
+      academicYear: row.academicYear,
+      period: row.period
+    });
+    res.json({ ...row, preview });
+  } catch (e) {
+    console.error("PUT /admin/honor-roll-settings:", e);
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
+router29.post("/official-exam-stats", async (req, res) => {
+  try {
+    const b = req.body;
+    const examKindRaw = typeof b.examKind === "string" ? b.examKind.trim().toUpperCase() : "";
+    if (!isOfficialExamKind(examKindRaw)) {
+      return res.status(400).json({ error: "Type d\u2019examen invalide (CEPE, BEPC, BAC ou OTHER)" });
+    }
+    const academicYear = typeof b.academicYear === "string" && /^\d{4}-\d{4}$/.test(b.academicYear.trim()) ? b.academicYear.trim() : "";
+    if (!academicYear) {
+      return res.status(400).json({ error: "Ann\xE9e scolaire requise (ex. 2025-2026)" });
+    }
+    const examLabel = (typeof b.examLabel === "string" ? b.examLabel.trim() : "") || DEFAULT_EXAM_LABELS[examKindRaw];
+    const candidates = parseOptionalInt(b.candidates);
+    const admitted = parseOptionalInt(b.admitted);
+    if (candidates === void 0 || admitted === void 0) {
+      return res.status(400).json({ error: "Candidats et admis doivent \xEAtre des entiers positifs" });
+    }
+    const computed = computePassRate(candidates ?? null, admitted ?? null);
+    const passRate = parsePassRateInput(b.passRate) ?? computed;
+    if (passRate == null) {
+      return res.status(400).json({ error: "Indiquez un pourcentage d\u2019admission (0\u2013100)" });
+    }
+    const displayOrder = typeof b.displayOrder === "number" && Number.isFinite(b.displayOrder) ? Math.round(b.displayOrder) : 0;
+    const row = await createExamStat({
+      examKind: examKindRaw,
+      examLabel: examLabel.slice(0, 80),
+      academicYear,
+      candidates: candidates ?? null,
+      admitted: admitted ?? null,
+      passRate,
+      displayOrder,
+      isPublished: b.isPublished === true,
+      schoolId: schoolIdFrom2(req) ?? null
+    });
+    res.status(201).json(row);
+  } catch (e) {
+    console.error("POST /admin/official-exam-stats:", e);
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
+router29.patch("/official-exam-stats/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id || "");
+    if (!isObjectId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    const existing = await getExamStatById(id);
+    if (!existing) return res.status(404).json({ error: "R\xE9sultat introuvable" });
+    const b = req.body;
+    const data = {};
+    if (typeof b.examKind === "string") {
+      const kind = b.examKind.trim().toUpperCase();
+      if (!isOfficialExamKind(kind)) {
+        return res.status(400).json({ error: "Type d\u2019examen invalide" });
+      }
+      data.examKind = kind;
+    }
+    if (typeof b.examLabel === "string" && b.examLabel.trim()) {
+      data.examLabel = b.examLabel.trim().slice(0, 80);
+    }
+    if (typeof b.academicYear === "string" && /^\d{4}-\d{4}$/.test(b.academicYear.trim())) {
+      data.academicYear = b.academicYear.trim();
+    }
+    if (b.candidates !== void 0) {
+      const candidates = parseOptionalInt(b.candidates);
+      if (candidates === void 0) return res.status(400).json({ error: "Candidats invalides" });
+      data.candidates = candidates;
+    }
+    if (b.admitted !== void 0) {
+      const admitted = parseOptionalInt(b.admitted);
+      if (admitted === void 0) return res.status(400).json({ error: "Admis invalides" });
+      data.admitted = admitted;
+    }
+    const nextCandidates = data.candidates === void 0 ? existing.candidates : data.candidates;
+    const nextAdmitted = data.admitted === void 0 ? existing.admitted : data.admitted;
+    const computed = computePassRate(nextCandidates, nextAdmitted);
+    if (b.passRate !== void 0) {
+      const parsed = parsePassRateInput(b.passRate);
+      if (parsed == null) return res.status(400).json({ error: "Pourcentage invalide (0\u2013100)" });
+      data.passRate = parsed;
+    } else if (computed != null && (b.candidates !== void 0 || b.admitted !== void 0)) {
+      data.passRate = computed;
+    }
+    if (typeof b.displayOrder === "number" && Number.isFinite(b.displayOrder)) {
+      data.displayOrder = Math.round(b.displayOrder);
+    }
+    if (typeof b.isPublished === "boolean") data.isPublished = b.isPublished;
+    const row = await updateExamStat(id, data);
+    res.json(row);
+  } catch (e) {
+    console.error("PATCH /admin/official-exam-stats:", e);
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
+router29.delete("/official-exam-stats/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id || "");
+    if (!isObjectId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    const existing = await getExamStatById(id);
+    if (!existing) return res.status(404).json({ error: "R\xE9sultat introuvable" });
+    await deleteExamStat(id);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("DELETE /admin/official-exam-stats:", e);
     res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
   }
 });
@@ -297120,6 +297873,127 @@ router34.post("/mock-exams/:id/submit", async (req, res) => {
     res.status(status).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
   }
 });
+router34.get("/campus/canteen-plans", async (req, res) => {
+  try {
+    const academicYear = typeof req.query.academicYear === "string" ? req.query.academicYear.trim() : "";
+    const rows = await prisma_default.canteenMealPlan.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+        ...academicYear ? { academicYear } : {}
+      },
+      orderBy: [{ academicYear: "desc" }, { name: "asc" }],
+      include: { _count: { select: { subscriptions: true } } }
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error("GET /student/campus/canteen-plans:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router34.get("/campus/canteen-subscriptions", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const rows = await prisma_default.canteenSubscription.findMany({
+      where: { studentId: student.id },
+      include: { plan: true },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error("GET /student/campus/canteen-subscriptions:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router34.post("/campus/canteen-subscriptions", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const planId = typeof req.body?.planId === "string" ? req.body.planId : "";
+    if (!planId) return res.status(400).json({ error: "planId requis" });
+    const result = await subscribeStudentToCanteen(student.id, planId);
+    res.status(201).json(result);
+  } catch (error) {
+    const status = error?.status ?? 500;
+    console.error("POST /student/campus/canteen-subscriptions:", error);
+    res.status(status).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router34.get("/campus/transport-routes", async (req, res) => {
+  try {
+    const academicYear = typeof req.query.academicYear === "string" ? req.query.academicYear.trim() : "";
+    const rows = await prisma_default.transportRoute.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+        ...academicYear ? { academicYear } : {}
+      },
+      orderBy: [{ academicYear: "desc" }, { name: "asc" }],
+      include: { _count: { select: { subscriptions: true } } }
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error("GET /student/campus/transport-routes:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router34.get("/campus/transport-subscriptions", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const rows = await prisma_default.transportSubscription.findMany({
+      where: { studentId: student.id },
+      include: { route: true },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error("GET /student/campus/transport-subscriptions:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router34.post("/campus/transport-subscriptions", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const routeId = typeof req.body?.routeId === "string" ? req.body.routeId : "";
+    const stopLabel = typeof req.body?.stopLabel === "string" ? req.body.stopLabel : void 0;
+    if (!routeId) return res.status(400).json({ error: "routeId requis" });
+    const result = await subscribeStudentToTransport(student.id, routeId, stopLabel);
+    res.status(201).json(result);
+  } catch (error) {
+    const status = error?.status ?? 500;
+    console.error("POST /student/campus/transport-subscriptions:", error);
+    res.status(status).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router34.get("/campus/transport-routes/:routeId/tracking", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const { routeId } = req.params;
+    const sub = await prisma_default.transportSubscription.findFirst({
+      where: { studentId: student.id, routeId, status: "ACTIVE" }
+    });
+    if (!sub) {
+      return res.status(403).json({ error: "Vous n\u2019\xEAtes pas inscrit sur cette ligne" });
+    }
+    const route = await prisma_default.transportRoute.findUnique({
+      where: { id: routeId },
+      select: { id: true, name: true, vehicleLabel: true }
+    });
+    if (!route) return res.status(404).json({ error: "Ligne introuvable" });
+    const latest = await prisma_default.transportVehiclePing.findFirst({
+      where: { routeId },
+      orderBy: { recordedAt: "desc" }
+    });
+    res.json({ route, latest });
+  } catch (error) {
+    console.error("GET /student/campus/transport-routes/:routeId/tracking:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
 var student_routes_default = router34;
 
 // src/routes/parent.routes.ts
@@ -298902,6 +299776,124 @@ router35.get("/children/:studentId/campus/transport-routes/:routeId/tracking", a
   } catch (error) {
     const status = error?.status ?? 500;
     const msg = error instanceof Error ? error.message : "Erreur serveur";
+    res.status(msg.includes("associ\xE9") ? 403 : status).json({ error: msg });
+  }
+});
+router35.get("/children/:studentId/health", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = await getParentIdForUser(req.user.id);
+    if (!parentId) return res.status(404).json({ error: "Parent non trouv\xE9" });
+    await assertParentOwnsStudent2(parentId, studentId);
+    const student = await prisma_default.student.findUnique({
+      where: { id: studentId },
+      include: {
+        user: { select: { firstName: true, lastName: true } },
+        healthDossier: {
+          select: {
+            bloodGroup: true,
+            familyDoctorName: true,
+            familyDoctorPhone: true,
+            preferredHospital: true,
+            insuranceInfo: true
+          }
+        },
+        allergyRecords: {
+          select: { id: true, allergen: true, severity: true, reaction: true },
+          orderBy: { allergen: "asc" }
+        },
+        treatments: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            medication: true,
+            dosage: true,
+            schedule: true,
+            startDate: true,
+            endDate: true,
+            isActive: true
+          },
+          orderBy: { updatedAt: "desc" }
+        },
+        infirmaryVisits: {
+          orderBy: { visitedAt: "desc" },
+          take: 30,
+          select: {
+            id: true,
+            visitedAt: true,
+            motive: true,
+            careAdministered: true,
+            outcome: true,
+            parentNotified: true
+          }
+        },
+        healthEmergencies: {
+          orderBy: { reportedAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            reportedAt: true,
+            severity: true,
+            description: true,
+            actionsTaken: true,
+            resolvedAt: true
+          }
+        },
+        healthCampaignParticipations: {
+          orderBy: { createdAt: "desc" },
+          take: 30,
+          select: {
+            id: true,
+            status: true,
+            completedAt: true,
+            campaign: {
+              select: {
+                title: true,
+                kind: true,
+                startDate: true,
+                endDate: true
+              }
+            }
+          }
+        }
+      }
+    });
+    if (!student) return res.status(404).json({ error: "\xC9l\xE8ve introuvable" });
+    const decrypted = decryptStudentRecord(student);
+    const allergies = typeof decrypted.allergies === "string" ? decrypted.allergies : student.allergies;
+    const emergencyContact = typeof decrypted.emergencyContact === "string" ? decrypted.emergencyContact : student.emergencyContact;
+    const emergencyPhone = typeof decrypted.emergencyPhone === "string" ? decrypted.emergencyPhone : student.emergencyPhone;
+    const emergencyContact2 = typeof decrypted.emergencyContact2 === "string" ? decrypted.emergencyContact2 : student.emergencyContact2;
+    const emergencyPhone2 = typeof decrypted.emergencyPhone2 === "string" ? decrypted.emergencyPhone2 : student.emergencyPhone2;
+    res.json({
+      student: {
+        firstName: student.user.firstName,
+        lastName: student.user.lastName,
+        allergies,
+        emergencyContact,
+        emergencyPhone,
+        emergencyContact2,
+        emergencyPhone2
+      },
+      dossier: student.healthDossier,
+      allergyRecords: student.allergyRecords,
+      treatments: student.treatments,
+      visits: student.infirmaryVisits,
+      emergencies: student.healthEmergencies,
+      campaigns: student.healthCampaignParticipations.map((row) => ({
+        id: row.id,
+        status: row.status,
+        completedAt: row.completedAt,
+        title: row.campaign.title,
+        kind: row.campaign.kind,
+        startDate: row.campaign.startDate,
+        endDate: row.campaign.endDate
+      }))
+    });
+  } catch (error) {
+    const status = error?.status ?? 500;
+    const msg = error instanceof Error ? error.message : "Erreur serveur";
+    console.error("GET /parent/children/:studentId/health:", error);
     res.status(msg.includes("associ\xE9") ? 403 : status).json({ error: msg });
   }
 });
@@ -303071,6 +304063,39 @@ router43.post("/fne-lookup", fneLookupLimiter, async (req, res) => {
     res.status(status).json({ error: message });
   }
 });
+router43.get("/academic-results", async (req, res) => {
+  try {
+    const schoolId = await resolvePublicSchoolId(req);
+    const brandingDelegate = getAppBrandingDelegate();
+    let academicYear = getCurrentAcademicYear();
+    if (brandingDelegate) {
+      const brandingId = await brandingIdForSchool(schoolId);
+      const row = await brandingDelegate.findUnique({ where: { id: brandingId } });
+      const year = row?.currentAcademicYear;
+      if (year && /^\d{4}-\d{4}$/.test(year)) academicYear = year;
+    }
+    const honorSetting = await getHonorRollSetting(schoolId);
+    const honorYear = honorSetting?.academicYear || academicYear;
+    const honorEnabled = honorSetting?.enabled ?? true;
+    const [examStats, honorRoll] = await Promise.all([
+      listPublishedExamStats({ schoolId, academicYear: honorYear }),
+      honorEnabled ? buildHonorRoll({
+        schoolId,
+        academicYear: honorYear,
+        period: honorSetting?.period
+      }) : Promise.resolve(null)
+    ]);
+    res.json({
+      academicYear: honorYear,
+      examStats,
+      honorRoll: honorEnabled ? honorRoll : null
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    console.error("GET /public/academic-results:", error);
+    res.status(500).json({ error: message });
+  }
+});
 var public_routes_default = router43;
 
 // src/routes/public-visitors.routes.ts
@@ -303349,23 +304374,21 @@ router44.post(
       if (!visitorId) return;
       const schoolId = await resolveSchoolId(req);
       const visitor = await upsertVisitor(visitorId, schoolId);
-      const thread = await prisma_default.publicChatThread.create({
-        data: {
-          publicVisitorId: visitor.id,
-          schoolId,
-          status: "OPEN"
-        },
-        select: { id: true }
+      const { id: threadId, created } = await findOrCreateOpenPublicChatThread({
+        publicVisitorId: visitor.id,
+        schoolId
       });
-      await prisma_default.publicVisitorEvent.create({
-        data: {
-          publicVisitorId: visitor.id,
-          eventType: "CHAT_THREAD_CREATE",
-          schoolId,
-          chatThreadId: thread.id
-        }
-      });
-      res.status(201).json({ threadId: thread.id });
+      if (created) {
+        await prisma_default.publicVisitorEvent.create({
+          data: {
+            publicVisitorId: visitor.id,
+            eventType: "CHAT_THREAD_CREATE",
+            schoolId,
+            chatThreadId: threadId
+          }
+        });
+      }
+      res.status(created ? 201 : 200).json({ threadId });
     } catch (error) {
       res.status(500).json({ error: publicServerErrorMessage(error) });
     }
@@ -303475,6 +304498,32 @@ router44.post(
         },
         select: { id: true }
       });
+      const { id: threadId, created } = await findOrCreateOpenPublicChatThread({
+        publicVisitorId: visitor.id,
+        schoolId
+      });
+      if (created) {
+        await prisma_default.publicVisitorEvent.create({
+          data: {
+            publicVisitorId: visitor.id,
+            eventType: "CHAT_THREAD_CREATE",
+            schoolId,
+            chatThreadId: threadId
+          }
+        });
+      }
+      await prisma_default.publicChatMessage.create({
+        data: {
+          threadId,
+          senderType: "VISITOR",
+          senderVisitorId: visitor.id,
+          content: formatOrientationChatNotice(criteria)
+        }
+      });
+      await prisma_default.publicChatThread.update({
+        where: { id: threadId },
+        data: { updatedAt: /* @__PURE__ */ new Date() }
+      });
       await prisma_default.publicVisitorEvent.create({
         data: {
           publicVisitorId: visitor.id,
@@ -303483,7 +304532,7 @@ router44.post(
           metadata: { criteriaKeys: Object.keys(criteria) }
         }
       });
-      res.status(201).json({ requestId: record.id });
+      res.status(201).json({ requestId: record.id, threadId });
     } catch (error) {
       res.status(500).json({ error: publicServerErrorMessage(error) });
     }

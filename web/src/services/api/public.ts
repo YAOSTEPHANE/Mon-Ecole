@@ -95,7 +95,40 @@ export const publicApi = {
     criteria: Record<string, unknown>;
     result?: Record<string, unknown> | null;
   }) => {
-    const response = await api.post<{ requestId: string }>('/public/recommendations/requests', data);
+    const response = await api.post<{ requestId: string; threadId: string }>(
+      '/public/recommendations/requests',
+      data,
+    );
     return response.data;
+  },
+  getAcademicResults: async (params?: { school?: string }) => {
+    const response = await api.get('/public/academic-results', { params });
+    return response.data as {
+      academicYear: string;
+      examStats: Array<{
+        id: string;
+        examKind: string;
+        examLabel: string;
+        academicYear: string;
+        candidates: number | null;
+        admitted: number | null;
+        passRate: number;
+      }>;
+      honorRoll: {
+        academicYear: string;
+        period: string;
+        periodLabel: string;
+        students: Array<{
+          classId: string;
+          className: string;
+          classLevel: string;
+          firstName: string;
+          lastName: string;
+          average: number;
+          photoUrl: string | null;
+          isPlaceholder?: boolean;
+        }>;
+      } | null;
+    };
   },
 };

@@ -6,6 +6,7 @@ import { admissionScopeWhere } from '../utils/school-context.util';
 import { isObjectId } from '../utils/school-access-guard.util';
 import type { AuthRequest } from '../middleware/auth.middleware';
 import type { PublicChatThreadStatus } from '@prisma/client';
+import { findOrCreateOpenPublicChatThread } from '../utils/public-chat-thread.util';
 
 const router = express.Router();
 
@@ -405,6 +406,59 @@ router.patch(
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur serveur';
       console.error('PATCH /public-chat/threads/:threadId:', error);
+      res.status(500).json({ error: message });
+    }
+  }
+);
+
+router.post(
+  '/public-recommendations/:id/reply',
+  body('content').isString().trim().notEmpty().isLength({ max: 2000 }).withMessage('Message invalide'),
+  async (req: ScopedReq, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+      const id = String(req.params.id || '').trim();
+      if (!isObjectId(id)) return res.status(400).json({ error: 'id invalide' });
+
+      const schoolId = req.schoolId!;
+      const scope = schoolScope(schoolId, req.school?.isDefault);
+
+      const request = await prisma.publicRecommendationRequest.findFirst({
+        where: { id, ...scope },
+        select: { id: true, publicVisitorId: true, schoolId: true },
+      });
+      if (!request) return res.status(404).json({ error: 'Demande introuvable' });
+      if (!request.publicVisitorId) {
+        return res.status(400).json({ error: 'Cette demande n’est pas liée à un visiteur' });
+      }
+
+      const visitorSchoolId = request.schoolId || schoolId;
+      const { id: threadId } = await findOrCreateOpenPublicChatThread({
+        publicVisitorId: request.publicVisitorId,
+        schoolId: visitorSchoolId,
+      });
+
+      await prisma.publicChatThread.update({
+        where: { id: threadId },
+        data: { status: 'OPEN', updatedAt: new Date() },
+      });
+
+      const content = String(req.body.content).trim().slice(0, 2000);
+      const message = await prisma.publicChatMessage.create({
+        data: {
+          threadId,
+          senderType: 'STAFF',
+          content,
+        },
+        select: { id: true, senderType: true, content: true, createdAt: true },
+      });
+
+      res.status(201).json({ threadId, message });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erreur serveur';
+      console.error('POST /public-recommendations/:id/reply:', error);
       res.status(500).json({ error: message });
     }
   }

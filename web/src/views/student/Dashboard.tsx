@@ -25,6 +25,9 @@ import {
   FiCloud,
   FiMonitor,
   FiTarget,
+  FiTruck,
+  FiUserPlus,
+  FiBookOpen,
 } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import Card from '../../components/ui/Card';
@@ -50,6 +53,9 @@ const DigitalLibraryBrowser = dynamic(() => import('../../components/digital-lib
 const ElearningHub = dynamic(() => import('../../components/elearning/ElearningHub'), { loading: () => <DashboardTabLoading />, ssr: false });
 const StudentMockExamsPanel = dynamic(() => import('../../components/student/StudentMockExamsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const LessonLogsBrowser = dynamic(() => import('../../components/shared/LessonLogsBrowser'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentReportCards = dynamic(() => import('../../components/student/StudentReportCards'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentReenrollment = dynamic(() => import('../../components/student/StudentReenrollment'), { loading: () => <DashboardTabLoading />, ssr: false });
+const StudentCampusPanel = dynamic(() => import('../../components/student/StudentCampusPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 
 const VALID_TAB_IDS = [
   'overview',
@@ -57,6 +63,7 @@ const VALID_TAB_IDS = [
   'academic-history',
   'identity-documents',
   'grades',
+  'report-cards',
   'schedule',
   'absences',
   'assignments',
@@ -64,7 +71,9 @@ const VALID_TAB_IDS = [
   'conduct',
   'extracurricular',
   'orientation',
+  'reenrollment',
   'payments',
+  'campus',
   'messages',
   'digital-library',
   'elearning',
@@ -112,6 +121,7 @@ const StudentDashboard = () => {
       { id: 'academic-history', label: 'Historique scolaire', icon: FiArchive, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Parcours et données académiques' },
       { id: 'identity-documents', label: 'Documents d’identité', icon: FiCreditCard, color: 'from-slate-600 to-slate-800', description: 'Pièces officielles et justificatifs' },
       { id: 'grades', label: 'Notes', icon: FiAward, color: 'from-purple-500 to-fuchsia-600', description: 'Résultats et évaluations' },
+      { id: 'report-cards', label: 'Bulletins', icon: FiBookOpen, color: 'from-violet-600 to-purple-700', description: 'Bulletins publiés et téléchargement officiel' },
       { id: 'schedule', label: 'Emploi du temps', icon: FiCalendar, color: 'from-pink-500 to-rose-600', description: 'Planning des cours' },
       { id: 'absences', label: 'Absences', icon: FiAlertCircle, color: 'from-amber-500 to-orange-600', description: 'Assiduité et justifications' },
       { id: 'assignments', label: 'Devoirs', icon: FiFileText, color: 'from-cyan-500 to-teal-600', description: 'Travaux à rendre et rendus' },
@@ -131,7 +141,21 @@ const StudentDashboard = () => {
         color: 'from-cptb-blue to-cptb-blue-dark',
         description: 'Filières, tests, conseils, partenariats, suivi et stages',
       },
+      {
+        id: 'reenrollment',
+        label: 'Réinscription',
+        icon: FiUserPlus,
+        color: 'from-cptb-blue to-cptb-blue-dark',
+        description: 'Demande de réinscription pour la prochaine année',
+      },
       { id: 'payments', label: 'Paiements', icon: FiDollarSign, color: 'from-emerald-500 to-green-600', description: 'Frais et règlements en ligne' },
+      {
+        id: 'campus',
+        label: 'Cantine & transport',
+        icon: FiTruck,
+        color: 'from-amber-600 to-orange-700',
+        description: 'Formules repas, lignes de bus et suivi GPS',
+      },
       { id: 'messages', label: 'Messages école', icon: FiMessageCircle, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Échanges avec l’administration' },
       { id: 'digital-library', label: 'Bibliothèque numérique', icon: FiCloud, color: 'from-sky-600 to-cptb-blue', description: 'E-books, PDF et ressources pédagogiques en ligne' },
       { id: 'elearning', label: 'E-learning', icon: FiMonitor, color: 'from-cptb-blue to-cptb-blue-mid', description: 'Cours en ligne, quiz et classes virtuelles' },
@@ -414,6 +438,7 @@ const StudentDashboard = () => {
                       searchDateRange={searchDateRange}
                     />
                   )}
+                  {activeTab === 'report-cards' && <StudentReportCards />}
                   {activeTab === 'schedule' && <StudentSchedule searchQuery={searchQuery} />}
                   {activeTab === 'absences' && (
                     <StudentAbsences searchQuery={searchQuery} searchDateRange={searchDateRange} />
@@ -434,7 +459,9 @@ const StudentDashboard = () => {
                   {activeTab === 'conduct' && <StudentConduct searchQuery={searchQuery} />}
                   {activeTab === 'extracurricular' && <StudentExtracurricularPanel />}
                   {activeTab === 'orientation' && <StudentOrientationPanel />}
+                  {activeTab === 'reenrollment' && <StudentReenrollment />}
                   {activeTab === 'payments' && <StudentPayments />}
+                  {activeTab === 'campus' && <StudentCampusPanel />}
                   {activeTab === 'messages' && <SchoolCommunication role="student" />}
                   {activeTab === 'digital-library' && <DigitalLibraryBrowser />}
                   {activeTab === 'elearning' && <ElearningHub mode="student" />}

@@ -326,4 +326,8 @@ export const parentApi = {
     const response = await api.get(`/parent/children/${studentId}/lesson-logs`);
     return response.data;
   },
+  getChildHealth: async (studentId: string) => {
+    const response = await api.get(`/parent/children/${studentId}/health`);
+    return response.data;
+  },
 };

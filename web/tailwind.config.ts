@@ -24,7 +24,7 @@ const config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-sans)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
       },
       colors: {
         tran: {

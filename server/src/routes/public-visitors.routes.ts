@@ -11,6 +11,7 @@ import { PUBLIC_VISITOR_COOKIE_NAME } from '../utils/public-visitor-cookie.util'
 import { isObjectId } from '../utils/school-access-guard.util';
 import { parseUserAgent } from '../utils/public-visitor-device.util';
 import { readClientIp, resolveVisitorGeo } from '../utils/public-visitor-geo.util';
+import { findOrCreateOpenPublicChatThread, formatOrientationChatNotice } from '../utils/public-chat-thread.util';
 
 const router = express.Router();
 
@@ -220,25 +221,23 @@ router.post(
       const schoolId = await resolveSchoolId(req);
       const visitor = await upsertVisitor(visitorId, schoolId);
 
-      const thread = await prisma.publicChatThread.create({
-        data: {
-          publicVisitorId: visitor.id,
-          schoolId,
-          status: 'OPEN',
-        },
-        select: { id: true },
+      const { id: threadId, created } = await findOrCreateOpenPublicChatThread({
+        publicVisitorId: visitor.id,
+        schoolId,
       });
 
-      await prisma.publicVisitorEvent.create({
-        data: {
-          publicVisitorId: visitor.id,
-          eventType: 'CHAT_THREAD_CREATE',
-          schoolId,
-          chatThreadId: thread.id,
-        },
-      });
+      if (created) {
+        await prisma.publicVisitorEvent.create({
+          data: {
+            publicVisitorId: visitor.id,
+            eventType: 'CHAT_THREAD_CREATE',
+            schoolId,
+            chatThreadId: threadId,
+          },
+        });
+      }
 
-      res.status(201).json({ threadId: thread.id });
+      res.status(created ? 201 : 200).json({ threadId });
     } catch (error: unknown) {
       res.status(500).json({ error: publicServerErrorMessage(error) });
     }
@@ -371,6 +370,33 @@ router.post(
         select: { id: true },
       });
 
+      const { id: threadId, created } = await findOrCreateOpenPublicChatThread({
+        publicVisitorId: visitor.id,
+        schoolId,
+      });
+      if (created) {
+        await prisma.publicVisitorEvent.create({
+          data: {
+            publicVisitorId: visitor.id,
+            eventType: 'CHAT_THREAD_CREATE',
+            schoolId,
+            chatThreadId: threadId,
+          },
+        });
+      }
+      await prisma.publicChatMessage.create({
+        data: {
+          threadId,
+          senderType: 'VISITOR',
+          senderVisitorId: visitor.id,
+          content: formatOrientationChatNotice(criteria),
+        },
+      });
+      await prisma.publicChatThread.update({
+        where: { id: threadId },
+        data: { updatedAt: new Date() },
+      });
+
       await prisma.publicVisitorEvent.create({
         data: {
           publicVisitorId: visitor.id,
@@ -380,7 +406,7 @@ router.post(
         },
       });
 
-      res.status(201).json({ requestId: record.id });
+      res.status(201).json({ requestId: record.id, threadId });
     } catch (error: unknown) {
       res.status(500).json({ error: publicServerErrorMessage(error) });
     }

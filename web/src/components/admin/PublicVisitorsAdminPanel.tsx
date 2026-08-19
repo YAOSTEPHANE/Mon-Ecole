@@ -102,12 +102,26 @@ const EVENT_LABELS: Record<string, string> = {
   CHAT_MESSAGE_SUBMIT: "Message chat",
 };
 
+const INTENT_LABELS: Record<string, string> = {
+  info: "Informations",
+  pre_inscription: "Pré-inscription",
+  orientation: "Orientation / parcours",
+};
+
+function suggestionText(item: string | { title?: string } | null | undefined): string {
+  if (typeof item === "string") return item;
+  if (item && typeof item.title === "string") return item.title;
+  return "";
+}
+
 const PublicVisitorsAdminPanel: React.FC = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<PanelTab>("overview");
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [selectedVisitorId, setSelectedVisitorId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
+  const [recoReplies, setRecoReplies] = useState<Record<string, string>>({});
+  const [replyingRecoId, setReplyingRecoId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -132,7 +146,7 @@ const PublicVisitorsAdminPanel: React.FC = () => {
   const { data: threads = [], isLoading: threadsLoading } = useQuery({
     queryKey: ["admin-public-chat-threads"],
     queryFn: () => adminApi.getPublicChatThreads({ limit: 50 }),
-    enabled: tab === "chat" || tab === "overview",
+    enabled: tab === "chat" || tab === "overview" || tab === "recommendations",
     refetchInterval: tab === "chat" ? 10_000 : false,
   });
 
@@ -191,6 +205,23 @@ const PublicVisitorsAdminPanel: React.FC = () => {
       await refetchMessages();
       await queryClient.invalidateQueries({ queryKey: ["admin-public-chat-threads"] });
       toast.success("Réponse envoyée");
+    },
+    onError: () => toast.error("Envoi impossible"),
+  });
+
+  const sendRecoReply = useMutation({
+    mutationFn: async ({ id, content }: { id: string; content: string }) => {
+      return adminApi.replyPublicRecommendation(id, content);
+    },
+    onSuccess: async (data, vars) => {
+      setRecoReplies((prev) => ({ ...prev, [vars.id]: "" }));
+      setReplyingRecoId(null);
+      await queryClient.invalidateQueries({ queryKey: ["admin-public-chat-threads"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-public-chat-thread", data.threadId] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-public-visitor-stats"] });
+      setSelectedThreadId(data.threadId);
+      setTab("chat");
+      toast.success("Réponse envoyée dans le chat du visiteur");
     },
     onError: () => toast.error("Envoi impossible"),
   });
@@ -393,7 +424,11 @@ const PublicVisitorsAdminPanel: React.FC = () => {
           {threadsLoading ? (
             <p className="text-xs text-stone-500">Chargement…</p>
           ) : (threads as ChatThread[]).length === 0 ? (
-            <p className="text-xs text-stone-500">Aucun message visiteur pour l’instant.</p>
+            <p className="text-xs text-stone-500 leading-relaxed">
+              Aucun fil de chat pour l’instant. Les demandes du questionnaire (onglet Orientation) n’ouvraient
+              pas de conversation auparavant. Envoyez une réponse depuis Orientation pour créer le fil, ou
+              attendez qu’un visiteur écrive dans le widget « Chat ».
+            </p>
           ) : (
             <ul className="space-y-1">
               {(threads as ChatThread[]).map((t) => {
@@ -642,37 +677,102 @@ const PublicVisitorsAdminPanel: React.FC = () => {
 
       {tab === "recommendations" && (
         <Card className="p-4 border border-stone-200">
+          <p className="text-xs text-stone-500 mb-4 leading-relaxed">
+            Le visiteur a reçu des conseils automatiques. Pour lui écrire, utilisez le champ ci-dessous :
+            le message apparaît dans l’onglet Chat du widget (pas seulement ici).
+          </p>
           {recoLoading ? (
             <p className="text-xs text-stone-500">Chargement…</p>
-          ) : (recommendations as any[]).length === 0 ? (
+          ) : (recommendations as Array<{
+            id: string;
+            criteria: Record<string, unknown> | null;
+            result: { summary?: string; suggestions?: Array<string | { title: string }> } | null;
+            createdAt: string;
+            publicVisitorId: string | null;
+          }>).length === 0 ? (
             <p className="text-xs text-stone-500">Aucune demande d’orientation.</p>
           ) : (
             <ul className="divide-y divide-stone-100">
-              {(recommendations as any[]).map((row) => {
-                const criteria = row.criteria as Record<string, unknown> | null;
-                const result = row.result as { suggestions?: Array<{ title: string }> } | null;
+              {(recommendations as Array<{
+                id: string;
+                criteria: Record<string, unknown> | null;
+                result: { summary?: string; suggestions?: Array<string | { title: string }> } | null;
+                createdAt: string;
+                publicVisitorId: string | null;
+              }>).map((row) => {
+                const criteria = row.criteria;
+                const result = row.result;
+                const intent = String(criteria?.intent ?? "");
+                const draft = recoReplies[row.id] ?? "";
                 return (
                   <li key={row.id} className="py-3 first:pt-0">
                     <div className="flex justify-between gap-2">
                       <p className="text-xs font-semibold text-stone-800">
-                        Niveau : {String(criteria?.currentLevel ?? "—")}
+                        Demande anonyme
                       </p>
                       <p className="text-[10px] text-stone-400">{formatDate(row.createdAt)}</p>
                     </div>
                     <p className="text-xs text-stone-600 mt-1">
-                      Intentions : {String(criteria?.intent ?? "—")}
+                      Niveau : {String(criteria?.currentLevel ?? "—")}
                     </p>
-                    {Array.isArray(criteria?.interests) && criteria!.interests.length > 0 && (
+                    <p className="text-xs text-stone-600 mt-0.5">
+                      Intentions : {INTENT_LABELS[intent] ?? (intent || "—")}
+                    </p>
+                    {Array.isArray(criteria?.interests) && criteria.interests.length > 0 && (
                       <p className="text-xs text-stone-500 mt-0.5">
-                        Intérêts : {(criteria!.interests as string[]).join(", ")}
+                        Intérêts : {(criteria.interests as string[]).join(", ")}
                       </p>
+                    )}
+                    {result?.summary && (
+                      <p className="mt-2 text-xs text-stone-700">{result.summary}</p>
                     )}
                     {result?.suggestions && result.suggestions.length > 0 && (
                       <ul className="mt-2 text-xs text-stone-700 list-disc list-inside">
-                        {result.suggestions.slice(0, 3).map((s, i) => (
-                          <li key={i}>{s.title}</li>
-                        ))}
+                        {result.suggestions.slice(0, 3).map((s, i) => {
+                          const text = suggestionText(s);
+                          return text ? <li key={i}>{text}</li> : null;
+                        })}
                       </ul>
+                    )}
+                    {row.publicVisitorId ? (
+                      <div className="mt-3">
+                        <label className="sr-only" htmlFor={`reco-reply-${row.id}`}>
+                          Répondre au visiteur
+                        </label>
+                        <textarea
+                          id={`reco-reply-${row.id}`}
+                          rows={3}
+                          value={draft}
+                          onChange={(e) =>
+                            setRecoReplies((prev) => ({ ...prev, [row.id]: e.target.value }))
+                          }
+                          placeholder="Votre réponse (visible dans le Chat du site)…"
+                          className="w-full rounded-lg border border-stone-200 px-3 py-2 text-xs text-stone-800 placeholder:text-stone-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const content = draft.trim();
+                            if (!content) {
+                              toast.error("Saisissez un message");
+                              return;
+                            }
+                            setReplyingRecoId(row.id);
+                            sendRecoReply.mutate({ id: row.id, content });
+                          }}
+                          disabled={sendRecoReply.isPending && replyingRecoId === row.id}
+                          className="mt-2 inline-flex items-center gap-1 rounded-lg bg-teal-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
+                        >
+                          <FiSend className="h-3.5 w-3.5" aria-hidden />
+                          {sendRecoReply.isPending && replyingRecoId === row.id
+                            ? "Envoi…"
+                            : "Répondre dans le chat"}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-amber-800">
+                        Cette demande n’est pas liée à un visiteur : impossible d’ouvrir un chat.
+                      </p>
                     )}
                   </li>
                 );

@@ -17,14 +17,14 @@ export default function HomeDirectorSection() {
   return (
     <section
       id="mot-directrice"
-      className="mx-auto max-w-6xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-20"
+      className="mx-auto max-w-6xl scroll-mt-24 px-3 py-12 sm:px-6 sm:py-20"
       aria-labelledby="director-message-title"
     >
       <HomeReveal>
-        <div className="overflow-hidden rounded-[2rem] border border-stone-200/90 bg-white shadow-[0_28px_56px_-24px_rgba(12,10,9,0.16)] ring-1 ring-tran-mustard-500/15">
+        <div className="overflow-hidden rounded-3xl border border-stone-200/90 bg-white shadow-[0_28px_56px_-24px_rgba(12,10,9,0.16)] ring-1 ring-tran-mustard-500/15 sm:rounded-[2rem]">
           <div className="grid lg:grid-cols-12 lg:items-stretch">
             <div className="relative h-full border-b border-stone-200/80 lg:col-span-4 lg:border-b-0 lg:border-r">
-              <div className="relative aspect-[3/4] w-full max-w-sm overflow-hidden sm:mx-auto lg:mx-0 lg:aspect-auto lg:h-full lg:max-w-none lg:min-h-[28rem]">
+              <div className="relative mx-auto aspect-[4/5] w-full max-h-[min(70svh,22rem)] max-w-sm overflow-hidden sm:max-h-none sm:aspect-[3/4] lg:mx-0 lg:aspect-auto lg:h-full lg:max-w-none lg:min-h-[28rem]">
                 {useCustomPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -45,8 +45,8 @@ export default function HomeDirectorSection() {
                   className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-tran-mauve-950 via-tran-mauve-950/80 to-transparent sm:h-40"
                   aria-hidden
                 />
-                <div className="absolute inset-x-0 bottom-0 z-10 p-6 text-white lg:p-8">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-tran-mustard-400/35 bg-tran-mustard-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-tran-mustard-100">
+                <div className="absolute inset-x-0 bottom-0 z-10 p-4 text-white sm:p-6 lg:p-8">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-tran-mustard-400/35 bg-tran-mustard-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-tran-mustard-100 sm:tracking-[0.18em]">
                     <FiAward className="h-3.5 w-3.5" aria-hidden />
                     Direction pédagogique
                   </span>
@@ -63,7 +63,7 @@ export default function HomeDirectorSection() {
               </div>
             </div>
 
-            <div className="flex flex-col justify-center p-6 sm:p-8 lg:col-span-8 lg:p-10 xl:p-12">
+            <div className="flex flex-col justify-center p-4 sm:p-8 lg:col-span-8 lg:p-10 xl:p-12">
               <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-200/80 bg-tran-mustard-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-950">
                 {content.occasionBadge}
               </span>

@@ -25,6 +25,45 @@ export default function HomeReveal({ children, className = '', delayMs = 0 }: Ho
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    const markVisibleIfStaggered = () => {
+      if (el.classList.contains('public-stagger-item')) {
+        setVisible(true);
+        return true;
+      }
+      return false;
+    };
+
+    const selfMo = new MutationObserver(() => {
+      if (markVisibleIfStaggered()) selfMo.disconnect();
+    });
+    selfMo.observe(el, { attributes: true, attributeFilter: ['class'] });
+    if (markVisibleIfStaggered()) {
+      return () => selfMo.disconnect();
+    }
+
+    const parentSection = el.closest('.public-section-reveal');
+    if (parentSection) {
+      const revealFromParent = () => {
+        if (parentSection.classList.contains('public-section-reveal--visible')) {
+          setVisible(true);
+          return true;
+        }
+        return false;
+      };
+      if (revealFromParent()) {
+        return () => selfMo.disconnect();
+      }
+      const mo = new MutationObserver(() => {
+        if (revealFromParent()) mo.disconnect();
+      });
+      mo.observe(parentSection, { attributes: true, attributeFilter: ['class'] });
+      return () => {
+        mo.disconnect();
+        selfMo.disconnect();
+      };
+    }
+
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
@@ -35,7 +74,10 @@ export default function HomeReveal({ children, className = '', delayMs = 0 }: Ho
       { rootMargin: '0px 0px -8% 0px', threshold: 0.06 }
     );
     obs.observe(el);
-    return () => obs.disconnect();
+    return () => {
+      obs.disconnect();
+      selfMo.disconnect();
+    };
   }, []);
 
   const revealStyle: CSSProperties | undefined =

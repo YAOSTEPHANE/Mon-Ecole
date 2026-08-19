@@ -2506,7 +2506,20 @@ export const adminApi = {
   },
   getPublicRecommendations: async (params?: { limit?: number }) => {
     const response = await api.get('/admin/public-recommendations', { params });
-    return response.data;
+    return response.data as Array<{
+      id: string;
+      criteria: Record<string, unknown> | null;
+      result: { summary?: string; suggestions?: Array<string | { title: string }> } | null;
+      createdAt: string;
+      publicVisitorId: string | null;
+    }>;
+  },
+  replyPublicRecommendation: async (id: string, content: string) => {
+    const response = await api.post(`/admin/public-recommendations/${id}/reply`, { content });
+    return response.data as {
+      threadId: string;
+      message: { id: string; senderType: string; content: string; createdAt: string };
+    };
   },
   getPublicChatThreads: async (params?: { status?: 'OPEN' | 'CLOSED'; limit?: number }) => {
     const response = await api.get('/admin/public-chat/threads', { params });
@@ -2635,5 +2648,29 @@ export const adminApi = {
     );
     const blob = new Blob([response.data as string], { type: 'text/html;charset=utf-8' });
     window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
+  },
+  getOfficialExamStats: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/admin/official-exam-stats', { params });
+    return response.data;
+  },
+  createOfficialExamStat: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/official-exam-stats', data);
+    return response.data;
+  },
+  updateOfficialExamStat: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/admin/official-exam-stats/${id}`, data);
+    return response.data;
+  },
+  deleteOfficialExamStat: async (id: string) => {
+    const response = await api.delete(`/admin/official-exam-stats/${id}`);
+    return response.data;
+  },
+  updateHonorRollSettings: async (data: {
+    enabled?: boolean;
+    academicYear?: string | null;
+    period?: string | null;
+  }) => {
+    const response = await api.put('/admin/honor-roll-settings', data);
+    return response.data;
   },
 };

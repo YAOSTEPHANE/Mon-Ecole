@@ -261,4 +261,32 @@ export const studentApi = {
     const response = await api.get('/student/lesson-logs');
     return response.data;
   },
+  getCanteenPlans: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/student/campus/canteen-plans', { params });
+    return response.data;
+  },
+  getCanteenSubscriptions: async () => {
+    const response = await api.get('/student/campus/canteen-subscriptions');
+    return response.data;
+  },
+  subscribeCanteen: async (planId: string) => {
+    const response = await api.post('/student/campus/canteen-subscriptions', { planId });
+    return response.data;
+  },
+  getTransportRoutes: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/student/campus/transport-routes', { params });
+    return response.data;
+  },
+  getTransportSubscriptions: async () => {
+    const response = await api.get('/student/campus/transport-subscriptions');
+    return response.data;
+  },
+  subscribeTransport: async (data: { routeId: string; stopLabel?: string }) => {
+    const response = await api.post('/student/campus/transport-subscriptions', data);
+    return response.data;
+  },
+  getTransportTracking: async (routeId: string) => {
+    const response = await api.get(`/student/campus/transport-routes/${routeId}/tracking`);
+    return response.data;
+  },
 };

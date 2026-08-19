@@ -37,6 +37,10 @@ import {
 } from '../utils/mock-exam.util';
 import { isExamClassLevel } from '../utils/exam-class.util';
 import {
+  subscribeStudentToCanteen,
+  subscribeStudentToTransport,
+} from '../utils/campus-services.util';
+import {
   getAcademicYearsWithTuitionBlockForParent,
   parentTuitionBlockFromYears,
 } from '../utils/parent-academic-result-access.util';
@@ -2273,6 +2277,139 @@ router.post('/mock-exams/:id/submit', async (req: AuthRequest, res) => {
   } catch (e) {
     const status = (e as { status?: number })?.status ?? 500;
     res.status(status).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/campus/canteen-plans', async (req: AuthRequest, res) => {
+  try {
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+    const rows = await prisma.canteenMealPlan.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+        ...(academicYear ? { academicYear } : {}),
+      },
+      orderBy: [{ academicYear: 'desc' }, { name: 'asc' }],
+      include: { _count: { select: { subscriptions: true } } },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    console.error('GET /student/campus/canteen-plans:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/campus/canteen-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const rows = await prisma.canteenSubscription.findMany({
+      where: { studentId: student.id },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    console.error('GET /student/campus/canteen-subscriptions:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/campus/canteen-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const planId = typeof req.body?.planId === 'string' ? req.body.planId : '';
+    if (!planId) return res.status(400).json({ error: 'planId requis' });
+    const result = await subscribeStudentToCanteen(student.id, planId);
+    res.status(201).json(result);
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status ?? 500;
+    console.error('POST /student/campus/canteen-subscriptions:', error);
+    res.status(status).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/campus/transport-routes', async (req: AuthRequest, res) => {
+  try {
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
+    const rows = await prisma.transportRoute.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+        ...(academicYear ? { academicYear } : {}),
+      },
+      orderBy: [{ academicYear: 'desc' }, { name: 'asc' }],
+      include: { _count: { select: { subscriptions: true } } },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    console.error('GET /student/campus/transport-routes:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/campus/transport-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const rows = await prisma.transportSubscription.findMany({
+      where: { studentId: student.id },
+      include: { route: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    console.error('GET /student/campus/transport-subscriptions:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/campus/transport-subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const routeId = typeof req.body?.routeId === 'string' ? req.body.routeId : '';
+    const stopLabel = typeof req.body?.stopLabel === 'string' ? req.body.stopLabel : undefined;
+    if (!routeId) return res.status(400).json({ error: 'routeId requis' });
+    const result = await subscribeStudentToTransport(student.id, routeId, stopLabel);
+    res.status(201).json(result);
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status ?? 500;
+    console.error('POST /student/campus/transport-subscriptions:', error);
+    res.status(status).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/campus/transport-routes/:routeId/tracking', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const { routeId } = req.params;
+
+    const sub = await prisma.transportSubscription.findFirst({
+      where: { studentId: student.id, routeId, status: 'ACTIVE' },
+    });
+    if (!sub) {
+      return res.status(403).json({ error: 'Vous n’êtes pas inscrit sur cette ligne' });
+    }
+
+    const route = await prisma.transportRoute.findUnique({
+      where: { id: routeId },
+      select: { id: true, name: true, vehicleLabel: true },
+    });
+    if (!route) return res.status(404).json({ error: 'Ligne introuvable' });
+
+    const latest = await prisma.transportVehiclePing.findFirst({
+      where: { routeId },
+      orderBy: { recordedAt: 'desc' },
+    });
+    res.json({ route, latest });
+  } catch (error: unknown) {
+    console.error('GET /student/campus/transport-routes/:routeId/tracking:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 

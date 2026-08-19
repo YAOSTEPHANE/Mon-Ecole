@@ -52,15 +52,10 @@ export default function PublicVisitorPanel() {
   }, [messages, open, tab]);
 
   const ensureThread = useCallback(async (): Promise<string> => {
-    const stored = sessionStorage.getItem(CHAT_THREAD_STORAGE_KEY);
-    if (stored?.trim()) {
-      setThreadId(stored);
-      return stored;
-    }
-    const { threadId: newId } = await publicApi.createPublicChatThread();
-    sessionStorage.setItem(CHAT_THREAD_STORAGE_KEY, newId);
-    setThreadId(newId);
-    return newId;
+    const { threadId: id } = await publicApi.createPublicChatThread();
+    sessionStorage.setItem(CHAT_THREAD_STORAGE_KEY, id);
+    setThreadId(id);
+    return id;
   }, []);
 
   const loadMessages = useCallback(async (id: string) => {
@@ -143,8 +138,15 @@ export default function PublicVisitorPanel() {
       };
       const result = buildPublicRecommendations(criteria);
       setRecoResult(result);
-      await publicApi.submitPublicRecommendationRequest({ criteria, result });
-      toast.success("Recommandations enregistrées");
+      const { threadId: id } = await publicApi.submitPublicRecommendationRequest({
+        criteria,
+        result,
+      });
+      if (id) {
+        sessionStorage.setItem(CHAT_THREAD_STORAGE_KEY, id);
+        setThreadId(id);
+      }
+      toast.success("Demande envoyée. L’équipe peut vous répondre dans l’onglet Chat.");
     } catch {
       toast.error("Impossible d’enregistrer la demande.");
     } finally {
@@ -221,8 +223,8 @@ export default function PublicVisitorPanel() {
                   <p className="text-stone-500">Chargement…</p>
                 ) : messages.length === 0 ? (
                   <p className="text-stone-500 leading-relaxed">
-                    Posez une question sur les admissions, les niveaux ou la vie scolaire. Un
-                    responsable pourra vous répondre.
+                    Posez une question, ou envoyez d’abord une demande d’orientation : le fil
+                    s’affiche ici et un responsable pourra vous répondre.
                   </p>
                 ) : (
                   messages.map((m) => (

@@ -16,6 +16,12 @@ import {
   searchFneMatricule,
   type FneCycle,
 } from '../utils/fne-matricule-search.util';
+import { getCurrentAcademicYear } from '../utils/report-card.util';
+import {
+  buildHonorRoll,
+  getHonorRollSetting,
+  listPublishedExamStats,
+} from '../utils/public-academic-showcase.util';
 
 const EMPTY_PUBLIC_BRANDING = {
   navigationLogoUrl: null,
@@ -299,6 +305,45 @@ router.post('/fne-lookup', fneLookupLimiter, async (req, res) => {
     console.error('POST /public/fne-lookup:', error);
     const status = /critère|Sélectionnez|Indiquez/i.test(message) ? 400 : 502;
     res.status(status).json({ error: message });
+  }
+});
+
+/** Taux d’admission officiels et palmarès (1er de chaque classe) pour la page d’accueil. */
+router.get('/academic-results', async (req, res) => {
+  try {
+    const schoolId = await resolvePublicSchoolId(req);
+    const brandingDelegate = getAppBrandingDelegate();
+    let academicYear = getCurrentAcademicYear();
+    if (brandingDelegate) {
+      const brandingId = await brandingIdForSchool(schoolId);
+      const row = await brandingDelegate.findUnique({ where: { id: brandingId } });
+      const year = (row as { currentAcademicYear?: string | null } | null)?.currentAcademicYear;
+      if (year && /^\d{4}-\d{4}$/.test(year)) academicYear = year;
+    }
+
+    const honorSetting = await getHonorRollSetting(schoolId);
+    const honorYear = honorSetting?.academicYear || academicYear;
+    const honorEnabled = honorSetting?.enabled ?? true;
+    const [examStats, honorRoll] = await Promise.all([
+      listPublishedExamStats({ schoolId, academicYear: honorYear }),
+      honorEnabled
+        ? buildHonorRoll({
+            schoolId,
+            academicYear: honorYear,
+            period: honorSetting?.period,
+          })
+        : Promise.resolve(null),
+    ]);
+
+    res.json({
+      academicYear: honorYear,
+      examStats,
+      honorRoll: honorEnabled ? honorRoll : null,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    console.error('GET /public/academic-results:', error);
+    res.status(500).json({ error: message });
   }
 });
 

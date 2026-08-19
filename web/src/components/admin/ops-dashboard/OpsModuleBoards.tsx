@@ -21,6 +21,7 @@ import { adminApi } from '@/services/api';
 import { useSchool } from '@/contexts/SchoolContext';
 import { useSchoolReady, schoolQueryKey } from '@/hooks/useSchoolReady';
 import { formatFCFA } from '@/utils/currency';
+import { getCurrentAcademicYear } from '@/utils/academicYear';
 
 const CARD =
   'premium-surface p-5';
@@ -148,6 +149,28 @@ export default function OpsModuleBoards({
   const showLibrary = hasModule('library');
   const showNotifications = hasModule('notifications');
 
+  const { data: officialExamData } = useQuery({
+    queryKey: schoolQueryKey(['admin-official-exam-stats', getCurrentAcademicYear()], activeSchoolId),
+    queryFn: () => adminApi.getOfficialExamStats({ academicYear: getCurrentAcademicYear() }),
+    staleTime: 60_000,
+    enabled: schoolReady && section === 'snapshots' && showAdmissions,
+  });
+  const officialRateHint = useMemo(() => {
+    const rows = Array.isArray(officialExamData?.stats) ? officialExamData.stats : [];
+    const published = rows.filter(
+      (row: { isPublished?: boolean; examLabel?: string; passRate?: number }) =>
+        row.isPublished !== false && typeof row.passRate === 'number',
+    );
+    if (published.length === 0) return '';
+    return published
+      .slice(0, 2)
+      .map(
+        (row: { examLabel?: string; passRate: number }) =>
+          `${row.examLabel || 'Examen'} ${row.passRate.toLocaleString('fr-FR')} %`,
+      )
+      .join(' · ');
+  }, [officialExamData]);
+
   const snapshots = useMemo(() => {
     const items: Snapshot[] = [];
     if (showFees) {
@@ -248,6 +271,7 @@ export default function OpsModuleBoards({
     }
     return items.slice(0, 8);
   }, [
+    officialRateHint,
     cards,
     stats,
     hasModule,
@@ -393,7 +417,22 @@ export default function OpsModuleBoards({
             <p className="mt-1 text-[28px] font-bold leading-none tracking-tight text-stone-900">
               {item.value}
             </p>
-            <p className="mt-2 truncate text-[12px] text-stone-500">{item.hint}</p>
+            <p className="mt-2 line-clamp-2 text-[12px] text-stone-500">{item.hint}</p>
+            {item.key === 'admissions' && officialRateHint ? (
+              <span className="admission-lux-chip admission-lux-chip--compact mt-2 max-w-full">
+                <span className="admission-lux-chip__sheen" aria-hidden />
+                <span className="admission-lux-live" aria-hidden />
+                <span className="admission-lux-chip__icon" aria-hidden>
+                  <FiAward />
+                </span>
+                <span className="admission-lux-chip__copy min-w-0">
+                  <span className="admission-lux-chip__label">Taux d’admission</span>
+                  <span className="admission-lux-chip__value">
+                    <em className="truncate font-sans font-extrabold tabular-nums tracking-tight not-italic">{officialRateHint}</em>
+                  </span>
+                </span>
+              </span>
+            ) : null}
           </button>
         ))}
       </div>

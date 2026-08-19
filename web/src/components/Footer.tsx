@@ -112,6 +112,12 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-sm text-stone-500 mb-3 leading-relaxed">{tagline}</p>
+            <Link
+              href="/a-propos"
+              className="mb-4 inline-flex text-sm font-semibold text-amber-200/90 transition-colors hover:text-amber-100"
+            >
+              À propos de nous
+            </Link>
             <p className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
               Suivez-nous
             </p>
@@ -139,6 +145,42 @@ const Footer = () => {
               Ressources
             </h3>
             <ul className="space-y-2">
+              <li>
+                <Link
+                  href="/a-propos"
+                  className="text-sm text-stone-400 hover:text-amber-100 transition-colors flex items-center rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                >
+                  <FiBook className="w-4 h-4 mr-2" />
+                  À propos
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/a-propos/personnel"
+                  className="text-sm text-stone-400 hover:text-amber-100 transition-colors flex items-center rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                >
+                  <FiBook className="w-4 h-4 mr-2" />
+                  Le personnel
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/a-propos/etablissements"
+                  className="text-sm text-stone-400 hover:text-amber-100 transition-colors flex items-center rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                >
+                  <FiBook className="w-4 h-4 mr-2" />
+                  Nos établissements
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/a-propos/reglement-interieur"
+                  className="text-sm text-stone-400 hover:text-amber-100 transition-colors flex items-center rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                >
+                  <FiFileText className="w-4 h-4 mr-2" />
+                  Règlement intérieur
+                </Link>
+              </li>
               <li>
                 <Link
                   href="/help"

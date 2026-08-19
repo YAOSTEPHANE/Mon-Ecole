@@ -36,6 +36,7 @@ import {
   FiMonitor,
   FiTarget,
   FiCloud,
+  FiActivity,
 } from 'react-icons/fi';
 
 
@@ -53,6 +54,7 @@ const ParentAppointmentsPanel = dynamic(() => import('../../components/parent/Pa
 const ParentFamilyProfilePanel = dynamic(() => import('../../components/parent/ParentFamilyProfilePanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ParentExtracurricularPanel = dynamic(() => import('../../components/parent/ParentExtracurricularPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ParentCampusPanel = dynamic(() => import('../../components/parent/ParentCampusPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
+const ParentHealthPanel = dynamic(() => import('../../components/parent/ParentHealthPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ParentOrientationPanel = dynamic(() => import('../../components/parent/ParentOrientationPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ParentNotificationsPanel = dynamic(() => import('../../components/parent/ParentNotificationsPanel'), { loading: () => <DashboardTabLoading />, ssr: false });
 const SchoolCommunication = dynamic(() => import('../../components/portal/SchoolCommunication'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -76,6 +78,7 @@ const VALID_PARENT_TABS = [
   'schedule',
   'report-cards',
   'conduct',
+  'health',
   'extracurricular',
   'orientation',
   'payments',
@@ -153,6 +156,13 @@ const ParentDashboard = () => {
       { id: 'report-cards', label: 'Bulletins', icon: FiBook, requiresChild: true, color: 'from-orange-700 to-amber-700' },
       { id: 'conduct', label: 'Conduite', icon: FiShield, requiresChild: true, color: 'from-rose-500 to-orange-600' },
       {
+        id: 'health',
+        label: 'Infirmerie',
+        icon: FiActivity,
+        requiresChild: true,
+        color: 'from-rose-500 to-pink-600',
+      },
+      {
         id: 'extracurricular',
         label: 'Activités parascolaires',
         icon: FiMap,
@@ -197,6 +207,7 @@ const ParentDashboard = () => {
       schedule: 'Emploi du temps hebdomadaire',
       'report-cards': 'Bulletins et bilans',
       conduct: 'Appréciations et conduite',
+      health: 'Allergies, urgences, visites infirmerie et campagnes (lecture)',
       extracurricular: 'Clubs, événements, sorties et inscriptions',
       campus: 'Cantine scolaire et lignes de transport',
       orientation: 'Filières, tests, conseils, partenariats et suivi de votre enfant',
@@ -463,6 +474,19 @@ const ParentDashboard = () => {
                       <div className="text-center py-12 text-stone-600">
                         <p className="text-lg mb-2 font-semibold text-stone-900">Sélectionnez un enfant</p>
                         <p className="text-sm leading-relaxed">Choisissez un enfant dans « Mes enfants » pour voir sa conduite.</p>
+                      </div>
+                    </Card>
+                  ))}
+                {activeTab === 'health' &&
+                  (selectedChild ? (
+                    <ParentHealthPanel studentId={selectedChild} />
+                  ) : (
+                    <Card>
+                      <div className="text-center py-12 text-stone-600">
+                        <p className="text-lg mb-2 font-semibold text-stone-900">Sélectionnez un enfant</p>
+                        <p className="text-sm leading-relaxed">
+                          Choisissez un enfant dans « Mes enfants » pour consulter l’infirmerie.
+                        </p>
                       </div>
                     </Card>
                   ))}
