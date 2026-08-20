@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  },
   "env": {
     "NEXT_PUBLIC_EXPRESS_UPLOADS_VIA_API_PREFIX": "1",
     "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1"
