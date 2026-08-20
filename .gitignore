@@ -31,3 +31,19 @@ server/backups/
 e2e/.e2e-ready.json
 
 server/compiled/
+
+# Marketing — médias lourds / générés (hors prod)
+marketing/video/captures/
+marketing/video/normalized/
+marketing/video/segments/
+marketing/video/slides/
+marketing/video/vo-segments/
+marketing/video/*.mp4
+marketing/video/*.mp3
+marketing/video/_tts-input.txt
+marketing/video/concat.txt
+marketing/video/timeline-sync.json
+
+# Scripts CapCut locaux (machine)
+scripts/capcut-add-transitions.py
+scripts/populate-capcut-promo.py
