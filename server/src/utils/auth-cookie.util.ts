@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 
 export const AUTH_COOKIE_NAME = 'sm_session';
+/** Indicateur lisible côté JS (non HttpOnly) pour éviter un GET /auth/me inutile. */
+export const AUTH_SESSION_HINT_COOKIE = 'sm_has_session';
 
 /** Durée cookie alignée sur JWT (défaut 12 h). */
 export function authCookieMaxAgeMs(): number {
@@ -60,31 +62,54 @@ export function extractAccessToken(req: Request): string | undefined {
   return fromCookie || undefined;
 }
 
+function appendCookie(
+  res: Response,
+  name: string,
+  value: string,
+  opts: { httpOnly: boolean; maxAge: number; sameSite: 'Strict' | 'Lax' | 'None'; secure: boolean },
+): void {
+  const parts = [
+    `${name}=${encodeURIComponent(value)}`,
+    'Path=/',
+    `Max-Age=${opts.maxAge}`,
+    `SameSite=${opts.sameSite}`,
+  ];
+  if (opts.httpOnly) parts.push('HttpOnly');
+  if (opts.secure) parts.push('Secure');
+  res.append('Set-Cookie', parts.join('; '));
+}
+
 export function setAuthSessionCookie(res: Response, token: string): void {
   const sameSite = cookieSameSite();
   const secure = cookieSecure(sameSite);
   const maxAge = Math.floor(authCookieMaxAgeMs() / 1000);
-  const parts = [
-    `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
-    'Path=/',
-    'HttpOnly',
-    `Max-Age=${maxAge}`,
-    `SameSite=${sameSite}`,
-  ];
-  if (secure) parts.push('Secure');
-  res.append('Set-Cookie', parts.join('; '));
+  appendCookie(res, AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    maxAge,
+    sameSite,
+    secure,
+  });
+  appendCookie(res, AUTH_SESSION_HINT_COOKIE, '1', {
+    httpOnly: false,
+    maxAge,
+    sameSite,
+    secure,
+  });
 }
 
 export function clearAuthSessionCookie(res: Response): void {
   const sameSite = cookieSameSite();
   const secure = cookieSecure(sameSite);
-  const parts = [
-    `${AUTH_COOKIE_NAME}=`,
-    'Path=/',
-    'HttpOnly',
-    'Max-Age=0',
-    `SameSite=${sameSite}`,
-  ];
-  if (secure) parts.push('Secure');
-  res.append('Set-Cookie', parts.join('; '));
+  appendCookie(res, AUTH_COOKIE_NAME, '', {
+    httpOnly: true,
+    maxAge: 0,
+    sameSite,
+    secure,
+  });
+  appendCookie(res, AUTH_SESSION_HINT_COOKIE, '', {
+    httpOnly: false,
+    maxAge: 0,
+    sameSite,
+    secure,
+  });
 }

@@ -3,12 +3,22 @@
 import { useEffect, useState } from 'react';
 import { FiDownload, FiX } from 'react-icons/fi';
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+};
+
+const DISMISS_KEY = 'pwa-install-dismissed';
+
 /**
  * Bannière d’installation PWA (Chrome / Edge / Android).
  * iOS : instructions manuelles (Ajouter à l’écran d’accueil).
+ *
+ * On n’appelle `preventDefault` que si la bannière custom sera affichée ;
+ * sinon Chrome garde sa bannière native (évite l’avertissement console).
  */
 export default function PwaInstallBanner() {
-  const [deferred, setDeferred] = useState<{ prompt: () => Promise<void> } | null>(null);
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [standalone, setStandalone] = useState(false);
@@ -16,20 +26,26 @@ export default function PwaInstallBanner() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const ua = window.navigator.userAgent;
-    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const ios =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     setIsIos(ios);
     setStandalone(
       window.matchMedia('(display-mode: standalone)').matches ||
         // @ts-expect-error iOS Safari
-        Boolean(window.navigator.standalone)
+        Boolean(window.navigator.standalone),
     );
-    const key = 'pwa-install-dismissed';
-    if (sessionStorage.getItem(key) === '1') setDismissed(true);
+    if (sessionStorage.getItem(DISMISS_KEY) === '1') {
+      setDismissed(true);
+    }
 
     const onBeforeInstall = (e: Event) => {
+      if (sessionStorage.getItem(DISMISS_KEY) === '1') {
+        // Laisser la bannière native du navigateur.
+        return;
+      }
       e.preventDefault();
-      const ev = e as Event & { prompt: () => Promise<void> };
-      setDeferred({ prompt: () => ev.prompt() });
+      setDeferred(e as BeforeInstallPromptEvent);
     };
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
     return () => window.removeEventListener('beforeinstallprompt', onBeforeInstall);
@@ -40,7 +56,8 @@ export default function PwaInstallBanner() {
 
   const dismiss = () => {
     setDismissed(true);
-    sessionStorage.setItem('pwa-install-dismissed', '1');
+    setDeferred(null);
+    sessionStorage.setItem(DISMISS_KEY, '1');
   };
 
   return (
@@ -58,6 +75,11 @@ export default function PwaInstallBanner() {
               type="button"
               onClick={async () => {
                 await deferred.prompt();
+                try {
+                  await deferred.userChoice;
+                } catch {
+                  /* ignore */
+                }
                 setDeferred(null);
               }}
               className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-800 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-900"
@@ -67,7 +89,12 @@ export default function PwaInstallBanner() {
             </button>
           )}
         </div>
-        <button type="button" onClick={dismiss} className="rounded-lg p-1 text-stone-400 hover:bg-stone-100" aria-label="Fermer">
+        <button
+          type="button"
+          onClick={dismiss}
+          className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+          aria-label="Fermer"
+        >
           <FiX className="h-4 w-4" />
         </button>
       </div>

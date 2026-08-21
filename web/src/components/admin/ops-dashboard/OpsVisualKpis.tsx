@@ -37,7 +37,7 @@ type OpsVisualKpisProps = {
 };
 
 const CARD =
-  'ops-kpi-card flex h-[272px] min-w-0 flex-col self-start rounded-[1.35rem] bg-white p-5 ring-1 ring-[#eceff5] shadow-[0_10px_28px_-18px_rgba(28,39,76,0.28)]';
+  'ops-kpi-card flex min-h-[240px] h-auto sm:h-[272px] min-w-0 flex-col self-stretch rounded-[1.35rem] bg-white p-4 sm:p-5 ring-1 ring-[#eceff5] shadow-[0_10px_28px_-18px_rgba(28,39,76,0.28)]';
 
 const BUBBLE_COLORS = ['#0018A8', '#8EB0FF', '#E6E8ED'];
 const BUBBLE_LAYOUT = [
@@ -112,19 +112,23 @@ function CardHead({
 }) {
   return (
     <div className="flex h-8 shrink-0 items-center justify-between gap-2">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <span className="ops-kpi-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8eefc] text-[#0018A8]">
           <Icon className="h-3.5 w-3.5" aria-hidden />
         </span>
-        <p className="truncate text-[13px] font-semibold leading-none text-stone-900">{title}</p>
+        <p className="min-w-0 truncate text-[12px] font-semibold leading-tight text-stone-900 sm:text-[13px] sm:leading-none">
+          {title}
+        </p>
       </div>
       {onMore ? (
         <button
           type="button"
           onClick={onMore}
-          className="shrink-0 text-[12px] font-medium leading-none text-[#3d6bff] transition hover:text-[#0018A8]"
+          aria-label={`Voir plus — ${title}`}
+          className="shrink-0 whitespace-nowrap rounded-lg px-1.5 py-1 text-[11px] font-medium leading-none text-[#3d6bff] transition hover:bg-[#e8eefc] hover:text-[#0018A8] sm:text-[12px]"
         >
-          Voir plus
+          <span className="sm:hidden">Plus</span>
+          <span className="hidden sm:inline">Voir plus</span>
         </button>
       ) : null}
     </div>
@@ -142,7 +146,9 @@ function MetricRow({
 }) {
   return (
     <div className="mt-3 flex h-9 shrink-0 items-center gap-2">
-      <span className="ops-kpi-metric text-[32px] font-bold leading-none tracking-tight text-stone-900">{value}</span>
+      <span className="ops-kpi-metric text-[26px] font-bold leading-none tracking-tight text-stone-900 sm:text-[32px]">
+        {value}
+      </span>
       <DeltaPill value={delta} suffix={suffix} />
     </div>
   );
@@ -158,7 +164,7 @@ function LegendSlot({
       {items.map((item) => (
         <span key={item.key} className="inline-flex shrink-0 items-center gap-1.5">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: item.color }} />
-          <span className="max-w-20 truncate">{item.label}</span>
+          <span className="max-w-[7.5rem] truncate sm:max-w-24">{item.label}</span>
         </span>
       ))}
     </div>
@@ -403,7 +409,7 @@ export default function OpsVisualKpis({
   );
 
   return (
-    <div className="grid min-w-0 grid-cols-4 items-start gap-4">
+    <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
       <article className={CARD} style={{ animationDelay: '40ms' }}>
         <CardHead title={treatmentLabel} icon={FiUsers} onMore={onTreatmentMore} />
         <MetricRow value={`${Math.round(liveTreatment)}${treatmentSuffix}`} delta={treatmentDelta} />

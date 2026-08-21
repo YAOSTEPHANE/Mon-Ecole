@@ -8,7 +8,7 @@ import {
   saveUserSnapshot,
   setOfflineCacheScope,
 } from '../lib/offline-storage';
-import { setMemoryAccessToken } from '../lib/auth-session';
+import { setMemoryAccessToken, mayHaveAuthSession } from '../lib/auth-session';
 import toast from 'react-hot-toast';
 import {
   applyDocumentTheme,
@@ -106,6 +106,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
+        // Sans aucune trace de session (mémoire / hint / legacy), éviter le probe.
+        // Les sessions cookie-only existantes sans hint : on probe si un snapshot local existe.
+        const hasSnap = Boolean((await loadUserSnapshot<User>().catch(() => null))?.id);
+        if (!mayHaveAuthSession() && !hasSnap) {
+          setUser(null);
+          setToken(null);
+          return;
+        }
         await fetchUser();
       } finally {
         setLoading(false);

@@ -24,7 +24,6 @@ import {
   FiCalendar,
   FiBook,
   FiDownload,
-  FiAward,
 } from 'react-icons/fi';
 import { downloadStudentEnrollmentDossier } from '@/lib/downloadStudentEnrollmentDossier';
 import { EnrollmentDossierSuccessModal } from './EnrollmentDossierSuccessModal';
@@ -97,19 +96,6 @@ const AdmissionsManagement = () => {
     queryKey: ['admission-stats'],
     queryFn: adminApi.getAdmissionStats,
   });
-
-  const { data: officialExamData } = useQuery({
-    queryKey: ['admin-official-exam-stats', getCurrentAcademicYear()],
-    queryFn: () => adminApi.getOfficialExamStats({ academicYear: getCurrentAcademicYear() }),
-    staleTime: 60_000,
-  });
-  const officialRates = ((officialExamData?.stats || []) as Array<{
-    examLabel?: string;
-    passRate?: number;
-    isPublished?: boolean;
-  }>)
-    .filter((row) => row.isPublished !== false && typeof row.passRate === 'number')
-    .slice(0, 2);
 
   const { data: classes } = useQuery({
     queryKey: ['classes'],
@@ -260,29 +246,8 @@ const AdmissionsManagement = () => {
               </p>
             </div>
           </div>
-          {(stats || officialRates.length > 0) && (
+          {stats && (
             <div className="flex flex-wrap gap-2 text-xs">
-              {officialRates.map((row) => (
-                <span
-                  key={`${row.examLabel}-${row.passRate}`}
-                  className="admission-lux-chip admission-lux-chip--on-dark admission-lux-chip--compact pointer-events-none"
-                >
-                  <span className="admission-lux-chip__sheen" aria-hidden />
-                  <span className="admission-lux-live" aria-hidden />
-                  <span className="admission-lux-chip__icon" aria-hidden>
-                    <FiAward />
-                  </span>
-                  <span className="admission-lux-chip__copy">
-                    <span className="admission-lux-chip__label">Taux d’admission</span>
-                    <span className="admission-lux-chip__value">
-                      {row.examLabel}
-                      <em className="font-sans font-extrabold tabular-nums tracking-tight not-italic">{Number(row.passRate).toLocaleString('fr-FR')} %</em>
-                    </span>
-                  </span>
-                </span>
-              ))}
-              {stats ? (
-                <>
               <span className="px-2.5 py-1 rounded-lg bg-white/10">
                 En attente: <strong>{stats.pending}</strong>
               </span>
@@ -295,8 +260,6 @@ const AdmissionsManagement = () => {
               <span className="px-2.5 py-1 rounded-lg bg-white/10">
                 Total: <strong>{stats.total}</strong>
               </span>
-                </>
-              ) : null}
             </div>
           )}
         </div>

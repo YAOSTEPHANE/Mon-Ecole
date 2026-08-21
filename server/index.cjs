@@ -125511,38 +125511,56 @@ function extractAccessToken(req) {
   const fromCookie = cookies[AUTH_COOKIE_NAME]?.trim();
   return fromCookie || void 0;
 }
+function appendCookie(res, name, value, opts) {
+  const parts = [
+    `${name}=${encodeURIComponent(value)}`,
+    "Path=/",
+    `Max-Age=${opts.maxAge}`,
+    `SameSite=${opts.sameSite}`
+  ];
+  if (opts.httpOnly) parts.push("HttpOnly");
+  if (opts.secure) parts.push("Secure");
+  res.append("Set-Cookie", parts.join("; "));
+}
 function setAuthSessionCookie(res, token) {
   const sameSite = cookieSameSite();
   const secure = cookieSecure(sameSite);
   const maxAge = Math.floor(authCookieMaxAgeMs() / 1e3);
-  const parts = [
-    `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
-    "Path=/",
-    "HttpOnly",
-    `Max-Age=${maxAge}`,
-    `SameSite=${sameSite}`
-  ];
-  if (secure) parts.push("Secure");
-  res.append("Set-Cookie", parts.join("; "));
+  appendCookie(res, AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    maxAge,
+    sameSite,
+    secure
+  });
+  appendCookie(res, AUTH_SESSION_HINT_COOKIE, "1", {
+    httpOnly: false,
+    maxAge,
+    sameSite,
+    secure
+  });
 }
 function clearAuthSessionCookie(res) {
   const sameSite = cookieSameSite();
   const secure = cookieSecure(sameSite);
-  const parts = [
-    `${AUTH_COOKIE_NAME}=`,
-    "Path=/",
-    "HttpOnly",
-    "Max-Age=0",
-    `SameSite=${sameSite}`
-  ];
-  if (secure) parts.push("Secure");
-  res.append("Set-Cookie", parts.join("; "));
+  appendCookie(res, AUTH_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    sameSite,
+    secure
+  });
+  appendCookie(res, AUTH_SESSION_HINT_COOKIE, "", {
+    httpOnly: false,
+    maxAge: 0,
+    sameSite,
+    secure
+  });
 }
-var AUTH_COOKIE_NAME;
+var AUTH_COOKIE_NAME, AUTH_SESSION_HINT_COOKIE;
 var init_auth_cookie_util = __esm({
   "src/utils/auth-cookie.util.ts"() {
     "use strict";
     AUTH_COOKIE_NAME = "sm_session";
+    AUTH_SESSION_HINT_COOKIE = "sm_has_session";
   }
 });
 

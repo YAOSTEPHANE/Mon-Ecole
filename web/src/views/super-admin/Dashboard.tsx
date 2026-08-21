@@ -120,15 +120,15 @@ export default function SuperAdminDashboard() {
               <>
                 <Link
                   href="/admin"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0018A8] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-900/20 transition hover:bg-[#00128a]"
                 >
                   <FiBook className="h-4 w-4" aria-hidden />
                   Admin établissement
-                  <FiExternalLink className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                  <FiExternalLink className="h-3.5 w-3.5 opacity-80" aria-hidden />
                 </Link>
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-sm font-bold text-slate-900 shadow-lg shadow-amber-500/25 transition hover:from-amber-300 hover:to-amber-400"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-800 shadow-sm transition hover:bg-stone-50"
                 >
                   <FiGlobe className="h-4 w-4" aria-hidden />
                   Site public

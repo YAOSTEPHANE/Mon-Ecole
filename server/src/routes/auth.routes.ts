@@ -2,7 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import type { StaffCategory, SupportStaffKind } from '@prisma/client';
 import prisma from '../utils/prisma';
-import { generateToken } from '../utils/jwt.util';
+import { generateToken, verifyAccessToken } from '../utils/jwt.util';
 import { hashPassword, comparePassword, assertPasswordPolicy, PASSWORD_POLICY_HINT } from '../utils/password.util';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { bumpUserTokenVersion } from '../utils/session-invalidation.util';
@@ -14,6 +14,7 @@ import {
 } from '../utils/email.util';
 import {
   clearAuthSessionCookie,
+  extractAccessToken,
   setAuthSessionCookie,
 } from '../utils/auth-cookie.util';
 import {

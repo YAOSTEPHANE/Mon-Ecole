@@ -100,19 +100,23 @@ function CardHead({
 }) {
   return (
     <div className="mb-4 flex h-8 items-center justify-between gap-2">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8eefc] text-[#0018A8]">
           <Icon className="h-3.5 w-3.5" aria-hidden />
         </span>
-        <h3 className="truncate text-[13px] font-semibold leading-none text-stone-900">{title}</h3>
+        <h3 className="min-w-0 truncate text-[12px] font-semibold leading-tight text-stone-900 sm:text-[13px] sm:leading-none">
+          {title}
+        </h3>
       </div>
       {onMore ? (
         <button
           type="button"
           onClick={onMore}
-          className="shrink-0 text-[12px] font-medium leading-none text-[#3d6bff] hover:text-[#0018A8]"
+          aria-label={`Voir plus — ${title}`}
+          className="shrink-0 whitespace-nowrap rounded-lg px-1.5 py-1 text-[11px] font-medium leading-none text-[#3d6bff] hover:bg-[#e8eefc] hover:text-[#0018A8] sm:text-[12px]"
         >
-          Voir plus
+          <span className="sm:hidden">Plus</span>
+          <span className="hidden sm:inline">Voir plus</span>
         </button>
       ) : null}
     </div>
@@ -148,28 +152,6 @@ export default function OpsModuleBoards({
   const showExtra = hasModule('extracurricular');
   const showLibrary = hasModule('library');
   const showNotifications = hasModule('notifications');
-
-  const { data: officialExamData } = useQuery({
-    queryKey: schoolQueryKey(['admin-official-exam-stats', getCurrentAcademicYear()], activeSchoolId),
-    queryFn: () => adminApi.getOfficialExamStats({ academicYear: getCurrentAcademicYear() }),
-    staleTime: 60_000,
-    enabled: schoolReady && section === 'snapshots' && showAdmissions,
-  });
-  const officialRateHint = useMemo(() => {
-    const rows = Array.isArray(officialExamData?.stats) ? officialExamData.stats : [];
-    const published = rows.filter(
-      (row: { isPublished?: boolean; examLabel?: string; passRate?: number }) =>
-        row.isPublished !== false && typeof row.passRate === 'number',
-    );
-    if (published.length === 0) return '';
-    return published
-      .slice(0, 2)
-      .map(
-        (row: { examLabel?: string; passRate: number }) =>
-          `${row.examLabel || 'Examen'} ${row.passRate.toLocaleString('fr-FR')} %`,
-      )
-      .join(' · ');
-  }, [officialExamData]);
 
   const snapshots = useMemo(() => {
     const items: Snapshot[] = [];
@@ -271,7 +253,6 @@ export default function OpsModuleBoards({
     }
     return items.slice(0, 8);
   }, [
-    officialRateHint,
     cards,
     stats,
     hasModule,
@@ -399,7 +380,7 @@ export default function OpsModuleBoards({
   if (section === 'snapshots') {
     if (snapshots.length === 0) return null;
     return (
-      <div className="mt-4 grid min-w-0 grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {snapshots.map((item) => (
           <button
             key={item.key}
@@ -418,21 +399,6 @@ export default function OpsModuleBoards({
               {item.value}
             </p>
             <p className="mt-2 line-clamp-2 text-[12px] text-stone-500">{item.hint}</p>
-            {item.key === 'admissions' && officialRateHint ? (
-              <span className="admission-lux-chip admission-lux-chip--compact mt-2 max-w-full">
-                <span className="admission-lux-chip__sheen" aria-hidden />
-                <span className="admission-lux-live" aria-hidden />
-                <span className="admission-lux-chip__icon" aria-hidden>
-                  <FiAward />
-                </span>
-                <span className="admission-lux-chip__copy min-w-0">
-                  <span className="admission-lux-chip__label">Taux d’admission</span>
-                  <span className="admission-lux-chip__value">
-                    <em className="truncate font-sans font-extrabold tabular-nums tracking-tight not-italic">{officialRateHint}</em>
-                  </span>
-                </span>
-              </span>
-            ) : null}
           </button>
         ))}
       </div>
