@@ -20,6 +20,7 @@ import {
   type GenderKey,
   type MoneyBucket,
 } from '../utils/financial-breakdown.util';
+import { buildInspectionExportPackage } from '../utils/inspection-export.util';
 
 const router = express.Router();
 
@@ -2087,6 +2088,22 @@ router.get('/reports/financial/breakdown', async (req: SchoolContextRequest, res
     });
   } catch (e) {
     console.error('GET /admin/reports/financial/breakdown:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/** Pack CSV/JSON pour inspection / ministère */
+router.get('/reports/inspection-export', async (req: SchoolContextRequest, res) => {
+  try {
+    const academicYear =
+      typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : null;
+    const pack = await buildInspectionExportPackage({
+      schoolId: req.schoolId,
+      academicYear,
+    });
+    res.json(pack);
+  } catch (e) {
+    console.error('GET /admin/reports/inspection-export:', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });

@@ -5,6 +5,7 @@ import prisma from '../utils/prisma';
 import { generateToken } from '../utils/jwt.util';
 import { hashPassword, comparePassword, assertPasswordPolicy, PASSWORD_POLICY_HINT } from '../utils/password.util';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { bumpUserTokenVersion } from '../utils/session-invalidation.util';
 import {
   createPasswordResetToken,
   sendPasswordResetEmail,
@@ -136,7 +137,7 @@ router.post(
       });
 
       // Générer le token
-      const token = generateToken(user.id, user.email, user.role);
+      const token = generateToken(user.id, user.email, user.role, 0);
       setAuthSessionCookie(res, token);
 
       res.status(201).json({
@@ -266,7 +267,7 @@ router.post(
       // Générer le token
       let token: string;
       try {
-        token = generateToken(user.id, user.email, user.role);
+        token = generateToken(user.id, user.email, user.role, user.tokenVersion ?? 0);
       } catch (jwtErr: any) {
         console.error('Erreur JWT generateToken:', jwtErr);
         return res.status(500).json({
@@ -299,8 +300,15 @@ router.post(
   }
 );
 
-/** Déconnexion : invalide le cookie de session HttpOnly. */
-router.post('/logout', (_req, res) => {
+/** Déconnexion : invalide le cookie et révoque le JWT (tokenVersion++). */
+router.post('/logout', authenticate, async (req: AuthRequest, res) => {
+  try {
+    if (req.user?.id) {
+      await bumpUserTokenVersion(req.user.id);
+    }
+  } catch (e) {
+    console.error('POST /auth/logout bumpTokenVersion:', e);
+  }
   clearAuthSessionCookie(res);
   res.json({ message: 'Déconnexion réussie' });
 });
@@ -690,11 +698,12 @@ router.post(
       // Hasher le nouveau mot de passe
       const hashedPassword = await hashPassword(password);
 
-      // Mettre à jour le mot de passe de l'utilisateur
+      // Mettre à jour le mot de passe + révoquer les sessions existantes
       await prisma.user.update({
         where: { id: tokenVerification.userId },
         data: { password: hashedPassword },
       });
+      await bumpUserTokenVersion(tokenVerification.userId);
 
       // Enregistrer l'événement de sécurité
       await prisma.securityEvent.create({

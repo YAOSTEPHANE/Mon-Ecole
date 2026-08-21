@@ -35,7 +35,8 @@ export function startScheduledTuitionReminders(): void {
     try {
       const r = await runAutomaticTuitionReminders({ minIntervalDays: minDays });
       console.log(
-        `[Relances frais] OK — ${r.notifiedFees} ligne(s), ~${r.parentNotifications} notif(s) parents.`
+        `[Relances frais] OK — ${r.notifiedFees} ligne(s), ~${r.parentNotifications} notif(s), ` +
+          `${r.smsSent} SMS, ${r.whatsappSent} WhatsApp.`,
       );
     } catch (e) {
       console.error('[Relances frais] Erreur :', e);

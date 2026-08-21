@@ -8,7 +8,10 @@ import {
 } from '../utils/admin-user-initial-password.util';
 import { optionalPasswordPolicyValidator, PASSWORD_POLICY_HINT } from '../utils/password.util';
 import { sanitizeVisibleStaffModules } from '../utils/staff-visible-modules.util';
-import type { SchoolContextRequest } from '../utils/school-context.util';
+import {
+  ensureSchoolMember,
+  type SchoolContextRequest,
+} from '../utils/school-context.util';
 import {
   assertSupportKindActiveForSchool,
   sanitizeVisibleStaffModulesForSchool,
@@ -507,6 +510,8 @@ router.post(
         },
       });
 
+      await ensureSchoolMember(schoolId, user.id);
+
       if (shouldSendSetupEmail) {
         try {
           await inviteNewUserToSetPassword(user.id, user.email, user.firstName);
@@ -1000,6 +1005,79 @@ router.delete('/staff/:id/attendances/:attendanceId', async (req: SchoolContextR
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur serveur';
     res.status(500).json({ error: message });
+  }
+});
+
+/** Congés personnel de soutien — vue RH agrégée */
+router.get('/hr/staff-leaves', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const where: { status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' } = {};
+    if (
+      typeof status === 'string' &&
+      ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].includes(status)
+    ) {
+      where.status = status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+    }
+
+    const leaves = await prisma.staffLeave.findMany({
+      where,
+      orderBy: { startDate: 'desc' },
+      include: {
+        staffMember: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.json(leaves);
+  } catch (error: unknown) {
+    console.error('GET /admin/hr/staff-leaves:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.put('/staff/:id/leaves/:leaveId', async (req, res) => {
+  try {
+    const { status, adminComment } = req.body as {
+      status?: string;
+      adminComment?: string | null;
+    };
+    if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Statut invalide (APPROVED ou REJECTED)' });
+    }
+
+    const leave = await prisma.staffLeave.findFirst({
+      where: { id: req.params.leaveId, staffMemberId: req.params.id },
+    });
+    if (!leave) {
+      return res.status(404).json({ error: 'Demande introuvable' });
+    }
+
+    const updated = await prisma.staffLeave.update({
+      where: { id: leave.id },
+      data: {
+        status: status as 'APPROVED' | 'REJECTED',
+        ...(adminComment !== undefined && {
+          adminComment:
+            adminComment === null || adminComment === '' ? null : String(adminComment).trim(),
+        }),
+      },
+    });
+
+    res.json(updated);
+  } catch (error: unknown) {
+    console.error('PUT admin staff leave:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 

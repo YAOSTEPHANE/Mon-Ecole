@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useStaffWorkspace } from '../hooks/useStaffWorkspace';
 import {
   canTakeAttendance,
+  canEnterGrades,
   canUseAssistant,
   canViewAcademics,
   canViewAdminOps,
@@ -30,6 +31,9 @@ import NotesScreen from '../screens/NotesScreen';
 import AbsencesScreen from '../screens/AbsencesScreen';
 import PaymentsScreen from '../screens/PaymentsScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
+import TeacherGradesScreen from '../screens/teacher/TeacherGradesScreen';
+import TeacherLeavesScreen from '../screens/teacher/TeacherLeavesScreen';
+import TeacherPayslipsScreen from '../screens/teacher/TeacherPayslipsScreen';
 import ParentHomeScreen from '../screens/parent/ParentHomeScreen';
 import ParentMessagesScreen from '../screens/parent/ParentMessagesScreen';
 import ParentAppointmentsScreen from '../screens/parent/ParentAppointmentsScreen';
@@ -68,6 +72,7 @@ function MainTabs() {
   const role = user?.role ?? '';
   const showAcademics = canViewAcademics(role);
   const showAttendance = canTakeAttendance(role);
+  const showEnterGrades = canEnterGrades(role);
   const showAdminOps = canViewAdminOps(role);
   const showStaffOps = canViewStaffOps(role);
   const showParentOps = canViewParentOps(role);
@@ -125,6 +130,15 @@ function MainTabs() {
       {showParentOps ? <Tab.Screen name="Famille" component={ParentFamilyScreen} /> : null}
       {showAttendance ? (
         <Tab.Screen name="Appel" component={AttendanceScreen} options={{ title: 'Présence' }} />
+      ) : null}
+      {showEnterGrades ? (
+        <Tab.Screen name="SaisieNotes" component={TeacherGradesScreen} options={{ title: 'Notes' }} />
+      ) : null}
+      {showEnterGrades ? (
+        <Tab.Screen name="Congés" component={TeacherLeavesScreen} options={{ title: 'Congés' }} />
+      ) : null}
+      {showEnterGrades ? (
+        <Tab.Screen name="MaPaie" component={TeacherPayslipsScreen} options={{ title: 'Paie' }} />
       ) : null}
       {showAssistant ? (
         <Tab.Screen name="Assistant" component={AssistantScreen} />

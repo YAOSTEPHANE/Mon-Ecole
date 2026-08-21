@@ -110,6 +110,7 @@ const ParentGuardiansModule: React.FC = () => {
     preferredLocale: '',
     notifyEmail: true,
     notifySms: false,
+    notifyWhatsApp: true,
     portalShowFees: true,
     portalShowGrades: true,
     portalShowAttendance: true,
@@ -128,6 +129,10 @@ const ParentGuardiansModule: React.FC = () => {
       preferredLocale: (detail as any).preferredLocale ?? '',
       notifyEmail: Boolean((detail as any).notifyEmail),
       notifySms: Boolean((detail as any).notifySms),
+      notifyWhatsApp:
+        (detail as any).notifyWhatsApp === undefined
+          ? true
+          : Boolean((detail as any).notifyWhatsApp),
       portalShowFees: Boolean((detail as any).portalShowFees),
       portalShowGrades: Boolean((detail as any).portalShowGrades),
       portalShowAttendance: Boolean((detail as any).portalShowAttendance),
@@ -188,6 +193,7 @@ const ParentGuardiansModule: React.FC = () => {
         preferredLocale: draft.preferredLocale || null,
         notifyEmail: draft.notifyEmail,
         notifySms: draft.notifySms,
+        notifyWhatsApp: draft.notifyWhatsApp,
         portalShowFees: draft.portalShowFees,
         portalShowGrades: draft.portalShowGrades,
         portalShowAttendance: draft.portalShowAttendance,
@@ -520,6 +526,7 @@ const ParentGuardiansModule: React.FC = () => {
                   [
                     ['notifyEmail', 'Notifications e-mail'],
                     ['notifySms', 'Notifications SMS'],
+                    ['notifyWhatsApp', 'Notifications WhatsApp'],
                     ['portalShowFees', 'Portail : frais'],
                     ['portalShowGrades', 'Portail : notes'],
                     ['portalShowAttendance', 'Portail : présences'],

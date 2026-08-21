@@ -6,6 +6,12 @@ import type { SchoolContextRequest } from '../utils/school-context.util';
 import { classScopeWhere } from '../utils/school-context.util';
 import { deleteClassWithDependencies } from '../utils/delete-class.util';
 import { isEducationSector } from '../utils/education-sector.util';
+import {
+  applyAcademicYearRollover,
+  previewAcademicYearRollover,
+} from '../utils/academic-year-rollover.util';
+import { getCurrentAcademicYear } from '../utils/report-card.util';
+import { getNextAcademicYear } from '../utils/school-level-progression.util';
 
 const router = express.Router();
 
@@ -54,6 +60,64 @@ router.get('/classes', async (req: SchoolContextRequest, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+/** Aperçu du clonage des classes année N → N+1 */
+router.get('/classes/rollover/preview', async (req: SchoolContextRequest, res) => {
+  try {
+    const fromAcademicYear =
+      (typeof req.query.fromAcademicYear === 'string' && req.query.fromAcademicYear) ||
+      getCurrentAcademicYear();
+    const toAcademicYear =
+      typeof req.query.toAcademicYear === 'string' && req.query.toAcademicYear
+        ? req.query.toAcademicYear
+        : getNextAcademicYear(fromAcademicYear);
+    const result = await previewAcademicYearRollover({
+      fromAcademicYear,
+      toAcademicYear,
+      schoolId: req.schoolId,
+    });
+    res.json(result);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+/** Applique le clonage des classes année N → N+1 */
+router.post(
+  '/classes/rollover',
+  [
+    body('fromAcademicYear').optional().isString(),
+    body('toAcademicYear').optional().isString(),
+    body('copyTeacherAssignments').optional().isBoolean(),
+  ],
+  async (req: SchoolContextRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const fromAcademicYear =
+        (typeof req.body?.fromAcademicYear === 'string' && req.body.fromAcademicYear) ||
+        getCurrentAcademicYear();
+      const toAcademicYear =
+        typeof req.body?.toAcademicYear === 'string' && req.body.toAcademicYear
+          ? req.body.toAcademicYear
+          : getNextAcademicYear(fromAcademicYear);
+      const result = await applyAcademicYearRollover({
+        fromAcademicYear,
+        toAcademicYear,
+        schoolId: req.schoolId,
+        copyTeacherAssignments: Boolean(req.body?.copyTeacherAssignments),
+      });
+      res.json({
+        ...result,
+        message: `${result.created.length} classe(s) créée(s) pour ${toAcademicYear} (${result.skipped} déjà existante(s)).`,
+      });
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  },
+);
 
 // Créer une classe
 router.post(

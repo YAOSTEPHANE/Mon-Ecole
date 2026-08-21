@@ -10,6 +10,7 @@ import AddClassModal from './AddClassModal';
 import EditClassModal, { type AdminClassRow } from './EditClassModal';
 import ClassGroupsModal, { type ClassGroupRow } from './ClassGroupsModal';
 import ClassRoomAssignmentPanel from './ClassRoomAssignmentPanel';
+import ClassYearRolloverPanel from './ClassYearRolloverPanel';
 import {
   FiPlus,
   FiUsers,
@@ -407,6 +408,8 @@ const ClassesList: React.FC<ClassesListProps> = ({ searchQuery = '', compact = f
           Organisez par niveau, section, voie (général / technique) et groupes ; gérez les effectifs et les professeurs principaux.
         </p>
       </div>
+
+      <ClassYearRolloverPanel />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 border border-gray-200">

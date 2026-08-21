@@ -4,33 +4,45 @@ import prisma from '../../utils/prisma';
 import { searchLibraryBorrowers } from '../../utils/library-borrower-search.util';
 import { createLibraryLoansBatch } from '../../utils/library-create-loans.util';
 import type { AuthRequest } from '../../middleware/auth.middleware';
+import {
+  resourceSchoolScopeWhere,
+  type SchoolContextRequest,
+} from '../../utils/school-context.util';
 
 const router = express.Router();
 
 router.get('/library/books', async (req, res) => {
   try {
     const { search, category, isActive } = req.query;
-    const where: Record<string, unknown> = {};
+    const schoolReq = req as SchoolContextRequest;
+    const andClauses: Record<string, unknown>[] = [];
     if (isActive === 'false') {
-      where.isActive = false;
+      andClauses.push({ isActive: false });
     } else if (isActive === 'all') {
       // pas de filtre isActive
     } else {
-      where.isActive = true;
+      andClauses.push({ isActive: true });
     }
     if (category && typeof category === 'string' && category.length > 0) {
-      where.category = category;
+      andClauses.push({ category });
     }
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const s = search.trim();
-      where.OR = [
-        { title: { contains: s } },
-        { author: { contains: s } },
-        { isbn: { contains: s } },
-      ];
+      andClauses.push({
+        OR: [
+          { title: { contains: s } },
+          { author: { contains: s } },
+          { isbn: { contains: s } },
+        ],
+      });
+    }
+    if (schoolReq.schoolId) {
+      andClauses.push(
+        resourceSchoolScopeWhere(schoolReq.schoolId, schoolReq.school?.isDefault ?? false),
+      );
     }
     const books = await prisma.libraryBook.findMany({
-      where,
+      where: andClauses.length ? { AND: andClauses } : {},
       orderBy: { title: 'asc' },
     });
     res.json(books);
@@ -53,6 +65,7 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
+      const schoolReq = req as SchoolContextRequest;
       const {
         isbn,
         title,
@@ -86,6 +99,7 @@ router.post(
           copiesTotal: total,
           copiesAvailable: avail,
           shelfLocation: shelfLocation?.trim() || null,
+          schoolId: schoolReq.schoolId ?? null,
         },
       });
       res.status(201).json(book);

@@ -1,3 +1,4 @@
 Photographies d’ambiance générées pour la vitrine publique (campus, classes, communauté).
 Les établissements peuvent les remplacer depuis Administration → images de la page d’accueil.
 hero-students-duo.png : duo d’élèves pour l’en-tête d’accueil.
+honor-*.jpg : portraits d’exemple pour le tableau d’honneur (placeholders).

@@ -1,5 +1,9 @@
 import type { Prisma } from '@prisma/client';
 import prisma from './prisma';
+import {
+  assertReenrollmentMatchesPromotion,
+  resolveTargetYearClassesHint,
+} from './promotion-reenrollment-guard.util';
 
 export const STUDENT_REENROLLMENT_STATUSES = [
   'PENDING',
@@ -39,6 +43,13 @@ export async function enrichReenrollmentRequestsWithReviewers<T extends Reenroll
       } | null;
       preferredClass: { id: string; name: string; level: string; academicYear: string } | null;
       approvedClass: { id: string; name: string; level: string; academicYear: string } | null;
+      promotionHint?: {
+        decision: 'ADMIS' | 'DOUBLANT' | null;
+        expectedLevel: string | null;
+        suggestedClassId: string | null;
+        suggestedClassName: string | null;
+        endOfCycle: boolean;
+      } | null;
     }
   >
 > {
@@ -75,12 +86,41 @@ export async function enrichReenrollmentRequestsWithReviewers<T extends Reenroll
   const reviewerById = new Map(reviewers.map((u) => [u.id, u] as const));
   const classById = new Map(classes.map((c) => [c.id, c] as const));
 
-  return requests.map((r) => ({
-    ...r,
-    reviewedBy: r.reviewedByUserId ? reviewerById.get(r.reviewedByUserId) ?? null : null,
-    preferredClass: r.preferredClassId ? classById.get(r.preferredClassId) ?? null : null,
-    approvedClass: r.approvedClassId ? classById.get(r.approvedClassId) ?? null : null,
-  }));
+  const withHints = await Promise.all(
+    requests.map(async (r) => {
+      let promotionHint: {
+        decision: 'ADMIS' | 'DOUBLANT' | null;
+        expectedLevel: string | null;
+        suggestedClassId: string | null;
+        suggestedClassName: string | null;
+        endOfCycle: boolean;
+      } | null = null;
+      try {
+        const hint = await resolveTargetYearClassesHint({
+          studentId: r.studentId,
+          targetAcademicYear: r.targetAcademicYear,
+        });
+        promotionHint = {
+          decision: hint.promotionDecision,
+          expectedLevel: hint.expectedLevel,
+          suggestedClassId: hint.suggestion?.id ?? null,
+          suggestedClassName: hint.suggestion?.name ?? null,
+          endOfCycle: hint.endOfCycle,
+        };
+      } catch {
+        promotionHint = null;
+      }
+      return {
+        ...r,
+        reviewedBy: r.reviewedByUserId ? reviewerById.get(r.reviewedByUserId) ?? null : null,
+        preferredClass: r.preferredClassId ? classById.get(r.preferredClassId) ?? null : null,
+        approvedClass: r.approvedClassId ? classById.get(r.approvedClassId) ?? null : null,
+        promotionHint,
+      };
+    }),
+  );
+
+  return withHints;
 }
 
 export async function enrichReenrollmentRequestWithReviewer<T extends ReenrollmentRequestRow>(
@@ -112,10 +152,12 @@ export async function listClassesForReenrollment(schoolId?: string | null) {
 export async function applyReenrollmentApproval(params: {
   studentId: string;
   toClassId: string;
+  targetAcademicYear?: string;
   effectiveDate?: Date;
   reason?: string | null;
   notes?: string | null;
   createdById?: string | null;
+  allowPromotionOverride?: boolean;
 }) {
   const student = await prisma.student.findUnique({
     where: { id: params.studentId },
@@ -127,11 +169,19 @@ export async function applyReenrollmentApproval(params: {
 
   const targetClass = await prisma.class.findUnique({
     where: { id: params.toClassId },
-    select: { id: true },
+    select: { id: true, academicYear: true },
   });
   if (!targetClass) {
     throw Object.assign(new Error('Classe de destination introuvable'), { statusCode: 400 });
   }
+
+  const targetAcademicYear = params.targetAcademicYear || targetClass.academicYear;
+  await assertReenrollmentMatchesPromotion({
+    studentId: params.studentId,
+    toClassId: params.toClassId,
+    targetAcademicYear,
+    allowOverride: params.allowPromotionOverride,
+  });
 
   const effectiveDate = params.effectiveDate ?? new Date();
 

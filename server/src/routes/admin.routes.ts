@@ -6,9 +6,10 @@ import {
   inviteNewUserToSetPassword,
   resolveAdminProvidedOrInvitePassword,
 } from '../utils/admin-user-initial-password.util';
-import { optionalPasswordPolicyValidator, PASSWORD_POLICY_HINT } from '../utils/password.util';
+import { optionalPasswordPolicyValidator, PASSWORD_POLICY_HINT, hashPassword } from '../utils/password.util';
 import { isSyntheticStudentEmail } from '../utils/student-login-identifier.util';
 import prisma from '../utils/prisma';
+import { bumpUserTokenVersion } from '../utils/session-invalidation.util';
 import { deleteStoredUploadUrl } from '../utils/upload-persist.util';
 import { buildClassOfficialReportCards, computeClassBulletinRanks, getCurrentAcademicYear, getPeriodDates, getPeriodLabel, gradePeriodWhere, inferReportingPeriod, toPeriodKey } from '../utils/report-card.util';
 import {
@@ -55,6 +56,7 @@ import mockExamsAdminRoutes from './admin-mock-exams.routes';
 import tracksAdminRoutes from './admin-tracks.routes';
 import orientationAdminRoutes from './admin-orientation.routes';
 import adminReportsRoutes from './admin-reports.routes';
+import adminGapsRoutes from './admin-gaps.routes';
 import adminMenaRoutes from './admin-mena.routes';
 import adminMenaPresenceRoutes from './admin-mena-presence.routes';
 import adminAppBrandingRoutes from './admin-app-branding.routes';
@@ -115,6 +117,8 @@ import {
   studentScopeWhere,
   classScopeWhere,
   admissionScopeWhere,
+  resourceSchoolScopeWhere,
+  userCanAccessSchool,
 } from '../utils/school-context.util';
 import libraryManagementRoutes from './shared/library-management.routes';
 import { maybeNotifyMaterialStockAlert } from '../utils/material-stock-notify.util';
@@ -203,9 +207,10 @@ router.use(campusAdminRoutes);
 router.use(platformAdminRoutes);
 router.use(mockExamsAdminRoutes);
 router.use(tracksAdminRoutes);
-router.use(orientationAdminRoutes);
-router.use(adminReportsRoutes);
-router.use(adminMenaRoutes);
+  router.use(orientationAdminRoutes);
+  router.use(adminReportsRoutes);
+  router.use(adminGapsRoutes);
+  router.use(adminMenaRoutes);
 router.use(adminMenaPresenceRoutes);
 router.use(adminAppBrandingRoutes);
 router.use(libraryManagementRoutes);
@@ -222,15 +227,20 @@ router.use(adminIntegrationsSettingsRoutes);
 
 // ========== GESTION ACADÉMIQUE ==========
 
-// Obtenir toutes les notes
-router.get('/grades', async (req, res) => {
+// Obtenir toutes les notes (scopées à l’établissement actif)
+router.get('/grades', async (req: SchoolContextRequest, res) => {
   try {
     const { studentId, courseId, classId } = req.query;
+    const schoolId = req.schoolId;
+    if (!schoolId) {
+      return res.status(400).json({ error: 'Établissement non résolu' });
+    }
 
     const grades = await prisma.grade.findMany({
       where: {
         AND: [
           gradeWhereRelationsExist,
+          { student: studentScopeWhere(schoolId, req.school?.isDefault ?? false) },
           ...(studentId ? [{ studentId: studentId as string }] : []),
           ...(courseId ? [{ courseId: courseId as string }] : []),
           ...(classId ? [{ student: { classId: classId as string } }] : []),
@@ -554,6 +564,7 @@ router.patch(
     body('approvedClassId').optional({ values: 'falsy' }).isString(),
     body('adminComment').optional().isString().isLength({ max: 2000 }),
     body('effectiveDate').optional({ values: 'falsy' }).isISO8601(),
+    body('allowPromotionOverride').optional().isBoolean(),
   ],
   async (req, res) => {
     try {
@@ -563,11 +574,12 @@ router.patch(
       }
 
       const { id } = req.params;
-      const { status, approvedClassId, adminComment, effectiveDate } = req.body as {
+      const { status, approvedClassId, adminComment, effectiveDate, allowPromotionOverride } = req.body as {
         status: 'APPROVED' | 'REJECTED';
         approvedClassId?: string;
         adminComment?: string;
         effectiveDate?: string;
+        allowPromotionOverride?: boolean;
       };
 
       const existing = await prisma.studentReenrollmentRequest.findUnique({
@@ -595,10 +607,12 @@ router.patch(
           const updatedStudent = await applyReenrollmentApproval({
             studentId: existing.studentId,
             toClassId: approvedClassId,
+            targetAcademicYear: existing.targetAcademicYear,
             effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
             reason: `Réinscription ${existing.targetAcademicYear}`,
             notes: existing.message,
             createdById: reviewerId,
+            allowPromotionOverride: Boolean(allowPromotionOverride),
           });
           className = updatedStudent.class?.name ?? null;
         } catch (applyError: unknown) {
@@ -633,6 +647,33 @@ router.patch(
     }
   },
 );
+
+/** Réconciliation présence MENA (jour) vs absences par cours */
+router.get('/attendance/reconcile', async (req: SchoolContextRequest, res) => {
+  try {
+    const { classId, from, to, onlyMismatches } = req.query as {
+      classId?: string;
+      from?: string;
+      to?: string;
+      onlyMismatches?: string;
+    };
+    const defaults = defaultAttendanceStatsPeriod();
+    const fromDate = from ? new Date(from) : defaults.from;
+    const toDate = to ? new Date(to) : defaults.to;
+    const { reconcileAttendanceSources } = await import('../utils/attendance-reconcile.util');
+    const result = await reconcileAttendanceSources({
+      from: fromDate,
+      to: toDate,
+      classId: classId || undefined,
+      schoolId: req.schoolId,
+      onlyMismatches: onlyMismatches === '1' || onlyMismatches === 'true',
+    });
+    res.json(result);
+  } catch (error: unknown) {
+    console.error('GET /admin/attendance/reconcile:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
 
 // Statistiques d’assiduité (agrégats sur une période)
 router.get('/absences/stats', async (req, res) => {
@@ -3427,7 +3468,7 @@ router.get('/announcements/:id', async (req, res) => {
 });
 
 // Obtenir toutes les annonces
-router.get('/announcements', async (req, res) => {
+router.get('/announcements', async (req: SchoolContextRequest, res) => {
   try {
     const { published, targetRole, targetClass } = req.query;
 
@@ -3436,6 +3477,9 @@ router.get('/announcements', async (req, res) => {
         ...(published !== undefined && { published: published === 'true' }),
         ...(targetRole && { targetRole: targetRole as any }),
         ...(targetClass && { targetClassId: targetClass as string }),
+        ...(req.schoolId
+          ? resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false)
+          : {}),
       },
       include: {
         author: {
@@ -3472,7 +3516,7 @@ router.get('/announcements', async (req, res) => {
 });
 
 // Créer une annonce
-router.post('/announcements', async (req, res) => {
+router.post('/announcements', async (req: SchoolContextRequest, res) => {
   try {
     const {
       title,
@@ -3530,6 +3574,7 @@ router.post('/announcements', async (req, res) => {
         portalCategory: normalizePortalCategory(portalCategory),
         coverImageUrl: normalizeCoverImageUrl(coverImageUrl),
         imageUrls: parseImageUrlsField(imageUrls),
+        schoolId: req.schoolId ?? null,
       },
       include: {
         author: {
@@ -5077,38 +5122,120 @@ router.post(
   }
 );
 
-// Changer le mot de passe d'un utilisateur
-router.put('/security/users/:id/password', async (req, res) => {
+// Changer le mot de passe d'un utilisateur (politique forte + révocation sessions)
+router.put('/security/users/:id/password', async (req: SchoolContextRequest, res) => {
   try {
     const { newPassword } = req.body;
+    const targetUserId = req.params.id;
+    const actor = req.user!;
 
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+    try {
+      await hashPassword(String(newPassword ?? ''));
+    } catch (e) {
+      return res.status(400).json({
+        error: e instanceof Error ? e.message : PASSWORD_POLICY_HINT,
+        hint: PASSWORD_POLICY_HINT,
+      });
     }
 
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const target = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        role: true,
+        schoolMemberships: { select: { schoolId: true } },
+        studentProfile: { select: { schoolId: true } },
+        teacherProfile: { select: { id: true } },
+        parentProfile: { select: { id: true } },
+        educatorProfile: { select: { id: true } },
+        staffProfile: { select: { schoolId: true } },
+      },
+    });
+    if (!target) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+
+    if (actor.role !== 'SUPER_ADMIN') {
+      const schoolId = req.schoolId;
+      if (!schoolId) {
+        return res.status(400).json({ error: 'Établissement non résolu' });
+      }
+      const canAccess = await userCanAccessSchool(actor.id, actor.role as never, schoolId);
+      if (!canAccess) {
+        return res.status(403).json({ error: 'Accès établissement refusé' });
+      }
+
+      const memberOfSchool = target.schoolMemberships.some((m) => m.schoolId === schoolId);
+      const studentOfSchool = target.studentProfile?.schoolId === schoolId;
+      const staffOfSchool = target.staffProfile?.schoolId === schoolId;
+      let teacherOfSchool = false;
+      if (target.teacherProfile) {
+        const n = await prisma.course.count({
+          where: {
+            teacherId: target.teacherProfile.id,
+            class: { schoolId },
+          },
+        });
+        teacherOfSchool = n > 0;
+      }
+      let parentOfSchool = false;
+      if (target.parentProfile) {
+        const n = await prisma.studentParent.count({
+          where: {
+            parentId: target.parentProfile.id,
+            student: studentScopeWhere(schoolId, req.school?.isDefault ?? false),
+          },
+        });
+        parentOfSchool = n > 0;
+      }
+      let educatorOfSchool = false;
+      if (target.educatorProfile) {
+        const n = await prisma.educatorClassAssignment.count({
+          where: {
+            educatorId: target.educatorProfile.id,
+            class: { schoolId },
+          },
+        });
+        educatorOfSchool = n > 0;
+      }
+      if (
+        !memberOfSchool &&
+        !studentOfSchool &&
+        !staffOfSchool &&
+        !teacherOfSchool &&
+        !parentOfSchool &&
+        !educatorOfSchool
+      ) {
+        return res.status(403).json({
+          error: 'Cet utilisateur n’appartient pas à votre établissement',
+        });
+      }
+    }
+
+    const hashedPassword = await hashPassword(String(newPassword));
 
     await prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: targetUserId },
       data: { password: hashedPassword },
     });
+    await bumpUserTokenVersion(targetUserId);
 
-    // Enregistrer l'événement de sécurité
     await prisma.securityEvent.create({
       data: {
-        userId: req.user!.id,
+        userId: actor.id,
         type: 'password_change',
-        description: `Mot de passe modifié pour l'utilisateur ${req.params.id}`,
+        description: `Mot de passe modifié pour l'utilisateur ${targetUserId}`,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
         severity: 'info',
       },
     });
 
-    res.json({ message: 'Mot de passe modifié avec succès' });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.json({ message: 'Mot de passe modifié avec succès. Sessions précédentes révoquées.' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    const status = message.includes('mot de passe') ? 400 : 500;
+    res.status(status).json({ error: message });
   }
 });
 
@@ -5159,6 +5286,10 @@ router.put('/security/users/:id/status', async (req, res) => {
       where: { id: req.params.id },
       data: { isActive },
     });
+
+    if (isActive === false) {
+      await bumpUserTokenVersion(user.id);
+    }
 
     // Enregistrer l'événement de sécurité
     await prisma.securityEvent.create({
@@ -5974,6 +6105,11 @@ router.put('/class-councils/:id', async (req, res) => {
       status,
     } = req.body;
 
+    const previous = await prisma.classCouncilSession.findUnique({
+      where: { id: req.params.id },
+      select: { status: true },
+    });
+
     const updated = await prisma.classCouncilSession.update({
       where: { id: req.params.id },
       data: {
@@ -5987,7 +6123,24 @@ router.put('/class-councils/:id', async (req, res) => {
       },
       include: { class: { select: { id: true, name: true, level: true } } },
     });
-    res.json(updated);
+
+    let promotionSync: { synced: number; skipped: number } | null = null;
+    if (status === 'FINALIZED' && previous?.status !== 'FINALIZED') {
+      try {
+        const { syncPromotionDecisionsFromClassCouncil } = await import(
+          '../utils/class-council-promotion-sync.util'
+        );
+        const authReq = req as import('../middleware/auth.middleware').AuthRequest;
+        promotionSync = await syncPromotionDecisionsFromClassCouncil(
+          req.params.id,
+          authReq.user?.id,
+        );
+      } catch (syncErr) {
+        console.error('syncPromotionDecisionsFromClassCouncil:', syncErr);
+      }
+    }
+
+    res.json({ ...updated, promotionSync });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Erreur serveur' });
   }
@@ -7228,12 +7381,15 @@ router.post('/tuition-fees/assign-invoices', async (req, res) => {
   }
 });
 
-/** Déclenche les relances automatiques (notifications in-app / e-mail). */
+/** Déclenche les relances automatiques (in-app + WhatsApp + SMS optionnel). */
 router.post('/tuition-fees/run-reminders', async (_req, res) => {
   try {
     const result = await runAutomaticTuitionReminders();
     res.json({
-      message: `${result.notifiedFees} ligne(s) relancée(s), ${result.parentNotifications} notification(s) parent approx.`,
+      message:
+        `${result.notifiedFees} ligne(s) relancée(s), ~${result.parentNotifications} notif(s), ` +
+        `${result.smsSent} SMS, ${result.whatsappSent} WhatsApp.`,
+      notified: result.notifiedFees,
       ...result,
     });
   } catch (e: unknown) {
@@ -7316,22 +7472,27 @@ router.post('/tuition-fees/counter-payment', async (req: SchoolContextRequest, r
 
 // ========== GESTION MATÉRIELLE ==========
 
-router.get('/material/rooms', async (req, res) => {
+router.get('/material/rooms', async (req: SchoolContextRequest, res) => {
   try {
     const { search, isActive } = req.query;
+    const andClauses: Record<string, unknown>[] = [];
+    if (search && typeof search === 'string' && search.trim()) {
+      andClauses.push({
+        OR: [
+          { name: { contains: search.trim() } },
+          { code: { contains: search.trim() } },
+          { building: { contains: search.trim() } },
+        ],
+      });
+    }
+    if (isActive !== undefined) {
+      andClauses.push({ isActive: isActive === 'true' });
+    }
+    if (req.schoolId) {
+      andClauses.push(resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false));
+    }
     const rooms = await prisma.materialRoom.findMany({
-      where: {
-        ...(search &&
-          typeof search === 'string' &&
-          search.trim() && {
-            OR: [
-              { name: { contains: search.trim() } },
-              { code: { contains: search.trim() } },
-              { building: { contains: search.trim() } },
-            ],
-          }),
-        ...(isActive !== undefined && { isActive: isActive === 'true' }),
-      },
+      where: andClauses.length ? { AND: andClauses } : {},
       orderBy: { name: 'asc' },
       include: {
         _count: {
@@ -7349,7 +7510,7 @@ router.get('/material/rooms', async (req, res) => {
   }
 });
 
-router.post('/material/rooms', async (req, res) => {
+router.post('/material/rooms', async (req: SchoolContextRequest, res) => {
   try {
     const { name, code, building, floor, capacity, description, isActive } = req.body;
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -7364,6 +7525,7 @@ router.post('/material/rooms', async (req, res) => {
         capacity: capacity != null && capacity !== '' ? Number(capacity) : null,
         description: description?.trim() || null,
         isActive: isActive !== false,
+        schoolId: req.schoolId ?? null,
       },
     });
     res.status(201).json(room);
@@ -7429,23 +7591,32 @@ router.delete('/material/rooms/:id', async (req, res) => {
   }
 });
 
-router.get('/material/equipment', async (req, res) => {
+router.get('/material/equipment', async (req: SchoolContextRequest, res) => {
   try {
     const { search, category, roomId, isActive } = req.query;
+    const andClauses: Record<string, unknown>[] = [];
+    if (search && typeof search === 'string' && search.trim()) {
+      andClauses.push({
+        OR: [
+          { name: { contains: search.trim() } },
+          { serialNumber: { contains: search.trim() } },
+        ],
+      });
+    }
+    if (category && typeof category === 'string' && category.trim()) {
+      andClauses.push({ category: category.trim() });
+    }
+    if (roomId && typeof roomId === 'string') {
+      andClauses.push({ roomId });
+    }
+    if (isActive !== undefined) {
+      andClauses.push({ isActive: isActive === 'true' });
+    }
+    if (req.schoolId) {
+      andClauses.push(resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false));
+    }
     const list = await prisma.materialEquipment.findMany({
-      where: {
-        ...(search &&
-          typeof search === 'string' &&
-          search.trim() && {
-            OR: [
-              { name: { contains: search.trim() } },
-              { serialNumber: { contains: search.trim() } },
-            ],
-          }),
-        ...(category && typeof category === 'string' && category.trim() && { category: category.trim() }),
-        ...(roomId && typeof roomId === 'string' && { roomId }),
-        ...(isActive !== undefined && { isActive: isActive === 'true' }),
-      },
+      where: andClauses.length ? { AND: andClauses } : {},
       include: { room: { select: { id: true, name: true, code: true } } },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
     });
@@ -7456,7 +7627,7 @@ router.get('/material/equipment', async (req, res) => {
   }
 });
 
-router.post('/material/equipment', async (req, res) => {
+router.post('/material/equipment', async (req: SchoolContextRequest, res) => {
   try {
     const { roomId, name, category, serialNumber, quantity, condition, notes, purchasedAt, isActive } =
       req.body;
@@ -7481,6 +7652,7 @@ router.post('/material/equipment', async (req, res) => {
         notes: notes?.trim() || null,
         purchasedAt: purchasedAt ? new Date(purchasedAt) : null,
         isActive: isActive !== false,
+        schoolId: req.schoolId ?? null,
       },
       include: { room: { select: { id: true, name: true, code: true } } },
     });

@@ -72,6 +72,7 @@ export default function StudentReenrollmentRequestsPanel() {
   const [approvedClassId, setApprovedClassId] = useState('');
   const [adminComment, setAdminComment] = useState('');
   const [effectiveDate, setEffectiveDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [allowPromotionOverride, setAllowPromotionOverride] = useState(false);
 
   const { data: stats } = useQuery({
     queryKey: ['admin-reenrollment-request-stats'],
@@ -100,6 +101,7 @@ export default function StudentReenrollmentRequestsPanel() {
         approvedClassId: decision === 'APPROVED' ? approvedClassId : undefined,
         adminComment: adminComment.trim() || undefined,
         effectiveDate: decision === 'APPROVED' ? effectiveDate : undefined,
+        allowPromotionOverride: decision === 'APPROVED' ? allowPromotionOverride : undefined,
       });
     },
     onSuccess: () => {
@@ -109,6 +111,7 @@ export default function StudentReenrollmentRequestsPanel() {
       setReviewTarget(null);
       setAdminComment('');
       setApprovedClassId('');
+      setAllowPromotionOverride(false);
     },
     onError: (e: { response?: { data?: { error?: string } } }) => {
       toast.error(e.response?.data?.error || 'Traitement impossible');
@@ -205,8 +208,13 @@ export default function StudentReenrollmentRequestsPanel() {
                             onClick={() => {
                               setReviewTarget(req);
                               setDecision('APPROVED');
-                              setApprovedClassId(req.preferredClassId || '');
+                              setApprovedClassId(
+                                req.promotionHint?.suggestedClassId ||
+                                  req.preferredClassId ||
+                                  '',
+                              );
                               setAdminComment('');
+                              setAllowPromotionOverride(false);
                               setEffectiveDate(new Date().toISOString().slice(0, 10));
                             }}
                           >
@@ -248,6 +256,35 @@ export default function StudentReenrollmentRequestsPanel() {
               </p>
             ) : null}
 
+            {reviewTarget.promotionHint?.decision ? (
+              <div
+                className={`rounded-lg px-3 py-2 text-xs ${
+                  reviewTarget.promotionHint.endOfCycle
+                    ? 'bg-amber-50 text-amber-950 border border-amber-200'
+                    : 'bg-violet-50 text-violet-950 border border-violet-200'
+                }`}
+              >
+                <p className="font-semibold">
+                  Décision fin d’année :{' '}
+                  {reviewTarget.promotionHint.decision === 'ADMIS' ? 'Admis(e)' : 'Doublant(e)'}
+                </p>
+                {reviewTarget.promotionHint.endOfCycle ? (
+                  <p className="mt-1">Fin de cycle — réinscription en classe supérieure non applicable.</p>
+                ) : (
+                  <p className="mt-1">
+                    Niveau attendu : <strong>{reviewTarget.promotionHint.expectedLevel || '—'}</strong>
+                    {reviewTarget.promotionHint.suggestedClassName
+                      ? ` · Suggestion : ${reviewTarget.promotionHint.suggestedClassName}`
+                      : ' · Aucune classe N+1 correspondante (lancez le rollover des classes).'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="rounded-lg bg-stone-50 px-3 py-2 text-xs text-stone-600">
+                Aucune décision Admis/Doublant enregistrée pour cet élève — contrôle de niveau non appliqué.
+              </p>
+            )}
+
             <div className="flex gap-2">
               <button
                 type="button"
@@ -285,13 +322,33 @@ export default function StudentReenrollmentRequestsPanel() {
                     className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
                   >
                     <option value="">— Choisir —</option>
-                    {classList.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.level}) — {c.academicYear}
-                      </option>
-                    ))}
+                    {classList
+                      .filter((c) => c.academicYear === reviewTarget.targetAcademicYear)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.level}) — {c.academicYear}
+                          {reviewTarget.promotionHint?.suggestedClassId === c.id
+                            ? ' ★ suggérée'
+                            : ''}
+                        </option>
+                      ))}
                   </select>
+                  {classList.filter((c) => c.academicYear === reviewTarget.targetAcademicYear)
+                    .length === 0 ? (
+                    <p className="mt-1 text-xs text-rose-700">
+                      Aucune classe pour {reviewTarget.targetAcademicYear}. Utilisez le rollover
+                      d’année dans la gestion des classes.
+                    </p>
+                  ) : null}
                 </div>
+                <label className="inline-flex items-center gap-2 text-xs text-stone-700">
+                  <input
+                    type="checkbox"
+                    checked={allowPromotionOverride}
+                    onChange={(e) => setAllowPromotionOverride(e.target.checked)}
+                  />
+                  Forcer malgré la décision Admis/Doublant (dérogation)
+                </label>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-stone-700">Date effective</label>
                   <input

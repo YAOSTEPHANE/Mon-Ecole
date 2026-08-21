@@ -61,8 +61,83 @@ export const teacherApi = {
     return data;
   },
 
+  getCourseGrades: async (courseId: string) => {
+    const { data } = await api.get(`/teacher/courses/${courseId}/grades`);
+    return Array.isArray(data) ? data : [];
+  },
+
+  createGrade: async (payload: {
+    studentId: string;
+    courseId: string;
+    evaluationType: string;
+    title: string;
+    score: number;
+    maxScore?: number;
+    coefficient?: number;
+    comments?: string;
+    date?: string;
+  }) => {
+    const { data } = await api.post('/teacher/grades', payload);
+    return data;
+  },
+
   getDashboardKpis: async () => {
     const { data } = await api.get('/teacher/dashboard/kpis');
     return data;
   },
+
+  getLeaves: async () => {
+    const { data } = await api.get('/teacher/leaves');
+    return (Array.isArray(data) ? data : []) as TeacherLeaveRow[];
+  },
+
+  createLeave: async (payload: {
+    type: string;
+    startDate: string;
+    endDate: string;
+    reason?: string;
+  }) => {
+    const { data } = await api.post('/teacher/leaves', payload);
+    return data as TeacherLeaveRow;
+  },
+
+  getMyPayrollLines: async () => {
+    const { data } = await api.get('/teacher/payroll/my-lines');
+    return (Array.isArray(data) ? data : []) as TeacherPayrollLine[];
+  },
+
+  getPayslipSummary: async (lineId: string) => {
+    const { data } = await api.get(`/teacher/payroll/my-lines/${lineId}/payslip`, {
+      params: { format: 'json' },
+    });
+    return data as {
+      monthLabel: string;
+      status: string;
+      baseSalary: number;
+      bonuses: number;
+      deductions: number;
+      netPay: number;
+    };
+  },
+};
+
+export type TeacherLeaveRow = {
+  id: string;
+  type: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  reason?: string | null;
+};
+
+export type TeacherPayrollLine = {
+  id: string;
+  netAmount: number;
+  baseSalary?: number;
+  payrollRun: {
+    year: number;
+    month: number;
+    status: string;
+    paidAt?: string | null;
+  };
 };

@@ -1,3 +1,6 @@
+/**
+ * JWT d’accès : HS256, secret fort en prod, tokenVersion pour révocation.
+ */
 import jwt, { type SignOptions } from 'jsonwebtoken';
 
 const DEV_FALLBACK = 'dev-jwt-secret-change-in-production';
@@ -10,7 +13,7 @@ function jwtSecret(): string {
   if (isProd) {
     if (!raw || WEAK_SECRETS.has(raw) || raw.length < 32) {
       throw new Error(
-        'JWT_SECRET doit être défini en production, être unique et faire au moins 32 caractères.'
+        'JWT_SECRET doit être défini en production, être unique et faire au moins 32 caractères.',
       );
     }
     return raw;
@@ -33,18 +36,26 @@ export type JwtAccessPayload = {
   userId: string;
   email: string;
   role: string;
+  /** Absent sur anciens jetons → traité comme 0 */
+  tokenVersion: number;
 };
 
-export const generateToken = (userId: string, email: string, role: string): string => {
+export const generateToken = (
+  userId: string,
+  email: string,
+  role: string,
+  tokenVersion = 0,
+): string => {
   const options: SignOptions = { expiresIn: expiresInOption() };
   return jwt.sign(
     {
       userId: String(userId),
       email: String(email),
       role: String(role),
+      tokenVersion: Number.isFinite(tokenVersion) ? Math.max(0, Math.floor(tokenVersion)) : 0,
     },
     jwtSecret(),
-    { ...options, algorithm: 'HS256' }
+    { ...options, algorithm: 'HS256' },
   );
 };
 
@@ -67,5 +78,9 @@ export function verifyAccessToken(token: string): JwtAccessPayload {
   if (typeof d.userId !== 'string' || typeof d.email !== 'string' || typeof d.role !== 'string') {
     throw new Error('Token invalide');
   }
-  return { userId: d.userId, email: d.email, role: d.role };
+  const tv =
+    typeof d.tokenVersion === 'number' && Number.isFinite(d.tokenVersion)
+      ? Math.floor(d.tokenVersion)
+      : 0;
+  return { userId: d.userId, email: d.email, role: d.role, tokenVersion: tv };
 }

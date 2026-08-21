@@ -22,7 +22,10 @@ import {
   sortedPeriodBuckets,
   type PeriodBucket,
 } from '../utils/hours-summary.util';
-import type { SchoolContextRequest } from '../utils/school-context.util';
+import {
+  ensureSchoolMember,
+  type SchoolContextRequest,
+} from '../utils/school-context.util';
 import {
   assertTeacherInSchool,
   SchoolAccessDeniedError,
@@ -413,7 +416,7 @@ router.post(
     body('hireDate').isISO8601(),
     body('engagementKind').optional().isIn(['PERMANENT', 'VACATAIRE']),
   ],
-  async (req, res) => {
+  async (req: SchoolContextRequest, res) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -485,6 +488,10 @@ router.post(
           teacherProfile: true,
         },
       });
+
+      if (req.schoolId) {
+        await ensureSchoolMember(req.schoolId, user.id);
+      }
 
       if (shouldSendSetupEmail) {
         try {

@@ -1647,4 +1647,70 @@ router.post('/discipline/records', async (req: AuthRequest, res) => {
   }
 });
 
+// ========== CONGÉS ==========
+
+router.get('/leaves', async (req: AuthRequest, res) => {
+  try {
+    const educatorId = await getEducatorId(req.user!.id);
+    if (!educatorId) {
+      return res.status(404).json({ error: 'Profil éducateur non trouvé' });
+    }
+
+    const leaves = await prisma.educatorLeave.findMany({
+      where: { educatorId },
+      orderBy: { startDate: 'desc' },
+    });
+
+    res.json(leaves);
+  } catch (error: unknown) {
+    console.error('GET /educator/leaves:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post(
+  '/leaves',
+  [
+    body('type').isIn(['ANNUAL', 'SICK', 'PERSONAL', 'TRAINING', 'OTHER']),
+    body('startDate').isISO8601(),
+    body('endDate').isISO8601(),
+    body('reason').optional().isString().isLength({ max: 2000 }),
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const educatorId = await getEducatorId(req.user!.id);
+      if (!educatorId) {
+        return res.status(404).json({ error: 'Profil éducateur non trouvé' });
+      }
+
+      const { type, startDate, endDate, reason } = req.body;
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (end < start) {
+        return res.status(400).json({ error: 'La date de fin doit être après la date de début' });
+      }
+
+      const leave = await prisma.educatorLeave.create({
+        data: {
+          educatorId,
+          type,
+          startDate: start,
+          endDate: end,
+          reason: reason?.trim() || null,
+        },
+      });
+
+      res.status(201).json(leave);
+    } catch (error: unknown) {
+      console.error('POST /educator/leaves:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+    }
+  }
+);
+
 export default router;

@@ -51,6 +51,10 @@ export function canTakeAttendance(role: string): boolean {
   return ['TEACHER', 'EDUCATOR'].includes(normalizeRole(role));
 }
 
+export function canEnterGrades(role: string): boolean {
+  return normalizeRole(role) === 'TEACHER';
+}
+
 export function canViewAcademics(role: string): boolean {
   return ['STUDENT', 'PARENT'].includes(normalizeRole(role));
 }

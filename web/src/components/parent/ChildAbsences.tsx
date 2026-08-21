@@ -1,20 +1,25 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parentApi } from '../../services/api';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
-import { 
-  FiCalendar, 
-  FiBook, 
+import Button from '../ui/Button';
+import Modal from '../ui/Modal';
+import ImageUpload from '../ui/ImageUpload';
+import {
+  FiCalendar,
+  FiBook,
   FiAlertCircle,
   FiCheckCircle,
   FiXCircle,
   FiClock,
   FiSearch,
-  FiFilter
+  FiFilter,
+  FiFileText,
 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import toast from 'react-hot-toast';
 import AbsencePermissionRequestsPanel from '../attendance/AbsencePermissionRequestsPanel';
 import DailyPresenceIndicator from '../attendance/DailyPresenceIndicator';
 
@@ -23,40 +28,73 @@ interface ChildAbsencesProps {
   searchQuery?: string;
 }
 
+type ChildAbsence = {
+  id: string;
+  date: string;
+  status?: string;
+  excused?: boolean;
+  reason?: string | null;
+  justificationDocuments?: string[];
+  course?: { name?: string };
+  teacher?: { user?: { firstName?: string; lastName?: string } };
+};
+
 const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
+  const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedAbsence, setSelectedAbsence] = useState<ChildAbsence | null>(null);
+  const [justificationReason, setJustificationReason] = useState('');
 
   const { data: absences, isLoading } = useQuery({
     queryKey: ['parent-child-absences', studentId],
     queryFn: () => parentApi.getChildAbsences(studentId),
   });
 
+  const justifyMutation = useMutation({
+    mutationFn: ({
+      absenceId,
+      documentUrl,
+      reason,
+    }: {
+      absenceId: string;
+      documentUrl: string;
+      reason?: string;
+    }) => parentApi.justifyChildAbsence(studentId, absenceId, documentUrl, reason),
+    onSuccess: () => {
+      toast.success('Justificatif envoyé — en attente de validation');
+      queryClient.invalidateQueries({ queryKey: ['parent-child-absences', studentId] });
+      setSelectedAbsence(null);
+      setJustificationReason('');
+    },
+    onError: (e: { response?: { data?: { error?: string } } }) => {
+      toast.error(e.response?.data?.error || 'Envoi impossible');
+    },
+  });
+
   const filteredAbsences = useMemo(() => {
     if (!absences) return [];
-    
-    let filtered = absences;
-    
-    // Search filter
+
+    let filtered = absences as ChildAbsence[];
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((a: any) => {
+      filtered = filtered.filter((a) => {
         const courseName = a.course?.name?.toLowerCase() || '';
         const dateStr = format(new Date(a.date), 'dd MMMM yyyy', { locale: fr }).toLowerCase();
         return courseName.includes(query) || dateStr.includes(query);
       });
     }
-    
-    // Status filter
+
     if (filterStatus !== 'all') {
       if (filterStatus === 'excused') {
-        filtered = filtered.filter((a: any) => a.excused);
+        filtered = filtered.filter((a) => a.excused);
       } else if (filterStatus === 'unexcused') {
-        filtered = filtered.filter((a: any) => !a.excused);
+        filtered = filtered.filter((a) => !a.excused);
       } else {
-        filtered = filtered.filter((a: any) => a.status === filterStatus);
+        filtered = filtered.filter((a) => a.status === filterStatus);
       }
     }
-    
+
     return filtered;
   }, [absences, searchQuery, filterStatus]);
 
@@ -71,10 +109,11 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
     );
   }
 
-  const totalAbsences = absences?.length || 0;
-  const unexcusedAbsences = absences?.filter((a: any) => !a.excused).length || 0;
-  const excusedAbsences = absences?.filter((a: any) => a.excused).length || 0;
-  const lateCount = absences?.filter((a: any) => a.status === 'LATE').length || 0;
+  const list = (absences as ChildAbsence[] | undefined) ?? [];
+  const totalAbsences = list.length;
+  const unexcusedAbsences = list.filter((a) => !a.excused).length;
+  const excusedAbsences = list.filter((a) => a.excused).length;
+  const lateCount = list.filter((a) => a.status === 'LATE').length;
 
   return (
     <div className="space-y-6">
@@ -91,30 +130,26 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
       />
       <Card className="border border-teal-200/80 bg-teal-50/50 p-3">
         <p className="text-xs leading-relaxed text-teal-950">
-          <strong>Justifier une absence :</strong> utilisez le formulaire ci-dessus pour demander une permission
-          (dates + motif). L’administration / vie scolaire traitera la demande. Les absences déjà enregistrées
-          apparaissent dans la liste ci-dessous.
+          <strong>Justifier :</strong> permission anticipée via le formulaire ci-dessus, ou dépôt
+          d’un justificatif sur une absence déjà pointée (bouton « Justifier »). L’administration
+          valide ensuite l’excuse.
         </p>
       </Card>
 
-      {/* Indicateur de recherche */}
       {searchQuery && (
         <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200">
           <div className="flex items-center space-x-3">
             <FiSearch className="w-5 h-5 text-orange-600" />
             <div>
               <p className="font-semibold text-gray-900">
-                Recherche: <span className="text-orange-600">"{searchQuery}"</span>
+                Recherche: <span className="text-orange-600">&quot;{searchQuery}&quot;</span>
               </p>
-              <p className="text-sm text-gray-600">
-                {filteredAbsences.length} absence(s) trouvée(s)
-              </p>
+              <p className="text-sm text-gray-600">{filteredAbsences.length} absence(s) trouvée(s)</p>
             </div>
           </div>
         </Card>
       )}
 
-      {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <div className="flex items-center justify-between">
@@ -162,7 +197,6 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
         </Card>
       </div>
 
-      {/* Filtres */}
       <Card>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-2">
@@ -183,15 +217,14 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
         </div>
       </Card>
 
-      {/* Liste des absences */}
       {filteredAbsences.length === 0 ? (
         <Card>
           <div className="text-center py-12 text-gray-500">
             <FiCalendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
             <p className="text-lg mb-2">Aucune absence trouvée</p>
             <p className="text-sm">
-              {searchQuery || filterStatus !== 'all' 
-                ? 'Essayez avec d\'autres critères de recherche'
+              {searchQuery || filterStatus !== 'all'
+                ? "Essayez avec d'autres critères de recherche"
                 : 'Aucune absence enregistrée pour le moment'}
             </p>
           </div>
@@ -208,10 +241,11 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Statut</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Justifiée</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Raison</th>
+                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredAbsences.map((absence: any) => (
+                {filteredAbsences.map((absence) => (
                   <tr key={absence.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-2 text-gray-900">
@@ -233,27 +267,48 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
                     <td className="py-3 px-4">
                       <Badge
                         variant={
-                          absence.status === 'PRESENT' ? 'success' :
-                          absence.status === 'LATE' ? 'warning' : 'danger'
+                          absence.status === 'PRESENT'
+                            ? 'success'
+                            : absence.status === 'LATE'
+                              ? 'warning'
+                              : 'danger'
                         }
                         size="sm"
                       >
-                        {absence.status === 'PRESENT' ? 'Présent' :
-                         absence.status === 'LATE' ? 'En retard' : 'Absent'}
+                        {absence.status === 'PRESENT'
+                          ? 'Présent'
+                          : absence.status === 'LATE'
+                            ? 'En retard'
+                            : 'Absent'}
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
-                      <Badge
-                        variant={absence.excused ? 'success' : 'secondary'}
-                        size="sm"
-                      >
+                      <Badge variant={absence.excused ? 'success' : 'secondary'} size="sm">
                         {absence.excused ? 'Oui' : 'Non'}
                       </Badge>
+                      {(absence.justificationDocuments?.length ?? 0) > 0 && !absence.excused ? (
+                        <p className="mt-1 text-[10px] text-amber-700">Justificatif déposé</p>
+                      ) : null}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-gray-600">
-                        {absence.reason || '-'}
-                      </span>
+                      <span className="text-sm text-gray-600">{absence.reason || '-'}</span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      {!absence.excused &&
+                      (absence.status === 'ABSENT' || absence.status === 'LATE') ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setSelectedAbsence(absence);
+                            setJustificationReason(absence.reason || '');
+                          }}
+                        >
+                          <FiFileText className="mr-1 h-3.5 w-3.5" />
+                          Justifier
+                        </Button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -263,7 +318,6 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
         </Card>
       )}
 
-      {/* Alerte pour absences non justifiées */}
       {unexcusedAbsences > 0 && (
         <Card className="border-l-4 border-orange-500">
           <div className="flex items-start space-x-4">
@@ -273,13 +327,78 @@ const ChildAbsences = ({ studentId, searchQuery = '' }: ChildAbsencesProps) => {
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 mb-2">Attention requise</h3>
               <p className="text-sm text-gray-700">
-                Votre enfant a {unexcusedAbsences} absence(s) non justifiée(s). 
-                Veuillez contacter l'établissement pour justifier ces absences.
+                Votre enfant a {unexcusedAbsences} absence(s) non justifiée(s). Déposez un
+                justificatif via le bouton « Justifier » ou contactez l&apos;établissement.
               </p>
             </div>
           </div>
         </Card>
       )}
+
+      <Modal
+        isOpen={!!selectedAbsence}
+        onClose={() => {
+          setSelectedAbsence(null);
+          setJustificationReason('');
+        }}
+        title="Justifier une absence"
+        size="md"
+      >
+        {selectedAbsence ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 mb-1">Cours</p>
+              <p className="font-semibold text-gray-900">{selectedAbsence.course?.name || 'N/A'}</p>
+              <p className="text-sm text-gray-600 mt-2 mb-1">Date</p>
+              <p className="font-semibold text-gray-900">
+                {format(new Date(selectedAbsence.date), 'dd MMMM yyyy', { locale: fr })}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Raison (optionnelle)
+              </label>
+              <textarea
+                value={justificationReason}
+                onChange={(e) => setJustificationReason(e.target.value)}
+                placeholder="Expliquez brièvement la raison de l'absence..."
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Document justificatif <span className="text-red-500">*</span>
+              </label>
+              <ImageUpload
+                onUpload={(documentUrl) => {
+                  if (justifyMutation.isPending) return;
+                  justifyMutation.mutate({
+                    absenceId: selectedAbsence.id,
+                    documentUrl,
+                    reason: justificationReason.trim() || undefined,
+                  });
+                }}
+                type="assignment"
+                uploadEndpoint="/upload/absence-justification"
+                uploadFieldName="document"
+                label="Télécharger le justificatif"
+              />
+            </div>
+            <div className="flex justify-end pt-4 border-t border-gray-200">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSelectedAbsence(null);
+                  setJustificationReason('');
+                }}
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 };

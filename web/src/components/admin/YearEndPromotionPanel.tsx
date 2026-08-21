@@ -36,6 +36,7 @@ type ClassGroup = {
 
 type PreviewResponse = {
   academicYear: string;
+  nextAcademicYear?: string;
   period: string;
   periodLabel: string;
   threshold: number;
@@ -138,8 +139,10 @@ const YearEndPromotionPanel: React.FC<{ compact?: boolean }> = ({ compact = fals
         <p className="mt-1 text-sm text-stone-600 leading-relaxed">
           Calcule les moyennes du <strong>3ᵉ trimestre</strong>, trie les élèves par classe (moyenne
           décroissante), puis déclare <strong>Admis</strong> (≥ {safeThreshold}/20) et{' '}
-          <strong>Doublant</strong> (&lt; {safeThreshold}/20). Met à jour le statut « redoublant » de
-          l’élève.
+          <strong>Doublant</strong> (&lt; {safeThreshold}/20). Met à jour le statut « redoublant ».
+          La réinscription en {data?.nextAcademicYear || 'N+1'} doit respecter cette décision
+          (niveau suivant si admis, même niveau si doublant). Pensez au{' '}
+          <strong>rollover des classes</strong> avant d’approuver les demandes.
         </p>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

@@ -169,6 +169,21 @@ export const teacherApi = {
     const response = await api.put(`/teacher/appointments/${appointmentId}/cancel`);
     return response.data;
   },
+  completeAppointment: async (appointmentId: string) => {
+    const response = await api.put(`/teacher/appointments/${appointmentId}/complete`);
+    return response.data;
+  },
+  getMyPayrollLines: async () => {
+    const response = await api.get('/teacher/payroll/my-lines');
+    return response.data;
+  },
+  getMyPayslipHtmlUrl: (lineId: string) => `/teacher/payroll/my-lines/${lineId}/payslip`,
+  openMyPayslip: async (lineId: string) => {
+    const response = await api.get(`/teacher/payroll/my-lines/${lineId}/payslip`, {
+      responseType: 'text',
+    });
+    return response.data as string;
+  },
   getMessagingThreads: async () => {
     const response = await api.get('/teacher/messaging/threads');
     return response.data;

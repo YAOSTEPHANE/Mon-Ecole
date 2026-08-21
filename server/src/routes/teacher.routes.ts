@@ -30,6 +30,8 @@ import {
   rollcallCourseListInclude,
   leanCourseListInclude,
 } from '../utils/attendance-rollcall-access.util';
+import { monthLabelFr } from '../utils/payroll.util';
+import { buildPayslipHtml } from '../utils/html-document.util';
 
 const router = express.Router();
 
@@ -368,6 +370,20 @@ router.post(
 
       if (!course) {
         return res.status(403).json({ error: 'Vous n\'enseignez pas ce cours' });
+      }
+
+      const studentInClass = await prisma.student.findFirst({
+        where: {
+          id: studentId,
+          classId: course.classId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (!studentInClass) {
+        return res.status(400).json({
+          error: 'Cet élève n’appartient pas à la classe de ce cours',
+        });
       }
 
       const gradeDate = date ? new Date(date) : new Date();
@@ -2101,6 +2117,142 @@ router.put('/appointments/:id/cancel', async (req: AuthRequest, res) => {
     res.json(decryptParentTeacherAppointmentRow(updated));
   } catch (error: unknown) {
     console.error('PUT /teacher/appointments/:id/cancel:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.put('/appointments/:id/complete', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) {
+      return res.status(404).json({ error: 'Profil enseignant non trouvé' });
+    }
+    const { id } = req.params;
+
+    const existing = await prisma.parentTeacherAppointment.findFirst({
+      where: { id, teacherId },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Rendez-vous introuvable.' });
+    }
+    if (existing.status !== 'CONFIRMED') {
+      return res.status(400).json({ error: 'Seuls les rendez-vous confirmés peuvent être marqués terminés.' });
+    }
+
+    const updated = await prisma.parentTeacherAppointment.update({
+      where: { id },
+      data: { status: 'COMPLETED' },
+      include: appointmentInclude,
+    });
+
+    const parentUser = await prisma.parent.findUnique({
+      where: { id: updated.parentId },
+      select: { userId: true },
+    });
+    if (parentUser?.userId) {
+      const when = updated.scheduledStart.toLocaleString('fr-FR', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+      await notifyUsersImportant([parentUser.userId], {
+        type: 'appointment',
+        title: 'Rendez-vous terminé',
+        content: `Votre entretien du ${when} a été marqué comme terminé.`,
+        link: '/parent?tab=appointments',
+      });
+    }
+
+    res.json(decryptParentTeacherAppointmentRow(updated));
+  } catch (error: unknown) {
+    console.error('PUT /teacher/appointments/:id/complete:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+// ========== PAIE (self-service) ==========
+
+router.get('/payroll/my-lines', async (req: AuthRequest, res) => {
+  try {
+    const lines = await prisma.payrollLine.findMany({
+      where: { userId: req.user!.id },
+      include: {
+        payrollRun: {
+          select: { id: true, year: true, month: true, status: true, paidAt: true },
+        },
+      },
+      take: 48,
+    });
+    lines.sort((a, b) => {
+      const ya = a.payrollRun.year - b.payrollRun.year;
+      if (ya !== 0) return -ya;
+      return b.payrollRun.month - a.payrollRun.month;
+    });
+    res.json(lines.slice(0, 24));
+  } catch (error: unknown) {
+    console.error('GET /teacher/payroll/my-lines:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.get('/payroll/my-lines/:id/payslip', async (req: AuthRequest, res) => {
+  try {
+    const line = await prisma.payrollLine.findFirst({
+      where: { id: req.params.id, userId: req.user!.id },
+      include: { payrollRun: true },
+    });
+    if (!line) {
+      return res.status(404).json({ error: 'Ligne de paie introuvable' });
+    }
+    if (line.payrollRun.status !== 'VALIDATED' && line.payrollRun.status !== 'PAID') {
+      return res.status(403).json({
+        error: 'Le bulletin n’est disponible qu’après validation ou paiement du cycle.',
+      });
+    }
+
+    const monthLabel = monthLabelFr(line.payrollRun.year, line.payrollRun.month);
+    const format = typeof req.query.format === 'string' ? req.query.format : 'html';
+
+    if (format === 'json') {
+      return res.json({
+        id: line.id,
+        employeeName: line.displayName,
+        employeeId: line.employeeId,
+        personKind: line.personKind,
+        year: line.payrollRun.year,
+        month: line.payrollRun.month,
+        monthLabel,
+        status: line.payrollRun.status,
+        paidAt: line.payrollRun.paidAt,
+        baseSalary: line.baseSalary,
+        bonuses: line.bonuses,
+        deductions: line.deductions,
+        netPay: line.netAmount,
+        notes: line.notes,
+      });
+    }
+
+    const html = buildPayslipHtml({
+      employeeName: line.displayName,
+      employeeId: line.employeeId,
+      personKind: line.personKind,
+      year: line.payrollRun.year,
+      month: line.payrollRun.month,
+      monthLabel,
+      baseSalary: line.baseSalary,
+      bonuses: line.bonuses,
+      deductions: line.deductions,
+      netPay: line.netAmount,
+      notes: line.notes,
+    });
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="bulletin-paie-${line.employeeId}.html"`
+    );
+    res.send(html);
+  } catch (error: unknown) {
+    console.error('GET /teacher/payroll/my-lines/:id/payslip:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });

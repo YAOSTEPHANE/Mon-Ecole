@@ -3,6 +3,7 @@
  */
 import express from 'express';
 import { ensureJwtConfiguration } from './utils/jwt.util';
+import { ensureDeviceApiKeyConfiguration } from './utils/device-api-key.util';
 import { useBlobStorage } from './utils/blob-storage.util';
 import { createApp } from './app/createApp';
 import {
@@ -15,6 +16,12 @@ void express;
 
 try {
   ensureJwtConfiguration();
+} catch (e) {
+  console.error(e);
+}
+
+try {
+  ensureDeviceApiKeyConfiguration();
 } catch (e) {
   console.error(e);
 }

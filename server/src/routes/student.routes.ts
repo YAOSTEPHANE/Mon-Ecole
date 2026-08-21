@@ -725,10 +725,20 @@ router.get('/reenrollment-options', async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Élève non trouvé' });
     }
     const classes = await listClassesForReenrollment(student.schoolId);
+    const { getNextAcademicYear } = await import('../utils/school-level-progression.util');
+    const { getCurrentAcademicYear } = await import('../utils/report-card.util');
+    const { resolveTargetYearClassesHint } = await import('../utils/promotion-reenrollment-guard.util');
+    const targetAcademicYear = getNextAcademicYear(getCurrentAcademicYear());
+    const promotionHint = await resolveTargetYearClassesHint({
+      studentId: student.id,
+      targetAcademicYear,
+    });
     res.json({
       studentId: student.id,
       enrollmentStatus: student.enrollmentStatus,
       currentClassId: student.classId,
+      targetAcademicYear,
+      promotionHint,
       classes,
     });
   } catch (error: unknown) {

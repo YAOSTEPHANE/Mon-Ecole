@@ -61,6 +61,13 @@ export type ReenrollmentRequest = {
   } | null;
   preferredClass?: ReenrollmentClassOption | null;
   approvedClass?: ReenrollmentClassOption | null;
+  promotionHint?: {
+    decision: 'ADMIS' | 'DOUBLANT' | null;
+    expectedLevel: string | null;
+    suggestedClassId: string | null;
+    suggestedClassName: string | null;
+    endOfCycle: boolean;
+  } | null;
   student?: {
     user?: { firstName?: string; lastName?: string; email?: string };
     class?: { id?: string; name?: string; level?: string; academicYear?: string };

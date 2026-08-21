@@ -159,6 +159,31 @@ router.post('/assignment', upload.single('assignment'), async (req: any, res) =>
   }
 });
 
+/** Justificatif d’absence — élève ou parent */
+router.post('/absence-justification', upload.single('document'), async (req: any, res) => {
+  try {
+    const role = req.user?.role;
+    if (!role || !['STUDENT', 'PARENT', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+      discardUploadedFile(req.file);
+      return res.status(403).json({ error: 'Non autorisé à déposer un justificatif' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier fourni' });
+    }
+    const fullUrl = await persistUploadedFile(req.file, 'absence-justifications', { req });
+    res.json({
+      message: 'Justificatif uploadé avec succès',
+      url: fullUrl,
+      filename: req.file.originalname,
+    });
+  } catch (error: unknown) {
+    discardUploadedFile(req.file);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Erreur serveur',
+    });
+  }
+});
+
 router.post('/course', upload.single('course'), async (req: any, res) => {
   try {
     if (!req.file) {

@@ -61,7 +61,7 @@ export const PLACEHOLDER_HONOR_STUDENTS: PublicHonorStudent[] = [
     firstName: 'Awa',
     lastName: 'Kouamé',
     average: 16.42,
-    photoUrl: '/home/news-mission.jpg',
+    photoUrl: '/home/honor-awa.jpg',
     isPlaceholder: true,
   },
   {
@@ -71,7 +71,7 @@ export const PLACEHOLDER_HONOR_STUDENTS: PublicHonorStudent[] = [
     firstName: 'Yao',
     lastName: "N'Guessan",
     average: 16.18,
-    photoUrl: '/home/role-student.jpg',
+    photoUrl: '/home/honor-yao.jpg',
     isPlaceholder: true,
   },
   {
@@ -81,7 +81,7 @@ export const PLACEHOLDER_HONOR_STUDENTS: PublicHonorStudent[] = [
     firstName: 'Mariam',
     lastName: 'Traoré',
     average: 16.75,
-    photoUrl: '/home/news-portes-ouvertes.jpg',
+    photoUrl: '/home/honor-mariam.jpg',
     isPlaceholder: true,
   },
   {
@@ -91,7 +91,7 @@ export const PLACEHOLDER_HONOR_STUDENTS: PublicHonorStudent[] = [
     firstName: 'Koffi',
     lastName: 'Bamba',
     average: 17.12,
-    photoUrl: '/home/experience-academique.jpg',
+    photoUrl: '/home/honor-koffi.jpg',
     isPlaceholder: true,
   },
   {
@@ -101,7 +101,7 @@ export const PLACEHOLDER_HONOR_STUDENTS: PublicHonorStudent[] = [
     firstName: 'Aminata',
     lastName: 'Diomandé',
     average: 16.88,
-    photoUrl: '/home/news-semaine.jpg',
+    photoUrl: '/home/honor-aminata.jpg',
     isPlaceholder: true,
   },
   {
@@ -111,7 +111,7 @@ export const PLACEHOLDER_HONOR_STUDENTS: PublicHonorStudent[] = [
     firstName: 'Jean-Marc',
     lastName: 'Koné',
     average: 17.04,
-    photoUrl: '/home/pillar-pedagogy.jpg',
+    photoUrl: '/home/honor-jeanmarc.jpg',
     isPlaceholder: true,
   },
   {
@@ -121,7 +121,7 @@ export const PLACEHOLDER_HONOR_STUDENTS: PublicHonorStudent[] = [
     firstName: 'Fatou',
     lastName: 'Ouattara',
     average: 17.36,
-    photoUrl: '/home/experience-familles.jpg',
+    photoUrl: '/home/honor-fatou.jpg',
     isPlaceholder: true,
   },
 ];

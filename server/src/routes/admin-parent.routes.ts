@@ -379,6 +379,7 @@ router.put('/parents/:id', async (req, res) => {
       preferredLocale,
       notifyEmail,
       notifySms,
+      notifyWhatsApp,
       portalShowFees,
       portalShowGrades,
       portalShowAttendance,
@@ -402,6 +403,7 @@ router.put('/parents/:id', async (req, res) => {
           ...(preferredLocale !== undefined && { preferredLocale: preferredLocale || null }),
           ...(notifyEmail !== undefined && { notifyEmail: Boolean(notifyEmail) }),
           ...(notifySms !== undefined && { notifySms: Boolean(notifySms) }),
+          ...(notifyWhatsApp !== undefined && { notifyWhatsApp: Boolean(notifyWhatsApp) }),
           ...(portalShowFees !== undefined && { portalShowFees: Boolean(portalShowFees) }),
           ...(portalShowGrades !== undefined && { portalShowGrades: Boolean(portalShowGrades) }),
           ...(portalShowAttendance !== undefined && {

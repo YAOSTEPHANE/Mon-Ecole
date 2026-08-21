@@ -486,6 +486,8 @@ const StudentAbsences = ({
               <ImageUpload
                 onUpload={handleJustify}
                 type="assignment"
+                uploadEndpoint="/upload/absence-justification"
+                uploadFieldName="document"
                 label="Télécharger le justificatif"
               />
             </div>

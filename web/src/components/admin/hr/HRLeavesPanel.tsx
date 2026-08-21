@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../../services/api';
 import Card from '../../ui/Card';
@@ -24,38 +24,145 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: 'Annulé',
 };
 
+const PERSON_KIND_LABEL: Record<'TEACHER' | 'EDUCATOR' | 'STAFF', string> = {
+  TEACHER: 'Enseignant',
+  EDUCATOR: 'Éducateur',
+  STAFF: 'Personnel',
+};
+
+type PersonKind = 'TEACHER' | 'EDUCATOR' | 'STAFF';
+
+type NormalizedLeave = {
+  id: string;
+  personKind: PersonKind;
+  personId: string;
+  personName: string;
+  personEmail?: string;
+  type: string;
+  status: string;
+  startDate?: string;
+  endDate?: string;
+  adminComment?: string | null;
+  sortKey: number;
+};
+
 const HRLeavesPanel: React.FC = () => {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>('all');
   const [rejectTarget, setRejectTarget] = useState<{
-    teacherId: string;
+    personKind: PersonKind;
+    personId: string;
     leaveId: string;
-    teacherName: string;
+    personName: string;
   } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  const { data: leaves, isLoading } = useQuery({
+  const statusParams = filter === 'all' ? undefined : { status: filter };
+
+  const { data: teacherLeaves, isLoading: loadingTeachers } = useQuery({
     queryKey: ['admin-hr-teacher-leaves', filter],
-    queryFn: () =>
-      filter === 'all'
-        ? adminApi.getHrTeacherLeaves()
-        : adminApi.getHrTeacherLeaves({ status: filter }),
+    queryFn: () => adminApi.getHrTeacherLeaves(statusParams),
   });
+  const { data: educatorLeaves, isLoading: loadingEducators } = useQuery({
+    queryKey: ['admin-hr-educator-leaves', filter],
+    queryFn: () => adminApi.getHrEducatorLeaves(statusParams),
+  });
+  const { data: staffLeaves, isLoading: loadingStaff } = useQuery({
+    queryKey: ['admin-hr-staff-leaves', filter],
+    queryFn: () => adminApi.getHrStaffLeaves(statusParams),
+  });
+
+  const isLoading = loadingTeachers || loadingEducators || loadingStaff;
+
+  const list = useMemo(() => {
+    const rows: NormalizedLeave[] = [];
+
+    for (const lv of (teacherLeaves as any[]) ?? []) {
+      rows.push({
+        id: lv.id,
+        personKind: 'TEACHER',
+        personId: lv.teacherId,
+        personName: `${lv.teacher?.user?.firstName ?? ''} ${lv.teacher?.user?.lastName ?? ''}`.trim(),
+        personEmail: lv.teacher?.user?.email,
+        type: lv.type,
+        status: lv.status,
+        startDate: lv.startDate,
+        endDate: lv.endDate,
+        adminComment: lv.adminComment,
+        sortKey: lv.startDate ? new Date(lv.startDate).getTime() : 0,
+      });
+    }
+
+    for (const lv of (educatorLeaves as any[]) ?? []) {
+      rows.push({
+        id: lv.id,
+        personKind: 'EDUCATOR',
+        personId: lv.educatorId,
+        personName: `${lv.educator?.user?.firstName ?? ''} ${lv.educator?.user?.lastName ?? ''}`.trim(),
+        personEmail: lv.educator?.user?.email,
+        type: lv.type,
+        status: lv.status,
+        startDate: lv.startDate,
+        endDate: lv.endDate,
+        adminComment: lv.adminComment,
+        sortKey: lv.startDate ? new Date(lv.startDate).getTime() : 0,
+      });
+    }
+
+    for (const lv of (staffLeaves as any[]) ?? []) {
+      rows.push({
+        id: lv.id,
+        personKind: 'STAFF',
+        personId: lv.staffMemberId,
+        personName: `${lv.staffMember?.user?.firstName ?? ''} ${lv.staffMember?.user?.lastName ?? ''}`.trim(),
+        personEmail: lv.staffMember?.user?.email,
+        type: lv.type,
+        status: lv.status,
+        startDate: lv.startDate,
+        endDate: lv.endDate,
+        adminComment: lv.adminComment,
+        sortKey: lv.startDate ? new Date(lv.startDate).getTime() : 0,
+      });
+    }
+
+    rows.sort((a, b) => b.sortKey - a.sortKey);
+    return rows;
+  }, [teacherLeaves, educatorLeaves, staffLeaves]);
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-hr-teacher-leaves'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-hr-educator-leaves'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-hr-staff-leaves'] });
+  };
 
   const updateMutation = useMutation({
     mutationFn: (payload: {
-      teacherId: string;
+      personKind: PersonKind;
+      personId: string;
       leaveId: string;
       status: 'APPROVED' | 'REJECTED';
       adminComment?: string;
-    }) =>
-      adminApi.updateTeacherLeaveStatus(payload.teacherId, payload.leaveId, {
+    }) => {
+      const data = {
         status: payload.status,
         ...(payload.adminComment !== undefined && { adminComment: payload.adminComment }),
-      }),
+      };
+      switch (payload.personKind) {
+        case 'TEACHER':
+          return adminApi.updateTeacherLeaveStatus(payload.personId, payload.leaveId, data);
+        case 'EDUCATOR':
+          return adminApi.updateEducatorLeaveStatus(payload.personId, payload.leaveId, data);
+        case 'STAFF':
+          return adminApi.updateStaffLeaveStatus(payload.personId, payload.leaveId, data);
+        default: {
+          const _exhaustive: never = payload.personKind;
+          return Promise.reject(new Error(`Type inconnu: ${_exhaustive}`));
+        }
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-hr-teacher-leaves'] });
-      toast.success('Demande mise à jour — un courriel a été envoyé à l’enseignant si SMTP est configuré.');
+      invalidateAll();
+      toast.success('Demande mise à jour.');
       setRejectTarget(null);
       setRejectReason('');
     },
@@ -63,11 +170,12 @@ const HRLeavesPanel: React.FC = () => {
       toast.error(err.response?.data?.error || 'Mise à jour impossible'),
   });
 
-  const openRejectModal = (lv: any) => {
+  const openRejectModal = (lv: NormalizedLeave) => {
     setRejectTarget({
-      teacherId: lv.teacherId,
+      personKind: lv.personKind,
+      personId: lv.personId,
       leaveId: lv.id,
-      teacherName: `${lv.teacher?.user?.firstName ?? ''} ${lv.teacher?.user?.lastName ?? ''}`.trim(),
+      personName: lv.personName,
     });
     setRejectReason('');
   };
@@ -80,22 +188,21 @@ const HRLeavesPanel: React.FC = () => {
     }
     if (!rejectTarget) return;
     updateMutation.mutate({
-      teacherId: rejectTarget.teacherId,
+      personKind: rejectTarget.personKind,
+      personId: rejectTarget.personId,
       leaveId: rejectTarget.leaveId,
       status: 'REJECTED',
       adminComment: trimmed,
     });
   };
 
-  const list = (leaves as any[]) ?? [];
-
   return (
     <div className="space-y-4">
       <Card className="p-4 border border-orange-100 bg-orange-50/40">
         <p className="text-sm text-gray-700 flex items-start gap-2">
           <FiCalendar className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-          Demandes de <strong>congés et permissions</strong> déposées par les enseignants. Validez ou refusez depuis la
-          direction (refus : motif obligatoire ; un courriel informe l’enseignant après décision).
+          Demandes de <strong>congés et permissions</strong> (enseignants, éducateurs, personnel). Validez ou
+          refusez depuis la direction (refus : motif obligatoire).
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {(['all', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((f) => (
@@ -125,7 +232,8 @@ const HRLeavesPanel: React.FC = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50 text-left text-gray-600">
-                  <th className="py-3 px-4 font-semibold">Enseignant</th>
+                  <th className="py-3 px-4 font-semibold">Personne</th>
+                  <th className="py-3 px-4 font-semibold">Profil</th>
                   <th className="py-3 px-4 font-semibold">Type</th>
                   <th className="py-3 px-4 font-semibold">Du</th>
                   <th className="py-3 px-4 font-semibold">Au</th>
@@ -135,13 +243,24 @@ const HRLeavesPanel: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {list.map((lv: any) => (
-                  <tr key={lv.id} className="border-b border-gray-100 hover:bg-gray-50/80">
+                {list.map((lv) => (
+                  <tr key={`${lv.personKind}-${lv.id}`} className="border-b border-gray-100 hover:bg-gray-50/80">
                     <td className="py-3 px-4">
-                      <div className="font-medium text-gray-900">
-                        {lv.teacher?.user?.firstName} {lv.teacher?.user?.lastName}
-                      </div>
-                      <div className="text-xs text-gray-500">{lv.teacher?.user?.email}</div>
+                      <div className="font-medium text-gray-900">{lv.personName || '—'}</div>
+                      <div className="text-xs text-gray-500">{lv.personEmail}</div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge
+                        className={
+                          lv.personKind === 'TEACHER'
+                            ? 'bg-blue-100 text-blue-800'
+                            : lv.personKind === 'EDUCATOR'
+                              ? 'bg-violet-100 text-violet-800'
+                              : 'bg-stone-100 text-stone-800'
+                        }
+                      >
+                        {PERSON_KIND_LABEL[lv.personKind]}
+                      </Badge>
                     </td>
                     <td className="py-3 px-4">{LEAVE_TYPES[lv.type] ?? lv.type}</td>
                     <td className="py-3 px-4 whitespace-nowrap">
@@ -188,7 +307,8 @@ const HRLeavesPanel: React.FC = () => {
                             disabled={updateMutation.isPending}
                             onClick={() =>
                               updateMutation.mutate({
-                                teacherId: lv.teacherId,
+                                personKind: lv.personKind,
+                                personId: lv.personId,
                                 leaveId: lv.id,
                                 status: 'APPROVED',
                               })
@@ -241,12 +361,12 @@ const HRLeavesPanel: React.FC = () => {
               Refuser la demande
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              {rejectTarget.teacherName ? (
+              {rejectTarget.personName ? (
                 <>
-                  Motif communiqué à <strong>{rejectTarget.teacherName}</strong> par courriel (si SMTP configuré).
+                  Motif communiqué à <strong>{rejectTarget.personName}</strong>.
                 </>
               ) : (
-                <>Motif communiqué à l’enseignant par courriel (si SMTP configuré).</>
+                <>Motif de refus obligatoire.</>
               )}
             </p>
             <label htmlFor="reject-reason" className="block text-sm font-medium text-gray-700 mb-2">

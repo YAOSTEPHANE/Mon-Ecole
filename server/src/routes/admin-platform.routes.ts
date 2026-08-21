@@ -131,7 +131,20 @@ router.get('/campus/transport/routes/:id/tracking', async (req: SchoolContextReq
       orderBy: { recordedAt: 'desc' },
       take: limit,
     });
-    res.json({ route, latest: pings[0] ?? null, pings });
+    const latest = pings[0] ?? null;
+    const staleMs = latest
+      ? Date.now() - new Date(latest.recordedAt).getTime()
+      : null;
+    res.json({
+      route,
+      latest,
+      pings,
+      stale: staleMs != null ? staleMs > 5 * 60 * 1000 : true,
+      ageMinutes: staleMs != null ? Math.round(staleMs / 60000) : null,
+      mapUrl: latest
+        ? `https://www.openstreetmap.org/?mlat=${latest.latitude}&mlon=${latest.longitude}#map=16/${latest.latitude}/${latest.longitude}`
+        : null,
+    });
   } catch (e) {
     res.status(errorStatus(e)).json({ error: e instanceof Error ? e.message : 'Erreur tracking' });
   }
@@ -347,18 +360,30 @@ router.post('/gamification/students/:studentId/award', async (req: SchoolContext
   }
 });
 
-/** Stub LTI 1.3 config (pour brancher un LMS externe) */
-router.get('/integrations/lti/config', (_req, res) => {
-  const issuer = process.env.LTI_ISSUER?.trim() || 'https://ecole.example.org';
-  res.json({
-    status: 'stub',
-    issuer,
-    clientId: process.env.LTI_CLIENT_ID || null,
-    authLoginUrl: `${issuer}/lti/login`,
-    authTokenUrl: `${issuer}/lti/token`,
-    jwksUrl: `${issuer}/lti/jwks`,
-    note: 'Configurer LTI_ISSUER / LTI_CLIENT_ID pour brancher un outil LTI (SCORM via package zip à venir).',
-  });
+/** Config LTI — redirige vers le module gaps (config persistée). */
+router.get('/integrations/lti/config', async (req: SchoolContextRequest, res) => {
+  try {
+    const row = await prisma.ltiPlatformConfig.findFirst({
+      where: req.schoolId ? { schoolId: req.schoolId } : {},
+      orderBy: { updatedAt: 'desc' },
+    });
+    const issuer = row?.issuer || process.env.LTI_ISSUER?.trim() || 'https://ecole.example.org';
+    res.json({
+      status: row?.enabled ? 'ready' : row ? 'configured' : 'env',
+      enabled: row?.enabled ?? false,
+      issuer,
+      clientId: row?.clientId || process.env.LTI_CLIENT_ID || null,
+      deploymentId: row?.deploymentId ?? null,
+      keysetUrl: row?.keysetUrl || `${issuer}/lti/jwks`,
+      redirectUris: row?.redirectUris ?? [],
+      authLoginUrl: `${issuer}/lti/login`,
+      authTokenUrl: `${issuer}/lti/token`,
+      jwksUrl: row?.keysetUrl || `${issuer}/lti/jwks`,
+      note: 'Configurer via PUT /admin/lti/config ou Intégrations. SCORM : /admin/scorm/packages.',
+    });
+  } catch (e) {
+    res.status(errorStatus(e)).json({ error: e instanceof Error ? e.message : 'Erreur LTI' });
+  }
 });
 
 export default router;

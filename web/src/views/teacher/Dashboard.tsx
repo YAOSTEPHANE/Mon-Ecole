@@ -13,6 +13,7 @@ import TeacherScheduleTab from '../../components/teacher/TeacherScheduleTab';
 import TeacherSubjectsTab from '../../components/teacher/TeacherSubjectsTab';
 import TeacherEvaluationsTab from '../../components/teacher/TeacherEvaluationsTab';
 import TeacherLeavesTab from '../../components/teacher/TeacherLeavesTab';
+import TeacherPayslipPanel from '../../components/teacher/TeacherPayslipPanel';
 import TeacherSelfAttendance from '../../components/teacher/TeacherSelfAttendance';
 import TeacherAppointmentsPanel from '../../components/teacher/TeacherAppointmentsPanel';
 import TeacherInternalMessaging from '../../components/teacher/TeacherInternalMessaging';
@@ -37,6 +38,7 @@ import {
   FiCloud,
   FiMonitor,
   FiTarget,
+  FiDollarSign,
 } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
@@ -53,6 +55,7 @@ const VALID_TAB_IDS = [
   'subjects',
   'evaluation',
   'leaves',
+  'payroll',
   'courses',
   'grades',
   'attendance',
@@ -102,6 +105,7 @@ const TeacherDashboard = () => {
       { id: 'subjects', label: 'Matières', icon: FiLayers, color: 'from-lime-500 to-green-600', description: 'Matières enseignées et rattachements' },
       { id: 'evaluation', label: 'Évaluation RH', icon: FiStar, color: 'from-amber-500 to-orange-600', description: 'Entretiens et évaluations internes' },
       { id: 'leaves', label: 'Congés & absences', icon: FiSun, color: 'from-sky-500 to-teal-600', description: 'Demandes de congé et absences' },
+      { id: 'payroll', label: 'Ma paie', icon: FiDollarSign, color: 'from-emerald-500 to-lime-600', description: 'Lignes de paie et bulletins' },
       { id: 'courses', label: 'Mes cours', icon: FiBook, color: 'from-emerald-600 to-green-700', description: 'Groupes, contenus et suivi par classe' },
       { id: 'grades', label: 'Notes', icon: FiClipboard, color: 'from-cptb-blue to-cptb-blue-dark', description: 'Saisie et suivi des évaluations' },
       { id: 'validations', label: 'Validations', icon: FiCheckCircle, color: 'from-cptb-blue-mid to-cptb-blue-dark', description: 'Valider les notes et moyennes (professeur principal)' },
@@ -252,6 +256,7 @@ const TeacherDashboard = () => {
                 {activeTab === 'subjects' && <TeacherSubjectsTab />}
                 {activeTab === 'evaluation' && <TeacherEvaluationsTab />}
                 {activeTab === 'leaves' && <TeacherLeavesTab />}
+                {activeTab === 'payroll' && <TeacherPayslipPanel />}
                 {activeTab === 'courses' && <CoursesList searchQuery={searchQuery} />}
                 {activeTab === 'grades' && <GradesManager searchQuery={searchQuery} />}
                 {activeTab === 'validations' && (

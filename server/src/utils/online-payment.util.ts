@@ -11,6 +11,7 @@ import {
   type PaymentProviderId,
 } from './payment-providers.util';
 import { getPaymentWebhookSecret } from './integration-settings.util';
+import { secureCompareStrings } from './secure-compare.util';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -180,8 +181,8 @@ export function assertWebhookSecret(headerSecret: string | undefined, bodySecret
       { status: 503 }
     );
   }
-  const provided = headerSecret || bodySecret;
-  if (!provided || provided !== expected) {
+  const provided = headerSecret || bodySecret || '';
+  if (!secureCompareStrings(provided, expected)) {
     throw Object.assign(new Error('Secret webhook invalide'), { status: 401 });
   }
 }

@@ -1,4 +1,5 @@
 import { ensureJwtConfiguration } from './utils/jwt.util';
+import { ensureDeviceApiKeyConfiguration } from './utils/device-api-key.util';
 import { useBlobStorage } from './utils/blob-storage.util';
 import { createApp } from './app/createApp';
 import { attachRealtime } from './utils/realtime.util';
@@ -8,6 +9,7 @@ import { startScheduledTuitionReminders } from './jobs/scheduled-tuition-reminde
 import { startScheduledAppointmentReminders } from './jobs/scheduled-appointment-reminders';
 import { startScheduledMenaPresenceImport } from './jobs/scheduled-mena-presence-import';
 import { startScheduledAbsenceReminders } from './jobs/scheduled-absence-reminders';
+import { startScheduledWaitlistExpiration } from './jobs/scheduled-waitlist-expiration';
 import {
   logDatabaseUrlDiagnostics,
   logProductionEnvDiagnostics,
@@ -25,6 +27,15 @@ try {
 
 try {
   ensureJwtConfiguration();
+} catch (e) {
+  console.error(e);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
+try {
+  ensureDeviceApiKeyConfiguration();
 } catch (e) {
   console.error(e);
   if (process.env.NODE_ENV === 'production') {
@@ -63,6 +74,7 @@ if (process.env.VERCEL !== '1') {
   startScheduledAppointmentReminders();
   startScheduledMenaPresenceImport();
   startScheduledAbsenceReminders();
+  startScheduledWaitlistExpiration();
   const server = http.createServer(app);
   attachRealtime(server);
   server.listen(PORT, () => {

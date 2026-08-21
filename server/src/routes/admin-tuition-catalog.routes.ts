@@ -10,6 +10,7 @@ import {
 } from '../utils/tuition-catalog.util';
 import { replicateTuitionStructures } from '../utils/tuition-replicate-year.util';
 import { computeScholarshipDiscount } from '../utils/student-scholarship.util';
+import { applyScholarshipsToExistingFees } from '../utils/apply-scholarship-to-fees.util';
 import {
   getLevelTuitionRates,
   getClassTuitionRates,
@@ -19,32 +20,36 @@ import {
   resolveTuitionForClass,
   TUITION_LEVELS,
 } from '../utils/tuition-level-amount.util';
+import {
+  resourceSchoolScopeWhere,
+  type SchoolContextRequest,
+} from '../utils/school-context.util';
 
 const router = express.Router();
 
 // --- Montants fixes de scolarité par niveau ---
 
-router.get('/tuition-level-rates', async (req, res) => {
+router.get('/tuition-level-rates', async (req: SchoolContextRequest, res) => {
   try {
     const academicYear = String(req.query.academicYear ?? '').trim();
     if (!academicYear) {
       return res.status(400).json({ error: 'academicYear est requis' });
     }
-    const rates = await getLevelTuitionRates(academicYear);
+    const rates = await getLevelTuitionRates(academicYear, req.schoolId);
     res.json({ academicYear, levels: TUITION_LEVELS, rates });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });
 
-router.get('/tuition-level-rates/resolve', async (req, res) => {
+router.get('/tuition-level-rates/resolve', async (req: SchoolContextRequest, res) => {
   try {
     const studentId = String(req.query.studentId ?? '').trim();
     const academicYear = String(req.query.academicYear ?? '').trim();
     if (!studentId || !academicYear) {
       return res.status(400).json({ error: 'studentId et academicYear sont requis' });
     }
-    const resolved = await resolveTuitionAmountForStudent(studentId, academicYear);
+    const resolved = await resolveTuitionAmountForStudent(studentId, academicYear, req.schoolId);
     if (!resolved) {
       return res.status(404).json({
         error: 'Aucun montant de scolarité défini pour la classe ou le niveau de cet élève.',
@@ -56,20 +61,20 @@ router.get('/tuition-level-rates/resolve', async (req, res) => {
   }
 });
 
-router.get('/tuition-class-rates', async (req, res) => {
+router.get('/tuition-class-rates', async (req: SchoolContextRequest, res) => {
   try {
     const academicYear = String(req.query.academicYear ?? '').trim();
     if (!academicYear) {
       return res.status(400).json({ error: 'academicYear est requis' });
     }
-    const rates = await getClassTuitionRates(academicYear);
+    const rates = await getClassTuitionRates(academicYear, req.schoolId);
     res.json({ academicYear, rates });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }
 });
 
-router.put('/tuition-class-rates', async (req, res) => {
+router.put('/tuition-class-rates', async (req: SchoolContextRequest, res) => {
   try {
     const { academicYear, rates } = req.body as {
       academicYear?: string;
@@ -78,8 +83,8 @@ router.put('/tuition-class-rates', async (req, res) => {
     if (!academicYear || !Array.isArray(rates)) {
       return res.status(400).json({ error: 'academicYear et rates[] sont requis' });
     }
-    const saved = await upsertClassTuitionRates(String(academicYear), rates);
-    const updated = await getClassTuitionRates(String(academicYear));
+    const saved = await upsertClassTuitionRates(String(academicYear), rates, req.schoolId);
+    const updated = await getClassTuitionRates(String(academicYear), req.schoolId);
     res.json({
       message: 'Montants par classe enregistrés',
       saved: saved.length,
@@ -91,14 +96,14 @@ router.put('/tuition-class-rates', async (req, res) => {
   }
 });
 
-router.get('/tuition-level-rates/resolve-for-class', async (req, res) => {
+router.get('/tuition-level-rates/resolve-for-class', async (req: SchoolContextRequest, res) => {
   try {
     const classId = String(req.query.classId ?? '').trim();
     const academicYear = String(req.query.academicYear ?? '').trim();
     if (!classId || !academicYear) {
       return res.status(400).json({ error: 'classId et academicYear sont requis' });
     }
-    const resolved = await resolveTuitionForClass(classId, academicYear);
+    const resolved = await resolveTuitionForClass(classId, academicYear, req.schoolId);
     if (!resolved) {
       return res.status(404).json({
         error:
@@ -111,7 +116,7 @@ router.get('/tuition-level-rates/resolve-for-class', async (req, res) => {
   }
 });
 
-router.put('/tuition-level-rates', async (req, res) => {
+router.put('/tuition-level-rates', async (req: SchoolContextRequest, res) => {
   try {
     const { academicYear, rates } = req.body as {
       academicYear?: string;
@@ -120,8 +125,8 @@ router.put('/tuition-level-rates', async (req, res) => {
     if (!academicYear || !Array.isArray(rates)) {
       return res.status(400).json({ error: 'academicYear et rates[] sont requis' });
     }
-    const saved = await upsertLevelTuitionRates(String(academicYear), rates);
-    const updated = await getLevelTuitionRates(String(academicYear));
+    const saved = await upsertLevelTuitionRates(String(academicYear), rates, req.schoolId);
+    const updated = await getLevelTuitionRates(String(academicYear), req.schoolId);
     res.json({
       message: 'Montants par niveau enregistrés',
       saved: saved.length,
@@ -135,9 +140,12 @@ router.put('/tuition-level-rates', async (req, res) => {
 
 // --- Catalogue de frais ---
 
-router.get('/tuition-fee-catalog', async (_req, res) => {
+router.get('/tuition-fee-catalog', async (req: SchoolContextRequest, res) => {
   try {
     const rows = await prisma.tuitionFeeCatalog.findMany({
+      where: req.schoolId
+        ? resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false)
+        : {},
       orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
       include: {
         class: { select: { id: true, name: true, level: true, academicYear: true } },
@@ -149,7 +157,7 @@ router.get('/tuition-fee-catalog', async (_req, res) => {
   }
 });
 
-router.post('/tuition-fee-catalog', async (req, res) => {
+router.post('/tuition-fee-catalog', async (req: SchoolContextRequest, res) => {
   try {
     const {
       label,
@@ -194,6 +202,7 @@ router.post('/tuition-fee-catalog', async (req, res) => {
         sortOrder: sortOrder != null ? Number(sortOrder) : 0,
         isActive: isActive !== false,
         scheduleTemplateId: scheduleTemplateId ? String(scheduleTemplateId) : null,
+        schoolId: req.schoolId ?? null,
       },
       include: {
         class: { select: { id: true, name: true, level: true } },
@@ -357,7 +366,11 @@ router.post('/student-scholarships', async (req, res) => {
         },
       },
     });
-    res.status(201).json(row);
+    const feesUpdated = await applyScholarshipsToExistingFees({
+      studentId: String(studentId),
+      academicYear: year,
+    });
+    res.status(201).json({ ...row, feesUpdated });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Erreur serveur';
     res.status(400).json({ error: msg });
@@ -382,7 +395,11 @@ router.put('/student-scholarships/:id', async (req, res) => {
         ...(isActive !== undefined && { isActive: Boolean(isActive) }),
       },
     });
-    res.json(row);
+    const feesUpdated = await applyScholarshipsToExistingFees({
+      studentId: row.studentId,
+      academicYear: row.academicYear,
+    });
+    res.json({ ...row, feesUpdated });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }

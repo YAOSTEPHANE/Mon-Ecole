@@ -11,6 +11,7 @@ export const parentFamilyPortalApi = {
     preferredLocale?: string | null;
     notifyEmail?: boolean;
     notifySms?: boolean;
+    notifyWhatsApp?: boolean;
     portalShowFees?: boolean;
     portalShowGrades?: boolean;
     portalShowAttendance?: boolean;

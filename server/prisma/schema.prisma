@@ -349,6 +349,8 @@ model User {
   phone     String?
   avatar    String?
   isActive  Boolean  @default(true)
+  /// Incrémenté à logout / reset mdp / désactivation — invalide les JWT antérieurs
+  tokenVersion Int   @default(0)
   /// Préférences interface (langue, thème, fuseau horaire, formats date/heure)
   uiPreferences Json?
   createdAt DateTime @default(now())
@@ -492,6 +494,7 @@ model DigitalLibraryDownloadGrant {
 
 model LibraryBook {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String?  @db.ObjectId
   isbn             String?
   title            String
   author           String
@@ -506,9 +509,11 @@ model LibraryBook {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  school        School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   loans         LibraryLoan[]
   reservations  LibraryReservation[]
 
+  @@index([schoolId])
   @@index([title])
   @@index([isbn])
   @@map("library_books")
@@ -631,6 +636,7 @@ enum MaterialRoomReservationStatus {
 
 model MaterialRoom {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String?  @db.ObjectId
   name        String
   code        String?
   building    String?
@@ -641,10 +647,12 @@ model MaterialRoom {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  school          School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   equipmentStored MaterialEquipment[]
   maintenance     MaterialMaintenance[]
   reservations    MaterialRoomReservation[]
 
+  @@index([schoolId])
   @@index([name])
   @@map("material_rooms")
 }
@@ -671,6 +679,7 @@ model MaterialRoomReservation {
 
 model MaterialEquipment {
   id            String                     @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String?                    @db.ObjectId
   roomId        String?                    @db.ObjectId
   name          String
   category      String
@@ -683,10 +692,12 @@ model MaterialEquipment {
   createdAt     DateTime                   @default(now())
   updatedAt     DateTime                   @updatedAt
 
+  school        School?              @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   room          MaterialRoom?        @relation(fields: [roomId], references: [id])
   maintenance   MaterialMaintenance[]
   allocations   MaterialAllocation[]
 
+  @@index([schoolId])
   @@index([category])
   @@index([name])
   @@map("material_equipment")
@@ -981,6 +992,42 @@ model TeacherLeave {
   @@map("teacher_leaves")
 }
 
+/// Congés / permissions éducateurs (miroir de TeacherLeave).
+model EducatorLeave {
+  id           String             @id @default(auto()) @map("_id") @db.ObjectId
+  educatorId   String             @db.ObjectId
+  educator     Educator           @relation(fields: [educatorId], references: [id])
+  type         TeacherLeaveType
+  status       TeacherLeaveStatus @default(PENDING)
+  startDate    DateTime
+  endDate      DateTime
+  reason       String?
+  adminComment String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([educatorId, status])
+  @@map("educator_leaves")
+}
+
+/// Congés / permissions personnel de soutien.
+model StaffLeave {
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  staffMemberId String             @db.ObjectId
+  staffMember   StaffMember        @relation(fields: [staffMemberId], references: [id])
+  type          TeacherLeaveType
+  status        TeacherLeaveStatus @default(PENDING)
+  startDate     DateTime
+  endDate       DateTime
+  reason        String?
+  adminComment  String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([staffMemberId, status])
+  @@map("staff_leaves")
+}
+
 model TeacherPerformanceReview {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   teacherId    String   @db.ObjectId
@@ -1094,6 +1141,8 @@ model Parent {
   preferredLocale      String?  @default("fr")
   notifyEmail          Boolean  @default(true)
   notifySms            Boolean  @default(false)
+  /// Opt-in relances WhatsApp (frais, absences…)
+  notifyWhatsApp       Boolean  @default(true)
   portalShowFees       Boolean  @default(true)
   portalShowGrades     Boolean  @default(true)
   portalShowAttendance Boolean  @default(true)
@@ -1198,6 +1247,7 @@ model Educator {
 
   user              User                      @relation(fields: [userId], references: [id])
   classAssignments  EducatorClassAssignment[]
+  leaves            EducatorLeave[]
 
   @@index([nfcId])
   @@map("educators")
@@ -1270,6 +1320,7 @@ model StaffMember {
   moduleRecords    StaffModuleRecord[]
   infirmaryVisits  InfirmaryVisit[]
   healthEmergenciesReported HealthEmergencyLog[] @relation("HealthEmergencyReporter")
+  leaves           StaffLeave[]
 
   /// Modules visibles dans l’espace STAFF (ids). Vide = défauts du métier (supportKind).
   visibleStaffModules String[] @default([])
@@ -1997,6 +2048,7 @@ model ClassCouncilSession {
 /// Versions du règlement intérieur (publication contrôlée par l’administration).
 model SchoolDisciplinaryRulebook {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String?   @db.ObjectId
   title         String    @default("Règlement intérieur")
   content       String
   academicYear  String?
@@ -2007,8 +2059,10 @@ model SchoolDisciplinaryRulebook {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  createdBy User? @relation("DisciplinaryRulebookAuthor", fields: [createdById], references: [id])
+  school    School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  createdBy User?   @relation("DisciplinaryRulebookAuthor", fields: [createdById], references: [id])
 
+  @@index([schoolId])
   @@index([isPublished, effectiveFrom])
   @@index([academicYear])
   @@map("school_disciplinary_rulebooks")
@@ -2017,6 +2071,7 @@ model SchoolDisciplinaryRulebook {
 /// Sanctions, exclusions, conseils de discipline, contrats de comportement — historique par élève.
 model StudentDisciplinaryRecord {
   id                         String                     @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId                   String?                    @db.ObjectId
   studentId                  String                     @db.ObjectId
   academicYear               String
   category                   DisciplinaryRecordCategory
@@ -2035,9 +2090,11 @@ model StudentDisciplinaryRecord {
   createdAt                  DateTime                   @default(now())
   updatedAt                  DateTime                   @updatedAt
 
+  school     School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   student    Student @relation(fields: [studentId], references: [id])
   recordedBy User    @relation("DisciplinaryRecordRecorder", fields: [recordedById], references: [id])
 
+  @@index([schoolId])
   @@index([studentId, incidentDate])
   @@index([studentId, academicYear])
   @@index([category])
@@ -2280,6 +2337,7 @@ model Message {
 model Announcement {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   authorId    String   @db.ObjectId
+  schoolId    String?  @db.ObjectId
   title       String
   content     String
   targetRole  Role?    // null = tous les rôles
@@ -2296,8 +2354,10 @@ model Announcement {
   updatedAt   DateTime @updatedAt
 
   author      User     @relation(fields: [authorId], references: [id])
+  school      School?  @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   targetClass Class?   @relation(fields: [targetClassId], references: [id])
 
+  @@index([schoolId])
   @@map("announcements")
 }
 
@@ -2450,6 +2510,7 @@ model TeacherAttendance {
 /// Barème / poste de frais réutilisable (niveau, classe, programme)
 model TuitionFeeCatalog {
   id               String                 @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String?                @db.ObjectId
   label            String
   academicYear     String?
   scope            TuitionFeeCatalogScope @default(BY_LEVEL)
@@ -2457,6 +2518,7 @@ model TuitionFeeCatalog {
   classLevel       String?
   classId          String?                @db.ObjectId
   class            Class?                 @relation(fields: [classId], references: [id])
+  school           School?                @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   /// Filière, option ou programme (texte libre)
   programLabel     String?
   feeType          SchoolFeeType          @default(TUITION)
@@ -2474,6 +2536,7 @@ model TuitionFeeCatalog {
 
   tuitionFees TuitionFee[]
 
+  @@index([schoolId])
   @@index([academicYear, scope, isActive])
   @@map("tuition_fee_catalog")
 }
@@ -2847,6 +2910,13 @@ model School {
   workspaces      AdminWorkspace[]
   branding        AppBranding?
   menaTransmissions MenaTransmission[]
+  announcements   Announcement[]
+  libraryBooks    LibraryBook[]
+  materialRooms   MaterialRoom[]
+  materialEquipment MaterialEquipment[]
+  disciplinaryRulebooks SchoolDisciplinaryRulebook[]
+  disciplinaryRecords   StudentDisciplinaryRecord[]
+  tuitionFeeCatalogs    TuitionFeeCatalog[]
 
   @@index([isActive])
   @@index([isDefault])
@@ -3571,6 +3641,10 @@ model MockExam {
   countsAsGrade   Boolean      @default(false)
   maxAttempts     Int          @default(2)
   passingScore    Float        @default(10)
+  /// Surveillance navigateur (onglets / plein écran)
+  proctoringEnabled  Boolean   @default(false)
+  requireFullscreen  Boolean   @default(false)
+  maxTabSwitches     Int?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -3616,6 +3690,10 @@ model MockExamAttempt {
   gradeId     String?   @db.ObjectId
   startedAt   DateTime  @default(now())
   submittedAt DateTime?
+  tabSwitchCount   Int      @default(0)
+  fullscreenExits  Int      @default(0)
+  proctoringFlags  String[] @default([])
+  integrityScore   Float?
 
   mockExam MockExam @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
   student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -3771,6 +3849,14 @@ model PublicVisitorEvent {
   @@map("public_visitor_events")
 }
 
+enum LeadPipelineStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
 model PublicContactLead {
   id               String            @id @default(auto()) @map("_id") @db.ObjectId
   publicVisitorId String?           @db.ObjectId
@@ -3784,9 +3870,17 @@ model PublicContactLead {
   message          String
 
   admissionReference String?
+  status           LeadPipelineStatus @default(NEW)
+  source           String?
+  assignedToId     String?            @db.ObjectId
+  lastContactedAt  DateTime?
+  tags             String[]           @default([])
   createdAt        DateTime         @default(now())
 
+  campaignRecipients CampaignRecipient[]
+
   @@index([schoolId, createdAt])
+  @@index([schoolId, status])
   @@map("public_contact_leads")
 }
 
@@ -3916,5 +4010,314 @@ model PublicHonorRollSetting {
   updatedAt    DateTime @updatedAt
 
   @@map("public_honor_roll_settings")
+}
+
+// ========== Écarts SI scolaire : alumni, parapheur, achats, CRM, LTI, patrimoine ==========
+
+model AlumniProfile {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String?  @db.ObjectId
+  studentId       String?  @db.ObjectId
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  graduationYear  Int?
+  currentJob      String?
+  company         String?
+  linkedInUrl     String?
+  notes           String?
+  newsletterOptIn Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  eventRegs AlumniEventRegistration[]
+  donations AlumniDonation[]
+
+  @@index([schoolId, graduationYear])
+  @@index([studentId])
+  @@map("alumni_profiles")
+}
+
+model AlumniEvent {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String?  @db.ObjectId
+  title       String
+  description String?
+  eventDate   DateTime
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations AlumniEventRegistration[]
+
+  @@index([schoolId, eventDate])
+  @@map("alumni_events")
+}
+
+model AlumniEventRegistration {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId         String   @db.ObjectId
+  alumniProfileId String   @db.ObjectId
+  status          String   @default("REGISTERED")
+  createdAt       DateTime @default(now())
+
+  event   AlumniEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  profile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, alumniProfileId])
+  @@map("alumni_event_registrations")
+}
+
+model AlumniDonation {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String?  @db.ObjectId
+  alumniProfileId String?  @db.ObjectId
+  amount          Float
+  currency        String   @default("XOF")
+  donatedAt       DateTime @default(now())
+  note            String?
+  createdAt       DateTime @default(now())
+
+  profile AlumniProfile? @relation(fields: [alumniProfileId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId, donatedAt])
+  @@map("alumni_donations")
+}
+
+enum SignatureDocType {
+  REPORT_CARD
+  CONTRACT
+  AUTHORIZATION
+  CERTIFICATE
+  OTHER
+}
+
+enum SignatureRequestStatus {
+  DRAFT
+  PENDING
+  SIGNED
+  CANCELLED
+  EXPIRED
+}
+
+model SignatureRequest {
+  id           String                 @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String?                @db.ObjectId
+  title        String
+  documentType SignatureDocType       @default(OTHER)
+  status       SignatureRequestStatus @default(DRAFT)
+  targetUserId String?                @db.ObjectId
+  studentId    String?                @db.ObjectId
+  fileUrl      String?
+  createdById  String                 @db.ObjectId
+  expiresAt    DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  actions SignatureAction[]
+
+  @@index([schoolId, status])
+  @@map("signature_requests")
+}
+
+model SignatureAction {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  requestId     String    @db.ObjectId
+  signerUserId  String    @db.ObjectId
+  signerRole    String?
+  signedAt      DateTime?
+  signatureData String?
+  ip            String?
+  status        String    @default("PENDING")
+
+  request SignatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([signerUserId])
+  @@map("signature_actions")
+}
+
+enum ProcurementStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+model ProcurementRequest {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String?           @db.ObjectId
+  title            String
+  description      String?
+  category         String?
+  estimatedAmount  Float?
+  status           ProcurementStatus @default(DRAFT)
+  requestedById    String            @db.ObjectId
+  approvedById     String?           @db.ObjectId
+  supplierId       String?           @db.ObjectId
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  bids ProcurementBid[]
+
+  @@index([schoolId, status])
+  @@map("procurement_requests")
+}
+
+model ProcurementBid {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  requestId   String   @db.ObjectId
+  vendorName  String
+  amount      Float
+  notes       String?
+  submittedAt DateTime @default(now())
+  selected    Boolean  @default(false)
+
+  request ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("procurement_bids")
+}
+
+enum MarketingChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  MIXED
+}
+
+enum MarketingCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  CANCELLED
+}
+
+model MarketingCampaign {
+  id             String                   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String?                  @db.ObjectId
+  name           String
+  channel        MarketingChannel         @default(EMAIL)
+  status         MarketingCampaignStatus  @default(DRAFT)
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  messageBody    String
+  audienceFilter Json?
+  stats          Json?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  recipients CampaignRecipient[]
+
+  @@index([schoolId, status])
+  @@map("marketing_campaigns")
+}
+
+model CampaignRecipient {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String    @db.ObjectId
+  leadId     String?   @db.ObjectId
+  parentId   String?   @db.ObjectId
+  status     String    @default("PENDING")
+  sentAt     DateTime?
+
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     PublicContactLead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@map("campaign_recipients")
+}
+
+model LtiPlatformConfig {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String?  @db.ObjectId
+  enabled       Boolean  @default(false)
+  issuer        String
+  clientId      String
+  deploymentId  String?
+  keysetUrl     String?
+  redirectUris  String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([schoolId])
+  @@map("lti_platform_configs")
+}
+
+model LtiLaunch {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String?  @db.ObjectId
+  userId         String?  @db.ObjectId
+  resourceLinkId String?
+  targetLinkUri  String?
+  launchedAt     DateTime @default(now())
+  rawClaims      Json?
+
+  @@index([schoolId, launchedAt])
+  @@map("lti_launches")
+}
+
+model ScormPackage {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String?  @db.ObjectId
+  title      String
+  version    String?  @default("1.2")
+  entryUrl   String
+  uploadedAt DateTime @default(now())
+  active     Boolean  @default(true)
+
+  @@index([schoolId, active])
+  @@map("scorm_packages")
+}
+
+enum EstateAssetCategory {
+  LAND
+  BUILDING
+  VEHICLE
+  FURNITURE
+  OTHER
+}
+
+model EstateBuilding {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String?  @db.ObjectId
+  name       String
+  code       String?
+  address    String?
+  floors     Int?
+  yearBuilt  Int?
+  areaSqm    Float?
+  notes      String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  assets EstateAsset[]
+
+  @@index([schoolId, active])
+  @@map("estate_buildings")
+}
+
+model EstateAsset {
+  id              String              @id @default(auto()) @map("_id") @db.ObjectId
+  buildingId      String?             @db.ObjectId
+  schoolId        String?             @db.ObjectId
+  name            String
+  category        EstateAssetCategory @default(OTHER)
+  value           Float?
+  acquisitionDate DateTime?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  building EstateBuilding? @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId])
+  @@index([buildingId])
+  @@map("estate_assets")
 }
 

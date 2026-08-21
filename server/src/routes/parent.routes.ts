@@ -921,6 +921,68 @@ router.get('/children/:studentId/absences', async (req: AuthRequest, res) => {
   }
 });
 
+/** Parent : déposer un justificatif sur une absence déjà pointée (validation staff ensuite). */
+router.put(
+  '/children/:studentId/absences/:absenceId/justify',
+  [
+    body('documentUrl').isString().trim().notEmpty(),
+    body('reason').optional().isString().isLength({ max: 2000 }),
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { studentId, absenceId } = req.params;
+      const parentId = await getParentIdForUser(req.user!.id);
+      if (!parentId) {
+        return res.status(403).json({ error: 'Profil parent introuvable' });
+      }
+      await assertParentOwnsStudent(parentId, studentId);
+
+      const absence = await prisma.absence.findFirst({
+        where: { id: absenceId, studentId },
+      });
+      if (!absence) {
+        return res.status(404).json({ error: 'Absence non trouvée ou non autorisée' });
+      }
+
+      const documentUrl = String(req.body.documentUrl).trim();
+      const reason =
+        typeof req.body.reason === 'string' && req.body.reason.trim()
+          ? req.body.reason.trim()
+          : undefined;
+      const existingDocuments = absence.justificationDocuments || [];
+
+      const updatedAbsence = await prisma.absence.update({
+        where: { id: absenceId },
+        data: {
+          justificationDocuments: [...existingDocuments, documentUrl],
+          ...(reason ? { reason } : {}),
+          justificationSubmittedAt: new Date(),
+        },
+        include: {
+          course: true,
+          teacher: {
+            include: {
+              user: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      });
+
+      res.json(updatedAbsence);
+    } catch (error: unknown) {
+      const statusCode = (error as { statusCode?: number })?.statusCode ?? 500;
+      res.status(statusCode).json({
+        error: error instanceof Error ? error.message : 'Erreur serveur',
+      });
+    }
+  },
+);
+
 router.get('/children/:studentId/daily-presence', async (req: AuthRequest, res) => {
   try {
     const { studentId } = req.params;
@@ -1023,10 +1085,20 @@ router.get('/children/:studentId/reenrollment-options', async (req: AuthRequest,
       return res.status(404).json({ error: 'Élève non trouvé' });
     }
     const classes = await listClassesForReenrollment(student.schoolId);
+    const { getNextAcademicYear } = await import('../utils/school-level-progression.util');
+    const { getCurrentAcademicYear } = await import('../utils/report-card.util');
+    const { resolveTargetYearClassesHint } = await import('../utils/promotion-reenrollment-guard.util');
+    const targetAcademicYear = getNextAcademicYear(getCurrentAcademicYear());
+    const promotionHint = await resolveTargetYearClassesHint({
+      studentId: student.id,
+      targetAcademicYear,
+    });
     res.json({
       studentId: student.id,
       enrollmentStatus: student.enrollmentStatus,
       currentClassId: student.classId,
+      targetAcademicYear,
+      promotionHint,
       classes,
     });
   } catch (error: unknown) {
@@ -2855,6 +2927,7 @@ router.put('/my-profile', async (req: AuthRequest, res) => {
       preferredLocale,
       notifyEmail,
       notifySms,
+      notifyWhatsApp,
       portalShowFees,
       portalShowGrades,
       portalShowAttendance,
@@ -2869,6 +2942,7 @@ router.put('/my-profile', async (req: AuthRequest, res) => {
         }),
         ...(notifyEmail !== undefined && { notifyEmail: Boolean(notifyEmail) }),
         ...(notifySms !== undefined && { notifySms: Boolean(notifySms) }),
+        ...(notifyWhatsApp !== undefined && { notifyWhatsApp: Boolean(notifyWhatsApp) }),
         ...(portalShowFees !== undefined && { portalShowFees: Boolean(portalShowFees) }),
         ...(portalShowGrades !== undefined && { portalShowGrades: Boolean(portalShowGrades) }),
         ...(portalShowAttendance !== undefined && {

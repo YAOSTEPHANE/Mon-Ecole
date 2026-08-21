@@ -302,7 +302,7 @@ router.post('/exchange', authLoginLimiter, async (req, res) => {
     }
 
     res.setHeader('Cache-Control', 'no-store');
-    const token = generateToken(user.id, user.email, user.role);
+    const token = generateToken(user.id, user.email, user.role, user.tokenVersion ?? 0);
     setAuthSessionCookie(res, token);
     return res.json({ token });
   } catch (e) {

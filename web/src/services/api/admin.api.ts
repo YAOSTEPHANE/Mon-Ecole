@@ -312,6 +312,30 @@ export const adminApi = {
     const response = await api.get('/admin/hr/teacher-leaves', { params });
     return response.data;
   },
+  getHrEducatorLeaves: async (params?: { status?: string }) => {
+    const response = await api.get('/admin/hr/educator-leaves', { params });
+    return response.data;
+  },
+  getHrStaffLeaves: async (params?: { status?: string }) => {
+    const response = await api.get('/admin/hr/staff-leaves', { params });
+    return response.data;
+  },
+  updateEducatorLeaveStatus: async (
+    educatorId: string,
+    leaveId: string,
+    data: { status: 'APPROVED' | 'REJECTED'; adminComment?: string | null }
+  ) => {
+    const response = await api.put(`/admin/educators/${educatorId}/leaves/${leaveId}`, data);
+    return response.data;
+  },
+  updateStaffLeaveStatus: async (
+    staffId: string,
+    leaveId: string,
+    data: { status: 'APPROVED' | 'REJECTED'; adminComment?: string | null }
+  ) => {
+    const response = await api.put(`/admin/staff/${staffId}/leaves/${leaveId}`, data);
+    return response.data;
+  },
   /** Vue RH : toutes les fiches d’évaluation */
   getHrTeacherPerformanceReviews: async () => {
     const response = await api.get('/admin/hr/teacher-performance-reviews');
@@ -432,9 +456,25 @@ export const adminApi = {
       approvedClassId?: string;
       adminComment?: string;
       effectiveDate?: string;
+      allowPromotionOverride?: boolean;
     }
   ) => {
     const response = await api.patch(`/admin/reenrollment-requests/${id}`, data);
+    return response.data;
+  },
+  previewClassYearRollover: async (params?: {
+    fromAcademicYear?: string;
+    toAcademicYear?: string;
+  }) => {
+    const response = await api.get('/admin/classes/rollover/preview', { params });
+    return response.data;
+  },
+  applyClassYearRollover: async (data: {
+    fromAcademicYear?: string;
+    toAcademicYear?: string;
+    copyTeacherAssignments?: boolean;
+  }) => {
+    const response = await api.post('/admin/classes/rollover', data);
     return response.data;
   },
   getAllAssignments: async (params?: { courseId?: string; classId?: string }) => {
@@ -2174,6 +2214,124 @@ export const adminApi = {
   getLtiConfig: async () => {
     const response = await api.get('/admin/integrations/lti/config');
     return response.data;
+  },
+  putLtiConfig: async (data: {
+    issuer: string;
+    clientId: string;
+    deploymentId?: string;
+    keysetUrl?: string;
+    enabled?: boolean;
+    redirectUris?: string[];
+  }) => {
+    const response = await api.put('/admin/lti/config', data);
+    return response.data;
+  },
+  getScormPackages: async () => {
+    const response = await api.get('/admin/scorm/packages');
+    return response.data;
+  },
+  createScormPackage: async (data: { title: string; entryUrl: string; version?: string }) => {
+    const response = await api.post('/admin/scorm/packages', data);
+    return response.data;
+  },
+  getAlumniProfiles: async () => {
+    const response = await api.get('/admin/alumni/profiles');
+    return response.data;
+  },
+  createAlumniProfile: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/alumni/profiles', data);
+    return response.data;
+  },
+  syncAlumniFromGraduated: async () => {
+    const response = await api.post('/admin/alumni/profiles/sync-graduated');
+    return response.data;
+  },
+  getAlumniEvents: async () => {
+    const response = await api.get('/admin/alumni/events');
+    return response.data;
+  },
+  createAlumniEvent: async (data: { title: string; eventDate: string; location?: string; description?: string }) => {
+    const response = await api.post('/admin/alumni/events', data);
+    return response.data;
+  },
+  getAlumniDonations: async () => {
+    const response = await api.get('/admin/alumni/donations');
+    return response.data;
+  },
+  createAlumniDonation: async (data: { amount: number; note?: string; alumniProfileId?: string; currency?: string }) => {
+    const response = await api.post('/admin/alumni/donations', data);
+    return response.data;
+  },
+  getSignatureRequests: async () => {
+    const response = await api.get('/admin/esignature/requests');
+    return response.data;
+  },
+  createSignatureRequest: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/esignature/requests', data);
+    return response.data;
+  },
+  signSignatureRequest: async (id: string, signatureData: string) => {
+    const response = await api.post(`/admin/esignature/requests/${id}/sign`, { signatureData });
+    return response.data;
+  },
+  getProcurementRequests: async () => {
+    const response = await api.get('/admin/procurement/requests');
+    return response.data;
+  },
+  createProcurementRequest: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/procurement/requests', data);
+    return response.data;
+  },
+  updateProcurementStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/admin/procurement/requests/${id}/status`, { status });
+    return response.data;
+  },
+  addProcurementBid: async (id: string, data: { vendorName: string; amount: number; notes?: string }) => {
+    const response = await api.post(`/admin/procurement/requests/${id}/bids`, data);
+    return response.data;
+  },
+  selectProcurementBid: async (id: string, bidId: string) => {
+    const response = await api.post(`/admin/procurement/requests/${id}/select-bid`, { bidId });
+    return response.data;
+  },
+  getMarketingCampaigns: async () => {
+    const response = await api.get('/admin/marketing/campaigns');
+    return response.data;
+  },
+  createMarketingCampaign: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/marketing/campaigns', data);
+    return response.data;
+  },
+  sendMarketingCampaign: async (id: string) => {
+    const response = await api.post(`/admin/marketing/campaigns/${id}/send`);
+    return response.data;
+  },
+  patchMarketingLead: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/admin/marketing/leads/${id}`, data);
+    return response.data;
+  },
+  getEstateBuildings: async () => {
+    const response = await api.get('/admin/estate/buildings');
+    return response.data;
+  },
+  createEstateBuilding: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/estate/buildings', data);
+    return response.data;
+  },
+  createEstateAsset: async (data: Record<string, unknown>) => {
+    const response = await api.post('/admin/estate/assets', data);
+    return response.data;
+  },
+  getGamificationLeaderboard: async () => {
+    const response = await api.get('/admin/gamification/leaderboard');
+    return response.data;
+  },
+  getInspectionExport: async (params?: { academicYear?: string }) => {
+    const response = await api.get('/admin/reports/inspection-export', { params });
+    return response.data as {
+      generatedAt: string;
+      files: Array<{ name: string; contentType: string; content: string }>;
+    };
   },
   getTransportTracking: async (routeId: string, params?: { limit?: number }) => {
     const response = await api.get(`/admin/campus/transport/routes/${routeId}/tracking`, { params });

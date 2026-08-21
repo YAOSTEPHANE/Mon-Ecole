@@ -53,11 +53,34 @@ export async function fetchAnnouncementsForPortal(
   const uniqClasses = [...new Set(classIds.filter(Boolean))];
   const classClauses = uniqClasses.map((id) => ({ targetClassId: id }));
 
+  let schoolScope: { OR: Array<{ schoolId: string | null } | { schoolId: { isSet: false } } | { schoolId: { in: string[] } }> } | undefined;
+  if (uniqClasses.length > 0) {
+    const classes = await prisma.class.findMany({
+      where: { id: { in: uniqClasses } },
+      select: { schoolId: true },
+    });
+    const schoolIds = [
+      ...new Set(classes.map((c) => c.schoolId).filter((id): id is string => Boolean(id))),
+    ];
+    if (schoolIds.length > 0) {
+      schoolScope = {
+        OR: [
+          { schoolId: { in: schoolIds } },
+          { schoolId: null },
+          { schoolId: { isSet: false } },
+        ],
+      };
+    }
+  }
+
   return prisma.announcement.findMany({
     where: {
       published: true,
       OR: [{ targetRole: role }, { targetRole: null }, ...classClauses],
-      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }] }],
+      AND: [
+        { OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }] },
+        ...(schoolScope ? [schoolScope] : []),
+      ],
     },
     include: ANNOUNCEMENT_INCLUDE,
     orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],

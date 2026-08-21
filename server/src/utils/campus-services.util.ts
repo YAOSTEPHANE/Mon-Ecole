@@ -1,6 +1,10 @@
 import type { Prisma } from '@prisma/client';
 import prisma from './prisma';
 import { notifyParentsForStudent } from './parent-notify.util';
+import {
+  billCanteenSubscriptionNow,
+  billTransportSubscriptionNow,
+} from './campus-billing.util';
 
 export async function subscribeStudentToCanteen(studentId: string, planId: string) {
   const plan = await prisma.canteenMealPlan.findFirst({
@@ -21,6 +25,15 @@ export async function subscribeStudentToCanteen(studentId: string, planId: strin
     include: { plan: true },
   });
 
+  let billing: 'created' | 'skipped' | null = null;
+  if (status === 'ACTIVE') {
+    try {
+      billing = await billCanteenSubscriptionNow(row.id);
+    } catch (e) {
+      console.error('bill canteen on subscribe:', e);
+    }
+  }
+
   try {
     await notifyParentsForStudent(studentId, {
       type: 'GENERAL',
@@ -32,7 +45,7 @@ export async function subscribeStudentToCanteen(studentId: string, planId: strin
     console.error('notify canteen:', e);
   }
 
-  return { subscription: row, status };
+  return { subscription: row, status, billing };
 }
 
 export async function subscribeStudentToTransport(studentId: string, routeId: string, stopLabel?: string) {
@@ -61,6 +74,15 @@ export async function subscribeStudentToTransport(studentId: string, routeId: st
     include: { route: true },
   });
 
+  let billing: 'created' | 'skipped' | null = null;
+  if (status === 'ACTIVE') {
+    try {
+      billing = await billTransportSubscriptionNow(row.id);
+    } catch (e) {
+      console.error('bill transport on subscribe:', e);
+    }
+  }
+
   try {
     await notifyParentsForStudent(studentId, {
       type: 'GENERAL',
@@ -72,7 +94,7 @@ export async function subscribeStudentToTransport(studentId: string, routeId: st
     console.error('notify transport:', e);
   }
 
-  return { subscription: row, status };
+  return { subscription: row, status, billing };
 }
 
 export type CampusPlanWhere = Prisma.CanteenMealPlanWhereInput;

@@ -367,7 +367,20 @@ router.post('/class-councils/:id/finalize', async (req, res) => {
       where: { id: req.params.id },
       data: { status: 'FINALIZED' },
     });
-    res.json(updated);
+    const authReq = req as import('../middleware/auth.middleware').AuthRequest;
+    let promotionSync: { synced: number; skipped: number } | null = null;
+    try {
+      const { syncPromotionDecisionsFromClassCouncil } = await import(
+        '../utils/class-council-promotion-sync.util'
+      );
+      promotionSync = await syncPromotionDecisionsFromClassCouncil(
+        req.params.id,
+        authReq.user?.id,
+      );
+    } catch (syncErr) {
+      console.error('syncPromotionDecisionsFromClassCouncil:', syncErr);
+    }
+    res.json({ ...updated, promotionSync });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }

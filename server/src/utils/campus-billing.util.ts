@@ -13,7 +13,7 @@ function addMonths(date: Date, months: number): Date {
   return d;
 }
 
-async function createCampusTuitionFee(params: {
+export async function createCampusTuitionFee(params: {
   studentId: string;
   academicYear: string;
   amount: number;
@@ -136,4 +136,42 @@ export async function billAllCampusServices(options?: {
   const canteen = await billActiveCanteenSubscriptions(options);
   const transport = await billActiveTransportSubscriptions(options);
   return { canteen, transport };
+}
+
+/** Émet une ligne de frais dès qu’un abonnement cantine devient ACTIVE. */
+export async function billCanteenSubscriptionNow(subscriptionId: string): Promise<'created' | 'skipped'> {
+  const sub = await prisma.canteenSubscription.findUnique({
+    where: { id: subscriptionId },
+    include: { plan: true },
+  });
+  if (!sub || sub.status !== 'ACTIVE' || sub.plan.priceAmount <= 0) return 'skipped';
+  const dueDate = addMonths(new Date(), 1);
+  const label = `Cantine — ${sub.plan.name} (${sub.plan.academicYear})`;
+  return createCampusTuitionFee({
+    studentId: sub.studentId,
+    academicYear: sub.plan.academicYear,
+    amount: sub.plan.priceAmount,
+    feeType: 'CANTEEN',
+    label,
+    dueDate,
+  });
+}
+
+/** Émet une ligne de frais dès qu’un abonnement transport devient ACTIVE. */
+export async function billTransportSubscriptionNow(subscriptionId: string): Promise<'created' | 'skipped'> {
+  const sub = await prisma.transportSubscription.findUnique({
+    where: { id: subscriptionId },
+    include: { route: true },
+  });
+  if (!sub || sub.status !== 'ACTIVE' || sub.route.priceAmount <= 0) return 'skipped';
+  const dueDate = addMonths(new Date(), 1);
+  const label = `Transport — ${sub.route.name} (${sub.route.academicYear})`;
+  return createCampusTuitionFee({
+    studentId: sub.studentId,
+    academicYear: sub.route.academicYear,
+    amount: sub.route.priceAmount,
+    feeType: 'TRANSPORT',
+    label,
+    dueDate,
+  });
 }

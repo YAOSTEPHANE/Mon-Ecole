@@ -138,10 +138,24 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
 
   const autoRemindersMut = useMutation({
     mutationFn: () => adminApi.runTuitionFeeAutoReminders(),
-    onSuccess: (data: { notified?: number; message?: string }) => {
+    onSuccess: (data: {
+      notified?: number;
+      notifiedFees?: number;
+      smsSent?: number;
+      whatsappSent?: number;
+      message?: string;
+    }) => {
+      const n = data?.notifiedFees ?? data?.notified;
+      const channels = [
+        typeof data?.smsSent === 'number' ? `${data.smsSent} SMS` : null,
+        typeof data?.whatsappSent === 'number' ? `${data.whatsappSent} WhatsApp` : null,
+      ]
+        .filter(Boolean)
+        .join(', ');
       toast.success(
         data?.message ||
-          `Relances automatiques lancées${typeof data?.notified === 'number' ? ` (${data.notified})` : ''}`,
+          `Relances auto : ${typeof n === 'number' ? n : 'OK'} frais` +
+            (channels ? ` (${channels})` : ''),
       );
       void qc.invalidateQueries({ queryKey: ['admin-tuition-fees-reminders'] });
     },
@@ -209,7 +223,12 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
             size="sm"
             disabled={autoRemindersMut.isPending}
             onClick={() => {
-              if (!window.confirm('Lancer les relances automatiques (notifications / e-mail) ?')) return;
+              if (
+                !window.confirm(
+                  'Lancer les relances automatiques (notification in-app + WhatsApp, et SMS si activé) ?',
+                )
+              )
+                return;
               autoRemindersMut.mutate();
             }}
           >
@@ -223,8 +242,10 @@ const PaymentRemindersPanel: React.FC<PaymentRemindersPanelProps> = ({ compact =
         <div className="flex items-start gap-3">
           <FiAlertTriangle className={`mt-0.5 shrink-0 text-amber-700 ${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
           <p className={compact ? 'text-xs leading-relaxed text-amber-900' : 'text-sm text-amber-900'}>
-            Les relances automatiques restent disponibles depuis « Gestion des frais ». Ici, chaque ligne ouvre
-            directement WhatsApp ou le client mail avec le message prérempli.
+            Relances serveur : notification + WhatsApp (si numéro parent) ; SMS si{' '}
+            <code className="rounded bg-amber-100 px-1">TUITION_REMINDER_SMS=true</code>. Chaque ligne permet
+            aussi un envoi manuel WhatsApp / e-mail. Désactiver WhatsApp auto :{' '}
+            <code className="rounded bg-amber-100 px-1">TUITION_REMINDER_WHATSAPP=false</code>.
           </p>
         </div>
       </Card>

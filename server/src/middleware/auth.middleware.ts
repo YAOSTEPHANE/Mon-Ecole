@@ -42,11 +42,16 @@ export const authenticate = async (
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true, isActive: true },
+      select: { id: true, email: true, role: true, isActive: true, tokenVersion: true },
     });
 
     if (!user || !user.isActive) {
       return res.status(401).json({ error: 'Utilisateur non autorisé' });
+    }
+
+    const dbVersion = user.tokenVersion ?? 0;
+    if (decoded.tokenVersion !== dbVersion) {
+      return res.status(401).json({ error: 'Session révoquée. Reconnectez-vous.' });
     }
 
     req.user = {

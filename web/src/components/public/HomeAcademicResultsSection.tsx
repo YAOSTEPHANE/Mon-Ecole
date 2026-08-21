@@ -90,44 +90,59 @@ export default function HomeAcademicResultsSection() {
               <p className="mx-auto mt-2 max-w-xl text-center text-sm text-stone-500">
                 Premier de chaque niveau (6ᵉ à Terminale).
               </p>
-              <div className="mt-8 grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+
+              <ul className="mt-10 flex snap-x snap-mandatory gap-6 overflow-x-auto px-1 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:snap-none sm:grid-cols-3 sm:gap-x-5 sm:gap-y-10 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 xl:grid-cols-7 [&::-webkit-scrollbar]:hidden">
                 {honorStudents.map((student) => {
                   const fullName = `${student.firstName} ${student.lastName}`;
                   return (
-                    <article key={student.classId} className="flex flex-col items-center gap-4 text-center">
-                      <div className="h-40 w-40 overflow-hidden rounded-full bg-stone-100 shadow-md sm:h-44 sm:w-44">
-                        {student.photoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={student.photoUrl}
-                            alt={`Portrait de ${fullName}`}
-                            className="h-full w-full object-cover object-[center_18%]"
+                    <li key={student.classId} className="w-[10.5rem] shrink-0 snap-center sm:w-auto">
+                      <article className="group flex flex-col items-center text-center">
+                        <div className="relative">
+                          <div
+                            className="absolute -inset-1 rounded-full bg-gradient-to-br from-tran-mustard-300 via-tran-mustard-500/90 to-tran-mauve-900 opacity-95 shadow-[0_10px_28px_-10px_rgba(28,39,76,0.45)] transition duration-500 group-hover:opacity-100"
+                            aria-hidden
                           />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-tran-mauve-900 to-tran-mustard-800 font-display text-3xl font-bold text-white">
-                            {initials(student.firstName, student.lastName)}
+                          <div className="relative h-40 w-40 overflow-hidden rounded-full bg-stone-200 ring-[3px] ring-white transition-transform duration-500 ease-out motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:scale-[1.04] sm:h-44 sm:w-44">
+                            {student.photoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={student.photoUrl}
+                                alt={`Portrait de ${fullName}`}
+                                className="h-full w-full object-cover object-center transition-transform duration-700 ease-out motion-safe:group-hover:scale-110"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-tran-mauve-900 to-tran-mustard-800 font-display text-3xl font-bold text-white">
+                                {initials(student.firstName, student.lastName)}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-display text-base font-semibold leading-snug text-stone-900">
-                          {fullName}
-                        </p>
-                        <p className="mt-2 text-xs text-stone-600">
-                          <span className="font-semibold text-stone-800">Classe</span> · {student.className}
-                        </p>
-                        <p className="mt-0.5 text-xs text-stone-600">
-                          <span className="font-semibold text-stone-800">Niveau</span> · {student.classLevel}
-                        </p>
-                        <p className="mt-2 inline-flex items-center gap-1 text-sm font-bold tabular-nums text-tran-mustard-800">
-                          <FiStar className="h-3.5 w-3.5" aria-hidden />
-                          {Number(student.average).toFixed(2)}/20
-                        </p>
-                      </div>
-                    </article>
+                          <span className="absolute -bottom-1 left-1/2 z-10 -translate-x-1/2 rounded-full border border-tran-mustard-300/70 bg-tran-mauve-950 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-tran-mustard-200 shadow-md">
+                            1<sup className="normal-case">er</sup>
+                          </span>
+                        </div>
+
+                        <div className="mt-5">
+                          <p className="font-display text-base font-semibold leading-snug text-stone-900">
+                            {fullName}
+                          </p>
+                          <p className="mt-1.5 text-xs text-stone-500">
+                            {student.className}
+                            <span className="mx-1 text-stone-300" aria-hidden>
+                              ·
+                            </span>
+                            {student.classLevel}
+                          </p>
+                          <p className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-tran-mustard-50 px-2.5 py-1 text-sm font-bold tabular-nums text-tran-mustard-900 ring-1 ring-tran-mustard-200/70">
+                            <FiStar className="h-3.5 w-3.5 text-tran-mustard-600" aria-hidden />
+                            {Number(student.average).toFixed(2)}
+                            <span className="text-xs font-semibold text-tran-mustard-700/80">/20</span>
+                          </p>
+                        </div>
+                      </article>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </div>
           ) : null}
         </div>

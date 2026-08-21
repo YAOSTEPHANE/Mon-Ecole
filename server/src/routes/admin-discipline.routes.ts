@@ -2,7 +2,10 @@ import express from 'express';
 import type { DisciplinaryRecordCategory, Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { notifyUsersImportant } from '../utils/notify-important.util';
-import type { AuthRequest } from '../middleware/auth.middleware';
+import {
+  resourceSchoolScopeWhere,
+  type SchoolContextRequest,
+} from '../utils/school-context.util';
 
 const router = express.Router();
 
@@ -41,9 +44,12 @@ function parseCategory(raw: unknown): DisciplinaryRecordCategory | null {
 
 // --- Règlement intérieur ---
 
-router.get('/discipline/rulebooks', async (_req, res) => {
+router.get('/discipline/rulebooks', async (req: SchoolContextRequest, res) => {
   try {
     const rows = await prisma.schoolDisciplinaryRulebook.findMany({
+      where: req.schoolId
+        ? resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false)
+        : {},
       orderBy: [{ sortOrder: 'asc' }, { effectiveFrom: 'desc' }],
       include: {
         createdBy: { select: { id: true, firstName: true, lastName: true } },
@@ -56,7 +62,7 @@ router.get('/discipline/rulebooks', async (_req, res) => {
   }
 });
 
-router.post('/discipline/rulebooks', async (req: AuthRequest, res) => {
+router.post('/discipline/rulebooks', async (req: SchoolContextRequest, res) => {
   try {
     const adminId = req.user!.id;
     const {
@@ -83,6 +89,7 @@ router.post('/discipline/rulebooks', async (req: AuthRequest, res) => {
         isPublished: Boolean(isPublished),
         sortOrder: Math.max(0, parseInt(String(sortOrder ?? '0'), 10) || 0),
         createdById: adminId,
+        schoolId: req.schoolId ?? null,
       },
       include: {
         createdBy: { select: { id: true, firstName: true, lastName: true } },
@@ -155,7 +162,7 @@ router.delete('/discipline/rulebooks/:id', async (req, res) => {
 
 // --- Actes disciplinaires ---
 
-router.get('/discipline/records', async (req, res) => {
+router.get('/discipline/records', async (req: SchoolContextRequest, res) => {
   try {
     const {
       studentId,
@@ -169,7 +176,11 @@ router.get('/discipline/records', async (req, res) => {
     const take = Math.min(200, Math.max(1, parseInt(String(limRaw ?? '50'), 10) || 50));
     const skip = Math.max(0, parseInt(String(offRaw ?? '0'), 10) || 0);
 
-    const where: Prisma.StudentDisciplinaryRecordWhereInput = {};
+    const where: Prisma.StudentDisciplinaryRecordWhereInput = {
+      ...(req.schoolId
+        ? resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false)
+        : {}),
+    };
     if (typeof studentId === 'string' && studentId) where.studentId = studentId;
     if (typeof academicYear === 'string' && academicYear) where.academicYear = academicYear;
     const cat = typeof category === 'string' ? parseCategory(category) : null;
@@ -196,7 +207,7 @@ router.get('/discipline/records', async (req, res) => {
   }
 });
 
-router.post('/discipline/records', async (req: AuthRequest, res) => {
+router.post('/discipline/records', async (req: SchoolContextRequest, res) => {
   try {
     const adminId = req.user!.id;
     const body = req.body as Record<string, unknown>;
@@ -211,7 +222,10 @@ router.post('/discipline/records', async (req: AuthRequest, res) => {
       });
     }
 
-    const st = await prisma.student.findUnique({ where: { id: studentId }, select: { id: true } });
+    const st = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, schoolId: true },
+    });
     if (!st) return res.status(404).json({ error: 'Élève introuvable.' });
 
     const description =
@@ -294,6 +308,7 @@ router.post('/discipline/records', async (req: AuthRequest, res) => {
         behaviorContractStatus: category === 'BEHAVIOR_CONTRACT' ? (behaviorContractStatus ?? 'ACTIVE') : null,
         parentNotifiedAt: notifyParents ? new Date() : null,
         recordedById: adminId,
+        schoolId: req.schoolId ?? st.schoolId ?? null,
       },
       include: recordInclude,
     });

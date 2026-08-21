@@ -274,6 +274,26 @@ router.post(
   }
 );
 
-
+/** Expire les dossiers WAITLIST trop anciens (manuel ou cron). */
+router.post('/admissions/expire-waitlist', async (req: SchoolContextRequest, res) => {
+  try {
+    const maxAgeDays =
+      typeof req.body?.maxAgeDays === 'number' && req.body.maxAgeDays > 0
+        ? Math.floor(req.body.maxAgeDays)
+        : undefined;
+    const { expireStaleWaitlistAdmissions } = await import('../utils/waitlist-expiration.util');
+    const result = await expireStaleWaitlistAdmissions({
+      maxAgeDays,
+      schoolId: req.schoolId,
+    });
+    res.json({
+      ...result,
+      message: `${result.expired} dossier(s) en liste d’attente expirés (> ${result.maxAgeDays} j).`,
+    });
+  } catch (error: unknown) {
+    console.error('POST /admissions/expire-waitlist:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
 
 export default router;

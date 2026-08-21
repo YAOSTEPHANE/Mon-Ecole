@@ -73,6 +73,18 @@ export const parentApi = {
     const response = await api.get(`/parent/children/${studentId}/absences`);
     return response.data;
   },
+  justifyChildAbsence: async (
+    studentId: string,
+    absenceId: string,
+    documentUrl: string,
+    reason?: string,
+  ) => {
+    const response = await api.put(`/parent/children/${studentId}/absences/${absenceId}/justify`, {
+      documentUrl,
+      reason,
+    });
+    return response.data;
+  },
   getChildDailyPresence: async (studentId: string, params?: { limit?: number }) => {
     const response = await api.get(`/parent/children/${studentId}/daily-presence`, { params });
     return response.data;

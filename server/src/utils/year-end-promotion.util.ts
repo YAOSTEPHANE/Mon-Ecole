@@ -5,6 +5,11 @@ import {
   gradePeriodWhere,
 } from './report-card.util';
 import { notifyParentsForStudent } from './parent-notify.util';
+import {
+  getNextAcademicYear,
+  getNextSchoolLevel,
+} from './school-level-progression.util';
+import { suggestDestinationClassForPromotion } from './promotion-reenrollment-guard.util';
 
 export type PromotionDecisionKind = 'ADMIS' | 'DOUBLANT';
 
@@ -21,12 +26,17 @@ export type PromotionPreviewRow = {
   gradeCount: number;
   decision: PromotionDecisionKind | 'SANS_NOTES';
   previousDecision?: PromotionDecisionKind | null;
+  /** Niveau attendu l’année suivante (null = fin de cycle si Admis Terminale). */
+  suggestedNextLevel?: string | null;
+  suggestedTargetClassId?: string | null;
+  suggestedTargetClassName?: string | null;
 };
 
 export type PromotionClassGroup = {
   classId: string;
   className: string;
   classLevel: string | null;
+  nextLevel: string | null;
   admis: PromotionPreviewRow[];
   doublants: PromotionPreviewRow[];
   sansNotes: PromotionPreviewRow[];
@@ -57,6 +67,7 @@ export async function previewPromotionDecisions(opts: {
   threshold?: number;
 }): Promise<{
   academicYear: string;
+  nextAcademicYear: string;
   period: string;
   periodLabel: string;
   threshold: number;
@@ -66,6 +77,7 @@ export async function previewPromotionDecisions(opts: {
   const period = opts.period || DEFAULT_PERIOD;
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
   const periodLabel = getPeriodLabel(period);
+  const nextAcademicYear = getNextAcademicYear(opts.academicYear);
 
   const classes = await prisma.class.findMany({
     where: {
@@ -73,7 +85,7 @@ export async function previewPromotionDecisions(opts: {
       ...(opts.classId ? { id: opts.classId } : {}),
       ...(opts.schoolId ? { schoolId: opts.schoolId } : {}),
     },
-    select: { id: true, name: true, level: true },
+    select: { id: true, name: true, level: true, schoolId: true },
     orderBy: [{ level: 'asc' }, { name: 'asc' }],
   });
 
@@ -117,12 +129,29 @@ export async function previewPromotionDecisions(opts: {
     );
     const countById = new Map(gradeCounts);
 
-    const previewRows: PromotionPreviewRow[] = students.map((s) => {
+    const previewRows: PromotionPreviewRow[] = [];
+    for (const s of students) {
       const rankRow = avgById.get(s.id);
       const average = rankRow?.average ?? 0;
       const gradeCount = countById.get(s.id) ?? 0;
       const decision = decide(average, gradeCount, threshold);
-      return {
+      let suggestedNextLevel: string | null = null;
+      let suggestedTargetClassId: string | null = null;
+      let suggestedTargetClassName: string | null = null;
+      if (decision === 'ADMIS' || decision === 'DOUBLANT') {
+        const hint = await suggestDestinationClassForPromotion({
+          sourceClassId: cls.id,
+          sourceClassName: cls.name,
+          sourceLevel: cls.level,
+          decision,
+          targetAcademicYear: nextAcademicYear,
+          schoolId: cls.schoolId ?? opts.schoolId,
+        });
+        suggestedNextLevel = hint.expectedLevel;
+        suggestedTargetClassId = hint.suggestion?.id ?? null;
+        suggestedTargetClassName = hint.suggestion?.name ?? null;
+      }
+      previewRows.push({
         studentId: s.id,
         studentCode: s.studentId,
         firstName: s.user.firstName,
@@ -135,8 +164,11 @@ export async function previewPromotionDecisions(opts: {
         gradeCount,
         decision,
         previousDecision: prevByStudent.get(s.id) ?? null,
-      };
-    });
+        suggestedNextLevel,
+        suggestedTargetClassId,
+        suggestedTargetClassName,
+      });
+    }
 
     previewRows.sort((a, b) => {
       if (a.decision === 'SANS_NOTES' && b.decision !== 'SANS_NOTES') return 1;
@@ -168,6 +200,7 @@ export async function previewPromotionDecisions(opts: {
       classId: cls.id,
       className: cls.name,
       classLevel: cls.level,
+      nextLevel: getNextSchoolLevel(cls.level),
       admis,
       doublants,
       sansNotes,
@@ -182,6 +215,7 @@ export async function previewPromotionDecisions(opts: {
 
   return {
     academicYear: opts.academicYear,
+    nextAcademicYear,
     period,
     periodLabel,
     threshold,

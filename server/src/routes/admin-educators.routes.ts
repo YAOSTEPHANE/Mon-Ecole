@@ -11,7 +11,10 @@ import {
   parseEducatorClassIds,
   syncEducatorClassAssignments,
 } from '../utils/educator-class-assignment.util';
-import type { SchoolContextRequest } from '../utils/school-context.util';
+import {
+  ensureSchoolMember,
+  type SchoolContextRequest,
+} from '../utils/school-context.util';
 
 const router = express.Router();
 
@@ -111,7 +114,7 @@ router.post(
     body('specialization').notEmpty(),
     body('hireDate').isISO8601(),
   ],
-  async (req, res) => {
+  async (req: SchoolContextRequest, res) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -174,6 +177,10 @@ router.post(
           educatorProfile: true,
         },
       });
+
+      if (req.schoolId) {
+        await ensureSchoolMember(req.schoolId, user.id);
+      }
 
       if (shouldSendSetupEmail) {
         try {
@@ -380,5 +387,77 @@ router.delete('/educators/:id', async (req, res) => {
   }
 });
 
+/** Congés éducateurs — vue RH agrégée */
+router.get('/hr/educator-leaves', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const where: { status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' } = {};
+    if (
+      typeof status === 'string' &&
+      ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].includes(status)
+    ) {
+      where.status = status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+    }
+
+    const leaves = await prisma.educatorLeave.findMany({
+      where,
+      orderBy: { startDate: 'desc' },
+      include: {
+        educator: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.json(leaves);
+  } catch (error: unknown) {
+    console.error('GET /admin/hr/educator-leaves:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.put('/educators/:id/leaves/:leaveId', async (req, res) => {
+  try {
+    const { status, adminComment } = req.body as {
+      status?: string;
+      adminComment?: string | null;
+    };
+    if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Statut invalide (APPROVED ou REJECTED)' });
+    }
+
+    const leave = await prisma.educatorLeave.findFirst({
+      where: { id: req.params.leaveId, educatorId: req.params.id },
+    });
+    if (!leave) {
+      return res.status(404).json({ error: 'Demande introuvable' });
+    }
+
+    const updated = await prisma.educatorLeave.update({
+      where: { id: leave.id },
+      data: {
+        status: status as 'APPROVED' | 'REJECTED',
+        ...(adminComment !== undefined && {
+          adminComment:
+            adminComment === null || adminComment === '' ? null : String(adminComment).trim(),
+        }),
+      },
+    });
+
+    res.json(updated);
+  } catch (error: unknown) {
+    console.error('PUT admin educator leave:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
 
 export default router;

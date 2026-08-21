@@ -87,6 +87,15 @@ export default function TeacherAppointmentsPanel() {
     onError: () => toast.error("Annulation impossible."),
   });
 
+  const completeMu = useMutation({
+    mutationFn: (id: string) => teacherApi.completeAppointment(id),
+    onSuccess: () => {
+      toast.success("Rendez-vous marqué terminé. Le parent a été notifié.");
+      invalidate();
+    },
+    onError: () => toast.error("Action impossible."),
+  });
+
   return (
     <Card>
       <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2">
@@ -192,7 +201,16 @@ export default function TeacherAppointmentsPanel() {
               )}
 
               {a.status === "CONFIRMED" && (
-                <div className="flex justify-end pt-1">
+                <div className="flex flex-wrap justify-end gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => completeMu.mutate(a.id)}
+                    disabled={completeMu.isPending || cancelMu.isPending}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm hover:shadow-md disabled:opacity-50"
+                  >
+                    <FiCheck className="h-4 w-4" aria-hidden />
+                    Marquer terminé
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -200,7 +218,7 @@ export default function TeacherAppointmentsPanel() {
                         cancelMu.mutate(a.id);
                       }
                     }}
-                    disabled={cancelMu.isPending}
+                    disabled={cancelMu.isPending || completeMu.isPending}
                     className="text-sm font-semibold text-rose-700 hover:text-rose-900 disabled:opacity-50"
                   >
                     Annuler le rendez-vous

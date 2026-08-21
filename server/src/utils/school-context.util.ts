@@ -186,6 +186,36 @@ function schoolIdMatchesActive(schoolId: string, includeLegacyOrphans: boolean) 
 }
 
 /**
+ * Filtre générique multi-école (annonces, biblio, matériel, discipline, catalogue…).
+ * Les enregistrements sans schoolId restent visibles uniquement sur l’établissement par défaut.
+ */
+export function resourceSchoolScopeWhere(schoolId: string, isDefaultSchool = false) {
+  return schoolIdMatchesActive(schoolId, isDefaultSchool);
+}
+
+/** Rattache un utilisateur à un établissement (idempotent). */
+export async function ensureSchoolMember(
+  schoolId: string,
+  userId: string,
+  options?: { isDefault?: boolean },
+): Promise<void> {
+  const members = getSchoolMemberDelegate();
+  if (!members) return;
+  const isDefault = options?.isDefault ?? true;
+  if (isDefault) {
+    await members.updateMany({
+      where: { userId },
+      data: { isDefault: false },
+    });
+  }
+  await members.upsert({
+    where: { schoolId_userId: { schoolId, userId } },
+    create: { schoolId, userId, isDefault },
+    update: isDefault ? { isDefault: true } : {},
+  });
+}
+
+/**
  * Filtre élèves pour l’établissement actif.
  * Relation `class` : utiliser `is` (filtre to-one Prisma). `{ class: { schoolId } }`
  * est rejeté par Prisma Mongo et renvoyait une liste vide / 500.
