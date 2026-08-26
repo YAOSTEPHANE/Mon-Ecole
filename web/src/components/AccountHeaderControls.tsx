@@ -8,6 +8,7 @@ import Avatar from './ui/Avatar';
 import ProfileEditModal from './ProfileEditModal';
 import { resolveStaffSupportKind, STAFF_KIND_LABELS } from '@/views/staff/staffSpaceConfig';
 import {
+  FiBell,
   FiBook,
   FiBookOpen,
   FiBriefcase,
@@ -172,6 +173,7 @@ export default function AccountHeaderControls({
   onOpenSettings,
 }: AccountHeaderControlsProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 16, maxHeight: 480 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -184,6 +186,14 @@ export default function AccountHeaderControls({
     [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || 'Utilisateur';
   const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'SUPER_ADMIN';
   const ops = variant === 'ops';
+  const notificationRole = (isAdmin ? 'ADMIN' : role) as
+    | 'ADMIN'
+    | 'TEACHER'
+    | 'STUDENT'
+    | 'PARENT'
+    | 'EDUCATOR'
+    | 'STAFF';
+  const showSettingsInMenu = Boolean(onOpenSettings) || isAdmin;
 
   useLayoutEffect(() => {
     if (!showUserMenu) return;
@@ -220,33 +230,6 @@ export default function AccountHeaderControls({
   return (
     <>
       <div className={`flex shrink-0 items-center ${ops ? 'gap-2' : 'gap-1.5 sm:gap-3 md:gap-4'}`}>
-        {showNotifications ? (
-          <NotificationCenter
-            role={
-              (isAdmin ? 'ADMIN' : role) as
-                | 'ADMIN'
-                | 'TEACHER'
-                | 'STUDENT'
-                | 'PARENT'
-                | 'EDUCATOR'
-                | 'STAFF'
-            }
-            currentUserId={isAdmin ? user?.id : undefined}
-            variant={ops ? 'ghost' : 'default'}
-          />
-        ) : null}
-
-        {ops && onOpenSettings ? (
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100"
-            aria-label="Paramètres"
-          >
-            <FiSettings className="h-4 w-4" />
-          </button>
-        ) : null}
-
         <div className="relative">
           <button
             ref={triggerRef}
@@ -283,6 +266,17 @@ export default function AccountHeaderControls({
           </button>
         </div>
       </div>
+
+      {showNotifications ? (
+        <NotificationCenter
+          role={notificationRole}
+          currentUserId={isAdmin ? user?.id : undefined}
+          hideTrigger
+          open={notificationsOpen}
+          onOpenChange={setNotificationsOpen}
+          anchorRef={triggerRef}
+        />
+      ) : null}
 
       {showUserMenu && typeof document !== 'undefined'
         ? createPortal(
@@ -347,6 +341,46 @@ export default function AccountHeaderControls({
                 </div>
 
                 <div className="shrink-0 border-t border-stone-200/80 bg-white p-1.5">
+                  {showNotifications ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        setNotificationsOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-stone-800 transition hover:bg-stone-100/90"
+                    >
+                      <FiBell className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+                      Notifications
+                    </button>
+                  ) : null}
+                  {showSettingsInMenu ? (
+                    onOpenSettings ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          onOpenSettings();
+                        }}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-stone-100"
+                      >
+                        <FiSettings className="h-4 w-4 shrink-0 text-[#0018A8]" aria-hidden />
+                        Paramètres
+                      </button>
+                    ) : (
+                      <Link
+                        href="/admin?tab=settings"
+                        role="menuitem"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-stone-100"
+                      >
+                        <FiSettings className="h-4 w-4 shrink-0 text-[#0018A8]" aria-hidden />
+                        Paramètres
+                      </Link>
+                    )
+                  ) : null}
                   <button
                     type="button"
                     role="menuitem"
@@ -360,41 +394,15 @@ export default function AccountHeaderControls({
                     Modifier mon profil
                   </button>
                   {isAdmin ? (
-                    <>
-                      <Link
-                        href="/directeur"
-                        role="menuitem"
-                        onClick={() => setShowUserMenu(false)}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-amber-50/90"
-                      >
-                        <FiPieChart className="h-4 w-4 shrink-0 text-cptb-blue" aria-hidden />
-                        Vue direction (KPI)
-                      </Link>
-                      {onOpenSettings ? (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            onOpenSettings();
-                          }}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-stone-100"
-                        >
-                          <FiSettings className="h-4 w-4 shrink-0 text-[#0018A8]" aria-hidden />
-                          Paramètres de l’établissement
-                        </button>
-                      ) : (
-                        <Link
-                          href="/admin?tab=settings"
-                          role="menuitem"
-                          onClick={() => setShowUserMenu(false)}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-stone-100"
-                        >
-                          <FiSettings className="h-4 w-4 shrink-0 text-[#0018A8]" aria-hidden />
-                          Paramètres de l’établissement
-                        </Link>
-                      )}
-                    </>
+                    <Link
+                      href="/directeur"
+                      role="menuitem"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-amber-50/90"
+                    >
+                      <FiPieChart className="h-4 w-4 shrink-0 text-cptb-blue" aria-hidden />
+                      Vue direction (KPI)
+                    </Link>
                   ) : null}
                   <button
                     type="button"

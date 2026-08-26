@@ -2389,6 +2389,11 @@ export const adminApi = {
     const response = await api.patch(`/admin/mock-exams/${id}`, data);
     return response.data;
   },
+  /** Publie la liste admin sur la page publique /examens-blancs. */
+  syncMockExamsPublicList: async (data?: { academicYear?: string; onlyPublished?: boolean }) => {
+    const response = await api.post('/admin/mock-exams/sync-public-list', data ?? {});
+    return response.data as { ok: boolean; academicYear: string; updatedCount: number; publicPath: string };
+  },
   deleteMockExam: async (id: string) => {
     const response = await api.delete(`/admin/mock-exams/${id}`);
     return response.data;

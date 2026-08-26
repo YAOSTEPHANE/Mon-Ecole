@@ -22,6 +22,7 @@ import {
   getHonorRollSetting,
   listPublishedExamStats,
 } from '../utils/public-academic-showcase.util';
+import { lookupPublicMockExamBulletin } from '../utils/public-mock-exam-results.util';
 
 const EMPTY_PUBLIC_BRANDING = {
   navigationLogoUrl: null,
@@ -305,6 +306,97 @@ router.post('/fne-lookup', fneLookupLimiter, async (req, res) => {
     console.error('POST /public/fne-lookup:', error);
     const status = /critère|Sélectionnez|Indiquez/i.test(message) ? 400 : 502;
     res.status(status).json({ error: message });
+  }
+});
+
+/**
+ * Consultation publique des notes d’examens blancs (bulletin).
+ * Critères : nom + prénom + matricule (n° élève ou FNE).
+ */
+router.post('/mock-exam-results-lookup', fneLookupLimiter, async (req, res) => {
+  try {
+    const body = (req.body ?? {}) as {
+      firstName?: string;
+      lastName?: string;
+      prenoms?: string;
+      nom?: string;
+      matricule?: string;
+      academicYear?: string;
+    };
+    const firstName = String(body.firstName || body.prenoms || '').trim();
+    const lastName = String(body.lastName || body.nom || '').trim();
+    const matricule = String(body.matricule || '').trim();
+
+    const schoolId = await resolvePublicSchoolId(req);
+    const bulletin = await lookupPublicMockExamBulletin(prisma, {
+      firstName,
+      lastName,
+      matricule,
+      schoolId,
+      academicYear: typeof body.academicYear === 'string' ? body.academicYear : null,
+    });
+
+    if (!bulletin) {
+      return res.status(404).json({
+        error:
+          'Aucun élève trouvé avec ces informations, ou aucune note d’examen blanc disponible.',
+      });
+    }
+
+    res.json(bulletin);
+  } catch (error: unknown) {
+    const status = (error as { status?: number })?.status ?? 500;
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    if (status >= 500) console.error('POST /public/mock-exam-results-lookup:', error);
+    res.status(status).json({ error: message });
+  }
+});
+
+/**
+ * Liste publique des examens blancs (métadonnées uniquement — pas de questions/réponses).
+ * Filtre : isPublicListed = true.
+ */
+router.get('/mock-exams', async (req, res) => {
+  try {
+    const schoolId = await resolvePublicSchoolId(req);
+    const brandingDelegate = getAppBrandingDelegate();
+    let academicYear = getCurrentAcademicYear();
+    if (typeof req.query.academicYear === 'string' && /^\d{4}-\d{4}$/.test(req.query.academicYear.trim())) {
+      academicYear = req.query.academicYear.trim();
+    } else if (brandingDelegate) {
+      const brandingId = await brandingIdForSchool(schoolId);
+      const row = await brandingDelegate.findUnique({ where: { id: brandingId } });
+      const year = (row as { currentAcademicYear?: string | null } | null)?.currentAcademicYear;
+      if (year && /^\d{4}-\d{4}$/.test(year)) academicYear = year;
+    }
+
+    const exams = await prisma.mockExam.findMany({
+      where: {
+        isPublicListed: true,
+        academicYear,
+        OR: [{ schoolId }, { schoolId: null }],
+      },
+      orderBy: [{ startsAt: 'asc' }, { examKind: 'asc' }, { title: 'asc' }],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        subject: true,
+        examKind: true,
+        academicYear: true,
+        targetLevels: true,
+        durationMinutes: true,
+        startsAt: true,
+        endsAt: true,
+        class: { select: { name: true, level: true } },
+      },
+    });
+
+    res.json({ academicYear, exams });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    console.error('GET /public/mock-exams:', error);
+    res.status(500).json({ error: message });
   }
 });
 

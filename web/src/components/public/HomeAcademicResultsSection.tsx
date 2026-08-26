@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { FiAward, FiStar } from 'react-icons/fi';
+import Link from 'next/link';
+import { FiAward, FiStar, FiArrowRight } from 'react-icons/fi';
 import { publicApi } from '@/services/api';
 import HomeReveal from './HomeReveal';
 
@@ -145,6 +146,16 @@ export default function HomeAcademicResultsSection() {
               </ul>
             </div>
           ) : null}
+
+          <div className="mt-10 flex justify-center">
+            <Link
+              href="/examens-blancs"
+              className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-amber-300/80 hover:bg-amber-50/60"
+            >
+              Consulter les notes d’examens blancs
+              <FiArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
         </div>
       </HomeReveal>
     </section>

@@ -212,6 +212,7 @@ export async function createMockExamWithQuestions(
     startsAt?: Date | null;
     endsAt?: Date | null;
     isPublished?: boolean;
+    isPublicListed?: boolean;
     countsAsGrade?: boolean;
     maxAttempts?: number;
     passingScore?: number;
@@ -241,6 +242,7 @@ export async function createMockExamWithQuestions(
       startsAt: data.startsAt ?? null,
       endsAt: data.endsAt ?? null,
       isPublished: data.isPublished ?? false,
+      isPublicListed: data.isPublicListed ?? false,
       countsAsGrade: data.countsAsGrade ?? false,
       maxAttempts: data.maxAttempts ?? 2,
       passingScore: data.passingScore ?? 10,

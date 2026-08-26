@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { generateDigitalCardPublicId } from '../src/utils/digital-card.util';
+import { seedMockExamDemoData } from '../src/utils/seed-mock-exams.util';
 
 const prisma = new PrismaClient();
 
@@ -45,6 +46,9 @@ async function main() {
   await prisma.studentHealthDossier.deleteMany();
   await prisma.healthCampaign.deleteMany();
   await prisma.studentAbsencePermissionRequest.deleteMany();
+  await prisma.mockExamAttempt.deleteMany();
+  await prisma.mockExamQuestion.deleteMany();
+  await prisma.mockExam.deleteMany();
   await prisma.student.deleteMany();
   await prisma.parent.deleteMany();
   await prisma.teacherLeave.deleteMany();
@@ -1945,6 +1949,21 @@ async function main() {
     ],
   });
 
+  console.log('📝 Création des examens blancs de démonstration…');
+  const mockExamSeed = await seedMockExamDemoData(prisma, {
+    replaceExisting: false,
+    academicYear: '2024-2025',
+    teacherId: teacher1Profile!.id,
+  });
+  await prisma.student.update({
+    where: { id: student8Profile!.id },
+    data: { classId: mockExamSeed.classIds.troisieme },
+  });
+  await prisma.student.update({
+    where: { id: student9Profile!.id },
+    data: { classId: mockExamSeed.classIds.terminale },
+  });
+
   console.log('✅ Seed terminé avec succès !');
   console.log('\n📊 Résumé des données créées :');
   console.log(`   - 1 Super administrateur (kouassistephane489@gmail.com / password123)`);
@@ -1964,7 +1983,9 @@ async function main() {
   console.log(`   - Dossiers santé, allergies, campagne vaccin, visites infirmerie`);
   console.log(`   - 2 Fiches de poste + pointages staff`);
   console.log(`   - 2 Activités parascolaires + inscriptions`);
-  console.log(`   - 2 Classes (6ème A : 5 élèves, 5ème B : 4 élèves)`);
+  console.log(`   - 4 Classes (6ème A, 5ème B, 3ème A examens, Terminale A examens)`);
+  console.log(`   - ${mockExamSeed.createdExamIds.length} examens blancs [DEMO] (BEPC / BAC + brouillon)`);
+  console.log(`   - Élèves student8 → 3ème (BEPC), student9 → Terminale (BAC)`);
   console.log(`   - 5 Cours (3 en 6ème A, 2 en 5ème B)`);
   console.log(`   - Nombreuses notes sur sept. 2025 – mai 2026 (graphiques admin / élève)`);
   console.log(`   - 20 Absences / présences / retards sur les ~50 derniers jours (visibles sur le tableau de bord mois)`);

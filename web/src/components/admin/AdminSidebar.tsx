@@ -64,7 +64,7 @@ const AdminSidebar = ({
       )}
 
       <aside
-        className={`dash-sidebar-rail z-50 border-r border-white/10
+        className={`dash-sidebar-rail relative z-50 border-r border-white/10
           transition-[transform,width] duration-300 ease-premium
           max-lg:w-[min(20rem,calc(100vw-1rem))]
           fixed left-0 dash-sticky-under-header dash-h-under-header
@@ -73,7 +73,7 @@ const AdminSidebar = ({
           max-lg:shadow-[16px_0_48px_-12px_rgba(0,0,0,0.55)]
           ${collapsed ? 'lg:w-[4.25rem]' : 'lg:w-64'}
           ${isOpen ? 'translate-x-0' : 'max-lg:-translate-x-full max-lg:pointer-events-none'}
-          lg:sticky lg:left-auto lg:translate-x-0 lg:pointer-events-auto lg:shrink-0 lg:self-start lg:shadow-none lg:z-50`}
+          lg:sticky lg:left-auto lg:h-dvh lg:max-h-dvh lg:translate-x-0 lg:pointer-events-auto lg:shrink-0 lg:self-stretch lg:shadow-none lg:z-50`}
         aria-label="Navigation administration"
       >
         <div className="flex h-full min-h-0 flex-col">
@@ -123,7 +123,7 @@ const AdminSidebar = ({
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2 max-lg:pl-[max(0.5rem,env(safe-area-inset-left))]">
             <nav
-              className="dash-sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 text-xs leading-snug max-lg:pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] lg:text-[10px] lg:leading-tight"
+              className="dash-sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 pb-3 text-xs leading-snug max-lg:pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] lg:text-[10px] lg:leading-tight"
               aria-label="Modules administration"
             >
               {mainTabs.map((tab) => {

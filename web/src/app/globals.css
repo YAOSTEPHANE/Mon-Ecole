@@ -288,8 +288,9 @@
   }
 
   .dash-header-hidden .dash-h-under-header {
-    height: calc(100dvh - env(safe-area-inset-top, 0px));
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px));
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 100dvh;
   }
 
   .dash-header-hidden .dash-min-h-under-header {
@@ -458,6 +459,7 @@
   }
 
   .dash-sidebar-rail {
+    position: relative;
     background: linear-gradient(180deg, #0a0a0a 0%, #111111 45%, #0c0c0c 100%);
     box-shadow:
       inset -1px 0 0 rgba(255, 255, 255, 0.06),

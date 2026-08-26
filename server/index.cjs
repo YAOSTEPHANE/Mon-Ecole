@@ -19140,14 +19140,14 @@ var require_etag = __commonJS({
   "node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var Stats = require("fs").Stats;
     var toString2 = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto13.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto14.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -41936,17 +41936,17 @@ var require_content_disposition = __commonJS({
 // node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "node_modules/cookie-signature/index.js"(exports2) {
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto13.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto14.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports2.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto13.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto14.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -53108,14 +53108,14 @@ var require_buffer_equal_constant_time = __commonJS({
 var require_jwa = __commonJS({
   "node_modules/jwa/index.js"(exports2, module2) {
     var Buffer3 = require_safe_buffer().Buffer;
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util = require("util");
     var MSG_INVALID_ALGORITHM = '"%s" is not a valid algorithm.\n  Supported algorithms are:\n  "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512" and "none".';
     var MSG_INVALID_SECRET = "secret must be a string or buffer";
     var MSG_INVALID_VERIFIER_KEY = "key must be a string or a buffer";
     var MSG_INVALID_SIGNER_KEY = "key must be a string, a buffer or an object";
-    var supportsKeyObjects = typeof crypto13.createPublicKey === "function";
+    var supportsKeyObjects = typeof crypto14.createPublicKey === "function";
     if (supportsKeyObjects) {
       MSG_INVALID_VERIFIER_KEY += " or a KeyObject";
       MSG_INVALID_SECRET += "or a KeyObject";
@@ -53205,17 +53205,17 @@ var require_jwa = __commonJS({
       return function sign(thing, secret) {
         checkIsSecretKey(secret);
         thing = normalizeInput(thing);
-        var hmac = crypto13.createHmac("sha" + bits, secret);
+        var hmac = crypto14.createHmac("sha" + bits, secret);
         var sig = (hmac.update(thing), hmac.digest("base64"));
         return fromBase64(sig);
       };
     }
     var bufferEqual;
-    var timingSafeEqual = "timingSafeEqual" in crypto13 ? function timingSafeEqual2(a, b) {
+    var timingSafeEqual = "timingSafeEqual" in crypto14 ? function timingSafeEqual2(a, b) {
       if (a.byteLength !== b.byteLength) {
         return false;
       }
-      return crypto13.timingSafeEqual(a, b);
+      return crypto14.timingSafeEqual(a, b);
     } : function timingSafeEqual2(a, b) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
@@ -53232,7 +53232,7 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto13.createSign("RSA-SHA" + bits);
+        var signer = crypto14.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign(privateKey, "base64"));
         return fromBase64(sig);
       };
@@ -53242,7 +53242,7 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto13.createVerify("RSA-SHA" + bits);
+        var verifier = crypto14.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify(publicKey, signature, "base64");
       };
@@ -53251,11 +53251,11 @@ var require_jwa = __commonJS({
       return function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto13.createSign("RSA-SHA" + bits);
+        var signer = crypto14.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign({
           key: privateKey,
-          padding: crypto13.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto13.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto14.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto14.constants.RSA_PSS_SALTLEN_DIGEST
         }, "base64"));
         return fromBase64(sig);
       };
@@ -53265,12 +53265,12 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto13.createVerify("RSA-SHA" + bits);
+        var verifier = crypto14.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify({
           key: publicKey,
-          padding: crypto13.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto13.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto14.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto14.constants.RSA_PSS_SALTLEN_DIGEST
         }, signature, "base64");
       };
     }
@@ -76727,9 +76727,9 @@ var require_webcrypto = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.isCryptoKey = void 0;
-    var crypto13 = require("node:crypto");
+    var crypto14 = require("node:crypto");
     var util = require("node:util");
-    var webcrypto = crypto13.webcrypto;
+    var webcrypto = crypto14.webcrypto;
     exports2.default = webcrypto;
     var isCryptoKey = (key) => util.types.isCryptoKey(key);
     exports2.isCryptoKey = isCryptoKey;
@@ -79021,17 +79021,17 @@ var require_sign3 = __commonJS({
   "node_modules/jose/dist/node/cjs/runtime/sign.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    var crypto13 = require("node:crypto");
+    var crypto14 = require("node:crypto");
     var node_util_1 = require("node:util");
     var dsa_digest_js_1 = require_dsa_digest();
     var hmac_digest_js_1 = require_hmac_digest();
     var node_key_js_1 = require_node_key();
     var get_sign_verify_key_js_1 = require_get_sign_verify_key();
-    var oneShotSign = (0, node_util_1.promisify)(crypto13.sign);
+    var oneShotSign = (0, node_util_1.promisify)(crypto14.sign);
     var sign = async (alg, key, data) => {
       const k = (0, get_sign_verify_key_js_1.default)(alg, key, "sign");
       if (alg.startsWith("HS")) {
-        const hmac = crypto13.createHmac((0, hmac_digest_js_1.default)(alg), k);
+        const hmac = crypto14.createHmac((0, hmac_digest_js_1.default)(alg), k);
         hmac.update(data);
         return hmac.digest();
       }
@@ -79046,20 +79046,20 @@ var require_verify2 = __commonJS({
   "node_modules/jose/dist/node/cjs/runtime/verify.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    var crypto13 = require("node:crypto");
+    var crypto14 = require("node:crypto");
     var node_util_1 = require("node:util");
     var dsa_digest_js_1 = require_dsa_digest();
     var node_key_js_1 = require_node_key();
     var sign_js_1 = require_sign3();
     var get_sign_verify_key_js_1 = require_get_sign_verify_key();
-    var oneShotVerify = (0, node_util_1.promisify)(crypto13.verify);
+    var oneShotVerify = (0, node_util_1.promisify)(crypto14.verify);
     var verify = async (alg, key, signature, data) => {
       const k = (0, get_sign_verify_key_js_1.default)(alg, key, "verify");
       if (alg.startsWith("HS")) {
         const expected = await (0, sign_js_1.default)(alg, k, data);
         const actual = signature;
         try {
-          return crypto13.timingSafeEqual(actual, expected);
+          return crypto14.timingSafeEqual(actual, expected);
         } catch {
           return false;
         }
@@ -84958,11 +84958,11 @@ var require_util3 = __commonJS({
     var { isUint8Array } = require("node:util/types");
     var { webidl } = require_webidl();
     var supportedHashes = [];
-    var crypto13;
+    var crypto14;
     try {
-      crypto13 = require("node:crypto");
+      crypto14 = require("node:crypto");
       const possibleRelevantHashes = ["sha256", "sha384", "sha512"];
-      supportedHashes = crypto13.getHashes().filter((hash2) => possibleRelevantHashes.includes(hash2));
+      supportedHashes = crypto14.getHashes().filter((hash2) => possibleRelevantHashes.includes(hash2));
     } catch {
     }
     function responseURL(response) {
@@ -85235,7 +85235,7 @@ var require_util3 = __commonJS({
       }
     }
     function bytesMatch(bytes2, metadataList) {
-      if (crypto13 === void 0) {
+      if (crypto14 === void 0) {
         return true;
       }
       const parsedMetadata = parseMetadata(metadataList);
@@ -85250,7 +85250,7 @@ var require_util3 = __commonJS({
       for (const item of metadata) {
         const algorithm = item.algo;
         const expectedValue = item.hash;
-        let actualValue = crypto13.createHash(algorithm).update(bytes2).digest("base64");
+        let actualValue = crypto14.createHash(algorithm).update(bytes2).digest("base64");
         if (actualValue[actualValue.length - 1] === "=") {
           if (actualValue[actualValue.length - 2] === "=") {
             actualValue = actualValue.slice(0, -2);
@@ -86314,8 +86314,8 @@ var require_body = __commonJS({
     var { multipartFormDataParser } = require_formdata_parser();
     var random;
     try {
-      const crypto13 = require("node:crypto");
-      random = (max) => crypto13.randomInt(0, max);
+      const crypto14 = require("node:crypto");
+      random = (max) => crypto14.randomInt(0, max);
     } catch {
       random = (max) => Math.floor(Math.random(max));
     }
@@ -97816,13 +97816,13 @@ var require_frame = __commonJS({
     "use strict";
     var { maxUnsigned16Bit } = require_constants6();
     var BUFFER_SIZE = 16386;
-    var crypto13;
+    var crypto14;
     var buffer = null;
     var bufIdx = BUFFER_SIZE;
     try {
-      crypto13 = require("node:crypto");
+      crypto14 = require("node:crypto");
     } catch {
-      crypto13 = {
+      crypto14 = {
         // not full compatibility, but minimum.
         randomFillSync: function randomFillSync(buffer2, _offset, _size) {
           for (let i = 0; i < buffer2.length; ++i) {
@@ -97835,7 +97835,7 @@ var require_frame = __commonJS({
     function generateMask() {
       if (bufIdx === BUFFER_SIZE) {
         bufIdx = 0;
-        crypto13.randomFillSync(buffer ??= Buffer.allocUnsafe(BUFFER_SIZE), 0, BUFFER_SIZE);
+        crypto14.randomFillSync(buffer ??= Buffer.allocUnsafe(BUFFER_SIZE), 0, BUFFER_SIZE);
       }
       return [buffer[bufIdx++], buffer[bufIdx++], buffer[bufIdx++], buffer[bufIdx++]];
     }
@@ -97907,9 +97907,9 @@ var require_connection = __commonJS({
     var { Headers: Headers2, getHeadersList } = require_headers();
     var { getDecodeSplit } = require_util3();
     var { WebsocketFrameSend } = require_frame();
-    var crypto13;
+    var crypto14;
     try {
-      crypto13 = require("node:crypto");
+      crypto14 = require("node:crypto");
     } catch {
     }
     function establishWebSocketConnection(url, protocols, client, ws, onEstablish, options) {
@@ -97929,7 +97929,7 @@ var require_connection = __commonJS({
         const headersList = getHeadersList(new Headers2(options.headers));
         request.headersList = headersList;
       }
-      const keyValue = crypto13.randomBytes(16).toString("base64");
+      const keyValue = crypto14.randomBytes(16).toString("base64");
       request.headersList.append("sec-websocket-key", keyValue);
       request.headersList.append("sec-websocket-version", "13");
       for (const protocol of protocols) {
@@ -97959,7 +97959,7 @@ var require_connection = __commonJS({
             return;
           }
           const secWSAccept = response.headersList.get("Sec-WebSocket-Accept");
-          const digest = crypto13.createHash("sha1").update(keyValue + uid).digest("base64");
+          const digest = crypto14.createHash("sha1").update(keyValue + uid).digest("base64");
           if (secWSAccept !== digest) {
             failWebsocketConnection(ws, "Incorrect hash received in Sec-WebSocket-Accept header.");
             return;
@@ -130262,7 +130262,7 @@ var require_le_unix = __commonJS({
 var require_mime_node = __commonJS({
   "node_modules/nodemailer/lib/mime-node/index.js"(exports2, module2) {
     "use strict";
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var fs11 = require("fs");
     var punycode = require_punycode();
     var { PassThrough } = require("stream");
@@ -130281,7 +130281,7 @@ var require_mime_node = __commonJS({
       constructor(contentType, options) {
         this.nodeCounter = 0;
         options = options || {};
-        this.baseBoundary = options.baseBoundary || crypto13.randomBytes(8).toString("hex");
+        this.baseBoundary = options.baseBoundary || crypto14.randomBytes(8).toString("hex");
         this.boundaryPrefix = options.boundaryPrefix || "--_NmP";
         this.disableFileAccess = !!options.disableFileAccess;
         this.disableUrlAccess = !!options.disableUrlAccess;
@@ -131240,8 +131240,8 @@ var require_mime_node = __commonJS({
       _generateMessageId() {
         return "<" + [2, 2, 2, 6].reduce(
           // crux to generate UUID-like random strings
-          (prev, len) => prev + "-" + crypto13.randomBytes(len).toString("hex"),
-          crypto13.randomBytes(4).toString("hex")
+          (prev, len) => prev + "-" + crypto14.randomBytes(len).toString("hex"),
+          crypto14.randomBytes(4).toString("hex")
         ) + "@" + // try to use the domain of the FROM address or fallback to server hostname
         (this.getEnvelope().from || this.hostname || "localhost").split("@").pop() + ">";
       }
@@ -131871,14 +131871,14 @@ var require_relaxed_body = __commonJS({
   "node_modules/nodemailer/lib/dkim/relaxed-body.js"(exports2, module2) {
     "use strict";
     var { Transform } = require("stream");
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var RelaxedBody = class extends Transform {
       constructor(options) {
         super();
         options = options || {};
         this.chunkBuffer = [];
         this.chunkBufferLen = 0;
-        this.bodyHash = crypto13.createHash(options.hashAlgo || "sha256");
+        this.bodyHash = crypto14.createHash(options.hashAlgo || "sha256");
         this.remainder = "";
         this.byteLength = 0;
         this.debug = options.debug;
@@ -131981,7 +131981,7 @@ var require_sign8 = __commonJS({
     "use strict";
     var punycode = require_punycode();
     var mimeFuncs = require_mime_funcs();
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     module2.exports = (headers, hashAlgo, bodyHash, options) => {
       options = options || {};
       const defaultFieldNames = "From:Sender:Reply-To:Subject:Date:Message-ID:To:Cc:MIME-Version:Content-Type:Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:In-Reply-To:References:List-Id:List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive";
@@ -131989,7 +131989,7 @@ var require_sign8 = __commonJS({
       const canonicalizedHeaderData = relaxedHeaders(headers, fieldNames, options.skipFields);
       const dkimHeader = generateDKIMHeader(options.domainName, options.keySelector, canonicalizedHeaderData.fieldNames, hashAlgo, bodyHash);
       canonicalizedHeaderData.headers += "dkim-signature:" + relaxedHeaderLine(dkimHeader);
-      const signer = crypto13.createSign(("rsa-" + hashAlgo).toUpperCase());
+      const signer = crypto14.createSign(("rsa-" + hashAlgo).toUpperCase());
       signer.update(canonicalizedHeaderData.headers);
       let signature;
       try {
@@ -132058,7 +132058,7 @@ var require_dkim = __commonJS({
     var { PassThrough } = require("stream");
     var fs11 = require("fs");
     var path11 = require("path");
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var DKIM_ALGO = "sha256";
     var MAX_MESSAGE_SIZE = 2 * 1024 * 1024;
     var DKIMSigner = class {
@@ -132071,7 +132071,7 @@ var require_dkim = __commonJS({
         this.chunks = [];
         this.chunklen = 0;
         this.readPos = 0;
-        this.cachePath = this.cacheDir ? path11.join(this.cacheDir, "message." + Date.now() + "-" + crypto13.randomBytes(14).toString("hex")) : false;
+        this.cachePath = this.cacheDir ? path11.join(this.cacheDir, "message." + Date.now() + "-" + crypto14.randomBytes(14).toString("hex")) : false;
         this.cache = false;
         this.headers = false;
         this.bodyHash = false;
@@ -132640,7 +132640,7 @@ var require_mailer = __commonJS({
     var MailMessage = require_mail_message();
     var net = require("net");
     var dns = require("dns");
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var Mail = class extends EventEmitter {
       constructor(transporter, options, defaults) {
         super();
@@ -132983,7 +132983,7 @@ var require_mailer = __commonJS({
             html = (html || "").toString().replace(
               /(<img\b[^<>]{0,1024} src\s{0,20}=[\s"']{0,20})(data:([^;]+);[^"'>\s]+)/gi,
               (match, prefix, dataUri, mimeType) => {
-                const cid = crypto13.randomBytes(10).toString("hex") + "@localhost";
+                const cid = crypto14.randomBytes(10).toString("hex") + "@localhost";
                 if (!mail.data.attachments) {
                   mail.data.attachments = [];
                 }
@@ -133110,7 +133110,7 @@ var require_smtp_connection = __commonJS({
     var net = require("net");
     var tls = require("tls");
     var os2 = require("os");
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var DataStream = require_data_stream2();
     var { PassThrough } = require("stream");
     var shared = require_shared();
@@ -133130,7 +133130,7 @@ var require_smtp_connection = __commonJS({
     var SMTPConnection = class extends EventEmitter {
       constructor(options) {
         super(options);
-        this.id = crypto13.randomBytes(8).toString("base64").replace(/\W/g, "");
+        this.id = crypto14.randomBytes(8).toString("base64").replace(/\W/g, "");
         this.stage = "init";
         this.options = options || {};
         this.secureConnection = !!this.options.secure;
@@ -134315,7 +134315,7 @@ var require_smtp_connection = __commonJS({
           );
         }
         const base64decoded = Buffer.from(challengeMatch[1], "base64").toString("ascii");
-        const hmacMD5 = crypto13.createHmac("md5", this._auth.credentials.pass);
+        const hmacMD5 = crypto14.createHmac("md5", this._auth.credentials.pass);
         hmacMD5.update(base64decoded);
         const prepended = this._auth.credentials.user + " " + hmacMD5.digest("hex");
         this._responseActions.push((str2) => {
@@ -134608,7 +134608,7 @@ var require_xoauth2 = __commonJS({
     "use strict";
     var { Stream } = require("stream");
     var nmfetch = require_fetch2();
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var shared = require_shared();
     var errors = require_errors6();
     var XOAuth2 = class extends Stream {
@@ -134954,7 +134954,7 @@ var require_xoauth2 = __commonJS({
        */
       jwtSignRS256(payload) {
         payload = ['{"alg":"RS256","typ":"JWT"}', JSON.stringify(payload)].map((val) => this.toBase64URL(val)).join(".");
-        const signature = crypto13.createSign("RSA-SHA256").update(payload).sign(this.options.privateKey);
+        const signature = crypto14.createSign("RSA-SHA256").update(payload).sign(this.options.privateKey);
         return payload + "." + this.toBase64URL(signature);
       }
     };
@@ -144627,14 +144627,14 @@ var require_plugin_crypto = __commonJS({
     function _interopDefault(ex) {
       return ex && typeof ex === "object" && "default" in ex ? ex["default"] : ex;
     }
-    var crypto13 = _interopDefault(require("crypto"));
+    var crypto14 = _interopDefault(require("crypto"));
     var createDigest = (algorithm, hmacKey2, counter) => {
-      const hmac = crypto13.createHmac(algorithm, Buffer.from(hmacKey2, "hex"));
+      const hmac = crypto14.createHmac(algorithm, Buffer.from(hmacKey2, "hex"));
       const digest = hmac.update(Buffer.from(counter, "hex")).digest();
       return digest.toString("hex");
     };
     var createRandomBytes = (size, encoding) => {
-      return crypto13.randomBytes(size).toString(encoding);
+      return crypto14.randomBytes(size).toString(encoding);
     };
     exports2.createDigest = createDigest;
     exports2.createRandomBytes = createRandomBytes;
@@ -146051,13 +146051,13 @@ var init_sensitive_upload_path_util = __esm({
 
 // src/utils/upload-access-token.util.ts
 function hmacKey() {
-  return import_crypto6.default.createHash("sha256").update(`upload-access:${uploadAccessSigningMaterial()}`, "utf8").digest();
+  return import_crypto7.default.createHash("sha256").update(`upload-access:${uploadAccessSigningMaterial()}`, "utf8").digest();
 }
 function signUploadAccessToken(relativePath) {
   const path11 = normalizeUploadRequestPath(relativePath);
   const exp = Date.now() + TTL_MS;
   const payload = `${path11}|${exp}`;
-  const sig = import_crypto6.default.createHmac("sha256", hmacKey()).update(payload, "utf8").digest("base64url");
+  const sig = import_crypto7.default.createHmac("sha256", hmacKey()).update(payload, "utf8").digest("base64url");
   return `${exp}.${sig}`;
 }
 function verifyUploadAccessToken(relativePath, token) {
@@ -146068,12 +146068,12 @@ function verifyUploadAccessToken(relativePath, token) {
   const exp = Number(expStr);
   if (!Number.isFinite(exp) || exp < Date.now()) return false;
   const payload = `${path11}|${exp}`;
-  const expected = import_crypto6.default.createHmac("sha256", hmacKey()).update(payload, "utf8").digest("base64url");
+  const expected = import_crypto7.default.createHmac("sha256", hmacKey()).update(payload, "utf8").digest("base64url");
   try {
     const a = Buffer.from(sig, "utf8");
     const b = Buffer.from(expected, "utf8");
     if (a.length !== b.length) return false;
-    return import_crypto6.default.timingSafeEqual(a, b);
+    return import_crypto7.default.timingSafeEqual(a, b);
   } catch {
     return false;
   }
@@ -146102,11 +146102,11 @@ function resolveStoredFileAccessUrl(storedUrl) {
   }
   return withUploadAccessQuery(storedUrl);
 }
-var import_crypto6, TTL_MS;
+var import_crypto7, TTL_MS;
 var init_upload_access_token_util = __esm({
   "src/utils/upload-access-token.util.ts"() {
     "use strict";
-    import_crypto6 = __toESM(require("crypto"), 1);
+    import_crypto7 = __toESM(require("crypto"), 1);
     init_jwt_util();
     init_blob_storage_util();
     init_sensitive_upload_path_util();
@@ -151272,7 +151272,7 @@ var require_urlsafe_base64_helper = __commonJS({
 var require_vapid_helper = __commonJS({
   "node_modules/web-push/src/vapid-helper.js"(exports2, module2) {
     "use strict";
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var asn1 = require_asn12();
     var jws = require_jws();
     var { URL: URL2 } = require("url");
@@ -151299,7 +151299,7 @@ var require_vapid_helper = __commonJS({
       });
     }
     function generateVAPIDKeys() {
-      const curve = crypto13.createECDH("prime256v1");
+      const curve = crypto14.createECDH("prime256v1");
       curve.generateKeys();
       let publicKeyBuffer = curve.getPublicKey();
       let privateKeyBuffer = curve.getPrivateKey();
@@ -151449,7 +151449,7 @@ var require_vapid_helper = __commonJS({
 var require_ece = __commonJS({
   "node_modules/http_ece/ece.js"(exports2, module2) {
     "use strict";
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var AES_GCM = "aes-128-gcm";
     var PAD_SIZE = { "aes128gcm": 1, "aesgcm": 2 };
     var TAG_LENGTH2 = 16;
@@ -151476,7 +151476,7 @@ var require_ece = __commonJS({
       return b;
     }
     function HMAC_hash(key, input) {
-      var hmac = crypto13.createHmac("sha256", key);
+      var hmac = crypto14.createHmac("sha256", key);
       hmac.update(input);
       return hmac.digest();
     }
@@ -151744,7 +151744,7 @@ var require_ece = __commonJS({
     function decryptRecord(key, counter, buffer, header, last) {
       keylog("decrypt", buffer);
       var nonce = generateNonce(key.nonce, counter);
-      var gcm = crypto13.createDecipheriv(AES_GCM, key.key, nonce);
+      var gcm = crypto14.createDecipheriv(AES_GCM, key.key, nonce);
       gcm.setAuthTag(buffer.slice(buffer.length - TAG_LENGTH2));
       var data = gcm.update(buffer.slice(0, buffer.length - TAG_LENGTH2));
       data = Buffer.concat([data, gcm.final()]);
@@ -151792,7 +151792,7 @@ var require_ece = __commonJS({
       keylog("encrypt", buffer);
       pad = pad || 0;
       var nonce = generateNonce(key.nonce, counter);
-      var gcm = crypto13.createCipheriv(AES_GCM, key.key, nonce);
+      var gcm = crypto14.createCipheriv(AES_GCM, key.key, nonce);
       var ciphertext = [];
       var padSize = PAD_SIZE[header.version];
       var padding = Buffer.alloc(pad + padSize);
@@ -151835,7 +151835,7 @@ var require_ece = __commonJS({
       }
       var header = parseParams(params);
       if (!header.salt) {
-        header.salt = crypto13.randomBytes(KEY_LENGTH);
+        header.salt = crypto14.randomBytes(KEY_LENGTH);
       }
       var result;
       if (header.version === "aes128gcm") {
@@ -151900,7 +151900,7 @@ var require_ece = __commonJS({
 var require_encryption_helper = __commonJS({
   "node_modules/web-push/src/encryption-helper.js"(exports2, module2) {
     "use strict";
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var ece = require_ece();
     var encrypt = function(userPublicKey, userAuth, payload, contentEncoding) {
       if (!userPublicKey) {
@@ -151927,9 +151927,9 @@ var require_encryption_helper = __commonJS({
       if (typeof payload === "string" || payload instanceof String) {
         payload = Buffer.from(payload);
       }
-      const localCurve = crypto13.createECDH("prime256v1");
+      const localCurve = crypto14.createECDH("prime256v1");
       const localPublicKey = localCurve.generateKeys();
-      const salt = crypto13.randomBytes(16).toString("base64url");
+      const salt = crypto14.randomBytes(16).toString("base64url");
       const cipherText = ece.encrypt(payload, {
         version: contentEncoding,
         dh: userPublicKey,
@@ -153574,7 +153574,7 @@ var require_accepts2 = __commonJS({
 // node_modules/base64id/lib/base64id.js
 var require_base64id = __commonJS({
   "node_modules/base64id/lib/base64id.js"(exports2, module2) {
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     var Base64Id = function() {
     };
     Base64Id.prototype.getRandomBytes = function(bytes2) {
@@ -153582,12 +153582,12 @@ var require_base64id = __commonJS({
       var self2 = this;
       bytes2 = bytes2 || 12;
       if (bytes2 > BUFFER_SIZE) {
-        return crypto13.randomBytes(bytes2);
+        return crypto14.randomBytes(bytes2);
       }
       var bytesInBuffer = parseInt(BUFFER_SIZE / bytes2);
       var threshold = parseInt(bytesInBuffer * 0.85);
       if (!threshold) {
-        return crypto13.randomBytes(bytes2);
+        return crypto14.randomBytes(bytes2);
       }
       if (this.bytesBufferIndex == null) {
         this.bytesBufferIndex = -1;
@@ -153599,14 +153599,14 @@ var require_base64id = __commonJS({
       if (this.bytesBufferIndex == -1 || this.bytesBufferIndex > threshold) {
         if (!this.isGeneratingBytes) {
           this.isGeneratingBytes = true;
-          crypto13.randomBytes(BUFFER_SIZE, function(err, bytes3) {
+          crypto14.randomBytes(BUFFER_SIZE, function(err, bytes3) {
             self2.bytesBuffer = bytes3;
             self2.bytesBufferIndex = 0;
             self2.isGeneratingBytes = false;
           });
         }
         if (this.bytesBufferIndex == -1) {
-          return crypto13.randomBytes(bytes2);
+          return crypto14.randomBytes(bytes2);
         }
       }
       var result = this.bytesBuffer.slice(bytes2 * this.bytesBufferIndex, bytes2 * (this.bytesBufferIndex + 1));
@@ -153620,7 +153620,7 @@ var require_base64id = __commonJS({
       }
       this.sequenceNumber = this.sequenceNumber + 1 | 0;
       rand.writeInt32BE(this.sequenceNumber, 11);
-      if (crypto13.randomBytes) {
+      if (crypto14.randomBytes) {
         this.getRandomBytes(12).copy(rand);
       } else {
         [0, 4, 8].forEach(function(i) {
@@ -181377,8 +181377,8 @@ var require_snapshot_utils = __commonJS({
         match: new Set(matchHeaders.map((header) => caseSensitive ? header : header.toLowerCase()))
       };
     }
-    var crypto13 = runtimeFeatures.has("crypto") ? require("node:crypto") : null;
-    var hashId = crypto13?.hash ? (value) => crypto13.hash("sha256", value, "base64url") : (value) => Buffer.from(value).toString("base64url");
+    var crypto14 = runtimeFeatures.has("crypto") ? require("node:crypto") : null;
+    var hashId = crypto14?.hash ? (value) => crypto14.hash("sha256", value, "base64url") : (value) => Buffer.from(value).toString("base64url");
     function isUndiciHeaders(headers) {
       return Array.isArray(headers) && (headers.length & 1) === 0;
     }
@@ -187529,10 +187529,10 @@ var require_subresource_integrity = __commonJS({
     var assert = require("node:assert");
     var { runtimeFeatures } = require_runtime_features();
     var validSRIHashAlgorithmTokenSet = /* @__PURE__ */ new Map([["sha256", 0], ["sha384", 1], ["sha512", 2]]);
-    var crypto13;
+    var crypto14;
     if (runtimeFeatures.has("crypto")) {
-      crypto13 = require("node:crypto");
-      const cryptoHashes = crypto13.getHashes();
+      crypto14 = require("node:crypto");
+      const cryptoHashes = crypto14.getHashes();
       if (cryptoHashes.length === 0) {
         validSRIHashAlgorithmTokenSet.clear();
       }
@@ -187622,7 +187622,7 @@ var require_subresource_integrity = __commonJS({
       return result;
     }
     var applyAlgorithmToBytes = (algorithm, bytes2) => {
-      return crypto13.hash(algorithm, bytes2, "base64");
+      return crypto14.hash(algorithm, bytes2, "base64");
     };
     function caseSensitiveMatch(actualValue, expectedValue) {
       let actualValueLength = actualValue.length;
@@ -190567,7 +190567,7 @@ var require_connection2 = __commonJS({
     var { WebsocketFrameSend } = require_frame2();
     var assert = require("node:assert");
     var { runtimeFeatures } = require_runtime_features();
-    var crypto13 = runtimeFeatures.has("crypto") ? require("node:crypto") : null;
+    var crypto14 = runtimeFeatures.has("crypto") ? require("node:crypto") : null;
     var warningEmitted = false;
     function establishWebSocketConnection(url, protocols, client, handler, options) {
       const requestURL = url;
@@ -190587,7 +190587,7 @@ var require_connection2 = __commonJS({
         const headersList = getHeadersList(new Headers2(options.headers));
         request.headersList = headersList;
       }
-      const keyValue = crypto13.randomBytes(16).toString("base64");
+      const keyValue = crypto14.randomBytes(16).toString("base64");
       request.headersList.append("sec-websocket-key", keyValue, true);
       request.headersList.append("sec-websocket-version", "13", true);
       for (const protocol of protocols) {
@@ -190627,7 +190627,7 @@ var require_connection2 = __commonJS({
             return;
           }
           const secWSAccept = response.headersList.get("Sec-WebSocket-Accept");
-          const digest = crypto13.hash("sha1", keyValue + uid, "base64");
+          const digest = crypto14.hash("sha1", keyValue + uid, "base64");
           if (secWSAccept !== digest) {
             failWebsocketConnection(handler, 1002, "Incorrect hash received in Sec-WebSocket-Accept header.");
             return;
@@ -197770,9 +197770,9 @@ var require_disk = __commonJS({
     var fs11 = require("fs");
     var os2 = require("os");
     var path11 = require("path");
-    var crypto13 = require("crypto");
+    var crypto14 = require("crypto");
     function getFilename(req, file, cb) {
-      crypto13.randomBytes(16, function(err, raw) {
+      crypto14.randomBytes(16, function(err, raw) {
         cb(err, err ? void 0 : raw.toString("hex"));
       });
     }
@@ -204745,10 +204745,10 @@ var require_misc = __commonJS({
     function getRandomByte() {
       return randomSafeContext.safeMathRandom() * 16;
     }
-    function uuid4(crypto13 = getCrypto()) {
+    function uuid4(crypto14 = getCrypto()) {
       try {
-        if (crypto13?.randomUUID) {
-          return randomSafeContext.withRandomSafeContext(() => crypto13.randomUUID()).replace(/-/g, "");
+        if (crypto14?.randomUUID) {
+          return randomSafeContext.withRandomSafeContext(() => crypto14.randomUUID()).replace(/-/g, "");
         }
       } catch {
       }
@@ -260955,6 +260955,166 @@ async function buildGdprDataExport(userId) {
   return base;
 }
 
+// src/utils/gdpr-erasure.util.ts
+var import_crypto5 = __toESM(require("crypto"), 1);
+init_prisma();
+var GdprErasureError = class extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.name = "GdprErasureError";
+    this.status = status;
+  }
+};
+function anonEmail(userId) {
+  const hash2 = import_crypto5.default.createHash("sha256").update(userId).digest("hex").slice(0, 16);
+  return `efface.${hash2}@anonyme.invalid`;
+}
+async function executeGdprErasure(userId) {
+  const user = await prisma_default.user.findUnique({
+    where: { id: userId },
+    include: {
+      studentProfile: true,
+      parentProfile: true
+    }
+  });
+  if (!user) throw new GdprErasureError("Utilisateur introuvable", 404);
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
+    throw new GdprErasureError(
+      "Les comptes administrateurs ne peuvent pas \xEAtre effac\xE9s via cette proc\xE9dure.",
+      403
+    );
+  }
+  const email = anonEmail(userId);
+  const placeholderName = "Anonymis\xE9";
+  await prisma_default.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        email,
+        firstName: placeholderName,
+        lastName: "RGPD",
+        phone: null,
+        avatar: null,
+        isActive: false,
+        oauthProvider: null,
+        oauthSubject: null,
+        oauthKey: null,
+        uiPreferences: void 0
+      }
+    });
+    if (user.studentProfile) {
+      await tx.student.update({
+        where: { id: user.studentProfile.id },
+        data: {
+          address: null,
+          emergencyContact: null,
+          emergencyPhone: null,
+          medicalInfo: null,
+          nfcId: null,
+          biometricId: null,
+          faceDescriptor: void 0,
+          isActive: false
+        }
+      });
+    }
+    if (user.parentProfile) {
+      await tx.parent.update({
+        where: { id: user.parentProfile.id },
+        data: {
+          profession: null,
+          internalNotes: null,
+          notifyEmail: false,
+          notifySms: false,
+          notifyWhatsApp: false
+        }
+      });
+    }
+    await tx.userTwoFactorSettings.deleteMany({ where: { userId } });
+    await tx.pushSubscription.deleteMany({ where: { userId } });
+  });
+  await bumpUserTokenVersion(userId);
+  await prisma_default.securityEvent.create({
+    data: {
+      userId,
+      type: "gdpr_erasure_executed",
+      description: `Effacement RGPD ex\xE9cut\xE9 (compte anonymis\xE9 \u2192 ${email})`,
+      severity: "warning"
+    }
+  });
+  return { userId };
+}
+
+// src/utils/audit-log.util.ts
+init_prisma();
+init_field_encryption_util();
+var REDACT_KEYS = /* @__PURE__ */ new Set([
+  "password",
+  "hashedPassword",
+  "token",
+  "refreshToken",
+  "authorization",
+  "newPassword"
+]);
+function valuesDiffer(b, a) {
+  const jb = JSON.stringify(b ?? null);
+  const ja = JSON.stringify(a ?? null);
+  return jb !== ja;
+}
+function buildFieldChanges(before, after, keys) {
+  const out = {};
+  for (const k of keys) {
+    if (REDACT_KEYS.has(k)) continue;
+    const bv = before && k in before ? before[k] : void 0;
+    const av = after && k in after ? after[k] : void 0;
+    if (valuesDiffer(bv, av)) {
+      out[k] = { before: bv ?? null, after: av ?? null };
+    }
+  }
+  return Object.keys(out).length > 0 ? out : void 0;
+}
+function auditActorFromRequest(req, user) {
+  return {
+    actorUserId: user?.id,
+    actorEmail: user?.email,
+    actorRole: user?.role,
+    ipAddress: req.ip || req.socket.remoteAddress || void 0,
+    userAgent: req.get("user-agent") || void 0
+  };
+}
+async function recordAuditLog(params) {
+  const a = auditActorFromRequest(params.req, params.actor ?? void 0);
+  try {
+    await prisma_default.auditLog.create({
+      data: {
+        actorUserId: a.actorUserId,
+        actorEmail: a.actorEmail,
+        actorRole: a.actorRole,
+        action: params.action,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        summary: params.summary,
+        changes: params.changes,
+        ipAddress: a.ipAddress,
+        userAgent: a.userAgent
+      }
+    });
+  } catch (e) {
+    console.error("[AuditLog] \xE9chec enregistrement:", e);
+  }
+}
+function studentSelfProfileSnapshotForAudit(s) {
+  return {
+    address: s.address ? decryptSensitiveString(s.address) : null,
+    emergencyContact: s.emergencyContact ? decryptSensitiveString(s.emergencyContact) : null,
+    emergencyPhone: s.emergencyPhone ? decryptSensitiveString(s.emergencyPhone) : null,
+    medicalInfo: s.medicalInfo ? decryptSensitiveString(s.medicalInfo) : null
+  };
+}
+var STUDENT_SELF_KEYS = ["address", "emergencyContact", "emergencyPhone", "medicalInfo"];
+function diffStudentSelfProfile(before, after) {
+  return buildFieldChanges(before, after, [...STUDENT_SELF_KEYS]);
+}
+
 // src/routes/auth.routes.ts
 var import_qrcode = __toESM(require_lib9(), 1);
 
@@ -261063,7 +261223,8 @@ var DEFAULT_USER_UI_PREFERENCES = {
   theme: "light",
   timezone: "Europe/Paris",
   dateFormat: "DD/MM/YYYY",
-  timeFormat: "24h"
+  timeFormat: "24h",
+  dashboardWidgets: ["news", "agenda", "messages", "assignments", "absences", "grades", "payments"]
 };
 var ALLOWED_THEMES = /* @__PURE__ */ new Set(["light", "dark", "auto"]);
 var ALLOWED_TIME_FORMATS = /* @__PURE__ */ new Set(["12h", "24h"]);
@@ -261074,9 +261235,29 @@ var ALLOWED_TIMEZONES = /* @__PURE__ */ new Set([
   "Europe/London",
   "America/New_York"
 ]);
+var ALLOWED_DASHBOARD_WIDGETS = /* @__PURE__ */ new Set([
+  "news",
+  "agenda",
+  "messages",
+  "assignments",
+  "absences",
+  "grades",
+  "payments"
+]);
 function asRecord(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value;
+}
+function normalizeDashboardWidgets(raw) {
+  if (!Array.isArray(raw)) {
+    return [...DEFAULT_USER_UI_PREFERENCES.dashboardWidgets ?? []];
+  }
+  const out = [];
+  for (const item of raw) {
+    const id = String(item ?? "").trim();
+    if (ALLOWED_DASHBOARD_WIDGETS.has(id) && !out.includes(id)) out.push(id);
+  }
+  return out.length > 0 ? out : [...DEFAULT_USER_UI_PREFERENCES.dashboardWidgets ?? []];
 }
 function normalizeUserUiPreferences(input) {
   const raw = asRecord(input) ?? {};
@@ -261090,7 +261271,8 @@ function normalizeUserUiPreferences(input) {
     theme: ALLOWED_THEMES.has(themeRaw) ? themeRaw : DEFAULT_USER_UI_PREFERENCES.theme,
     timezone: ALLOWED_TIMEZONES.has(timezoneRaw) ? timezoneRaw : DEFAULT_USER_UI_PREFERENCES.timezone,
     dateFormat: ALLOWED_DATE_FORMATS.has(dateFormatRaw) ? dateFormatRaw : DEFAULT_USER_UI_PREFERENCES.dateFormat,
-    timeFormat: ALLOWED_TIME_FORMATS.has(timeFormatRaw) ? timeFormatRaw : DEFAULT_USER_UI_PREFERENCES.timeFormat
+    timeFormat: ALLOWED_TIME_FORMATS.has(timeFormatRaw) ? timeFormatRaw : DEFAULT_USER_UI_PREFERENCES.timeFormat,
+    dashboardWidgets: normalizeDashboardWidgets(raw.dashboardWidgets)
   };
 }
 function mergeUserUiPreferences(current, patch) {
@@ -261756,6 +261938,40 @@ router.post(
     }
   }
 );
+router.post(
+  "/gdpr/erasure-confirm",
+  authenticate,
+  authorize("ADMIN", "SUPER_ADMIN"),
+  [
+    (0, import_express_validator.body)("userId").isString().notEmpty(),
+    (0, import_express_validator.body)("confirmPhrase").equals("EFFACER").withMessage("Saisissez EFFACER pour confirmer")
+  ],
+  async (req, res) => {
+    try {
+      const errors = (0, import_express_validator.validationResult)(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const userId = String(req.body.userId);
+      const result = await executeGdprErasure(userId);
+      await recordAuditLog({
+        req,
+        actor: req.user,
+        action: "DELETE",
+        entityType: "User",
+        entityId: userId,
+        summary: "Effacement RGPD (anonymisation) ex\xE9cut\xE9"
+      });
+      res.json({ ok: true, ...result });
+    } catch (error) {
+      if (error instanceof GdprErasureError) {
+        return res.status(error.status).json({ error: error.message });
+      }
+      console.error("POST /auth/gdpr/erasure-confirm:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  }
+);
 var auth_routes_default = router;
 
 // src/routes/admin.routes.ts
@@ -261763,7 +261979,7 @@ var import_express33 = __toESM(require_express2(), 1);
 var import_express_validator12 = __toESM(require_lib8(), 1);
 
 // src/utils/admin-user-initial-password.util.ts
-var import_crypto5 = __toESM(require("crypto"), 1);
+var import_crypto6 = __toESM(require("crypto"), 1);
 init_email_util();
 var SETUP_TOKEN_HOURS = 48;
 async function resolveAdminProvidedOrInvitePassword(passwordFromBody) {
@@ -261772,7 +261988,7 @@ async function resolveAdminProvidedOrInvitePassword(passwordFromBody) {
     validatePasswordStrength(raw);
     return { hashedPassword: await hashPassword(raw), shouldSendSetupEmail: false };
   }
-  const placeholder = import_crypto5.default.randomBytes(48).toString("base64url");
+  const placeholder = import_crypto6.default.randomBytes(48).toString("base64url");
   return { hashedPassword: await hashSecret(placeholder), shouldSendSetupEmail: true };
 }
 async function inviteNewUserToSetPassword(userId, email, firstName) {
@@ -264316,6 +264532,19 @@ router2.post(
         }
       }
       const { password: _pw, ...userWithoutPassword } = user;
+      await recordAuditLog({
+        req,
+        actor: req.user ? { id: req.user.id, email: req.user.email, role: req.user.role } : null,
+        action: "CREATE",
+        entityType: "StaffMember",
+        entityId: user.staffProfile?.id ?? user.id,
+        summary: `Cr\xE9ation personnel ${emailNorm} (modules: ${(modulesForCreate ?? []).join(", ") || "\u2014"})`,
+        changes: {
+          visibleStaffModules: { before: null, after: modulesForCreate ?? [] },
+          staffCategory: { before: null, after: staffCategory },
+          supportKind: { before: null, after: staffCategory === "SUPPORT" ? supportKind : null }
+        }
+      });
       res.status(201).json({ ...userWithoutPassword, passwordSetupEmailSent: shouldSendSetupEmail });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erreur serveur";
@@ -264583,6 +264812,31 @@ router2.put("/staff/:id", async (req, res) => {
         }
       }
     });
+    if (nextModules !== void 0 || staffCategory !== void 0 || supportKind !== void 0) {
+      await recordAuditLog({
+        req,
+        actor: req.user ? { id: req.user.id, email: req.user.email, role: req.user.role } : null,
+        action: "UPDATE",
+        entityType: "StaffMember",
+        entityId: staff.id,
+        summary: `Mise \xE0 jour permissions / m\xE9tier personnel ${staff.employeeId}`,
+        changes: {
+          ...nextModules !== void 0 ? {
+            visibleStaffModules: {
+              before: staff.visibleStaffModules ?? [],
+              after: nextModules
+            }
+          } : {},
+          ...staffCategory !== void 0 ? { staffCategory: { before: staff.staffCategory, after: nextCategory } } : {},
+          ...supportKind !== void 0 ? {
+            supportKind: {
+              before: staff.supportKind,
+              after: nextCategory === "SUPPORT" ? nextSupportKind : null
+            }
+          } : {}
+        }
+      });
+    }
     res.json(updated);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur serveur";
@@ -264879,9 +265133,28 @@ router3.put("/school-staff-metiers/:supportKind", async (req, res) => {
     if (sortOrder !== void 0 && sortOrder !== null && !Number.isNaN(Number(sortOrder))) {
       data.sortOrder = Number(sortOrder);
     }
+    const beforeRow = existing ?? await prisma_default.schoolStaffMetier.findUnique({
+      where: { schoolId_supportKind: { schoolId, supportKind } }
+    });
     const updated = await prisma_default.schoolStaffMetier.update({
       where: { schoolId_supportKind: { schoolId, supportKind } },
       data
+    });
+    await recordAuditLog({
+      req,
+      actor: req.user ? { id: req.user.id, email: req.user.email, role: req.user.role } : null,
+      action: "UPDATE",
+      entityType: "SchoolStaffMetier",
+      entityId: updated.id,
+      summary: `Mise \xE0 jour m\xE9tier ${supportKind} (\xE9cole ${schoolId})`,
+      changes: {
+        label: { before: beforeRow?.label ?? null, after: updated.label },
+        defaultModules: {
+          before: beforeRow?.defaultModules ?? [],
+          after: updated.defaultModules
+        },
+        isActive: { before: beforeRow?.isActive ?? null, after: updated.isActive }
+      }
     });
     const metiers = await listSchoolStaffMetiers(schoolId);
     const row = metiers.find((m) => m.supportKind === supportKind);
@@ -264896,6 +265169,14 @@ router3.post("/school-staff-metiers/seed-defaults", async (req, res) => {
     const schoolId = req.schoolId;
     await prisma_default.schoolStaffMetier.deleteMany({ where: { schoolId } });
     const count = await seedSchoolStaffMetiers(schoolId);
+    await recordAuditLog({
+      req,
+      actor: req.user ? { id: req.user.id, email: req.user.email, role: req.user.role } : null,
+      action: "UPDATE",
+      entityType: "SchoolStaffMetier",
+      entityId: schoolId,
+      summary: `R\xE9initialisation m\xE9tiers personnel \xE9cole ${schoolId} (${count} lignes)`
+    });
     const metiers = await listSchoolStaffMetiers(schoolId);
     res.json({ ok: true, count, metiers });
   } catch (error) {
@@ -270275,6 +270556,7 @@ async function createMockExamWithQuestions(client, data) {
       startsAt: data.startsAt ?? null,
       endsAt: data.endsAt ?? null,
       isPublished: data.isPublished ?? false,
+      isPublicListed: data.isPublicListed ?? false,
       countsAsGrade: data.countsAsGrade ?? false,
       maxAttempts: data.maxAttempts ?? 2,
       passingScore: data.passingScore ?? 10,
@@ -270380,6 +270662,29 @@ router13.get("/mock-exams", async (req, res) => {
     res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
   }
 });
+router13.post("/mock-exams/sync-public-list", async (req, res) => {
+  try {
+    const body27 = req.body || {};
+    const year = typeof body27.academicYear === "string" && body27.academicYear.trim() ? body27.academicYear.trim() : getCurrentAcademicYear();
+    const onlyPublished = body27.onlyPublished !== false;
+    const result = await prisma_default.mockExam.updateMany({
+      where: {
+        academicYear: year,
+        ...req.schoolId ? { schoolId: req.schoolId } : {},
+        ...onlyPublished ? { isPublished: true } : {}
+      },
+      data: { isPublicListed: true }
+    });
+    res.json({
+      ok: true,
+      academicYear: year,
+      updatedCount: result.count,
+      publicPath: "/examens-blancs"
+    });
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
 router13.get("/mock-exams/:id", async (req, res) => {
   try {
     const row = await prisma_default.mockExam.findUnique({
@@ -270431,6 +270736,7 @@ router13.post("/mock-exams", async (req, res) => {
       startsAt: parseDate(body27.startsAt),
       endsAt: parseDate(body27.endsAt),
       isPublished: Boolean(body27.isPublished),
+      isPublicListed: Boolean(body27.isPublicListed),
       countsAsGrade: Boolean(body27.countsAsGrade),
       maxAttempts: body27.maxAttempts != null && Number.isFinite(Number(body27.maxAttempts)) ? Math.max(1, Math.min(10, Number(body27.maxAttempts))) : 2,
       passingScore: body27.passingScore != null && Number.isFinite(Number(body27.passingScore)) ? Number(body27.passingScore) : 10,
@@ -270461,6 +270767,7 @@ router13.patch("/mock-exams/:id", async (req, res) => {
       data.courseId = body27.courseId || null;
     }
     if (typeof body27.isPublished === "boolean") data.isPublished = body27.isPublished;
+    if (typeof body27.isPublicListed === "boolean") data.isPublicListed = body27.isPublicListed;
     if (typeof body27.countsAsGrade === "boolean") data.countsAsGrade = body27.countsAsGrade;
     if (body27.durationMinutes != null) data.durationMinutes = Number(body27.durationMinutes) || null;
     if (body27.maxAttempts != null) {
@@ -273808,23 +274115,6 @@ router17.put("/lti/config", async (req, res) => {
     res.status(500).json({ error: errorMsg(e) });
   }
 });
-router17.post("/lti/launch", async (req, res) => {
-  try {
-    const claims = req.body?.claims ?? req.body ?? {};
-    const row = await prisma_default.ltiLaunch.create({
-      data: {
-        schoolId: req.schoolId ?? null,
-        userId: req.user?.id ?? null,
-        resourceLinkId: typeof claims.resource_link_id === "string" ? claims.resource_link_id : typeof req.body?.resourceLinkId === "string" ? req.body.resourceLinkId : null,
-        targetLinkUri: typeof claims.target_link_uri === "string" ? claims.target_link_uri : typeof req.body?.targetLinkUri === "string" ? req.body.targetLinkUri : null,
-        rawClaims: claims
-      }
-    });
-    res.status(201).json({ ok: true, launch: row });
-  } catch (e) {
-    res.status(500).json({ error: errorMsg(e) });
-  }
-});
 router17.get("/scorm/packages", async (req, res) => {
   try {
     const rows = await prisma_default.scormPackage.findMany({
@@ -273857,6 +274147,151 @@ router17.post("/scorm/packages", async (req, res) => {
     res.status(500).json({ error: errorMsg(e) });
   }
 });
+router17.get("/scorm/packages/:id/player", async (req, res) => {
+  try {
+    const row = await prisma_default.scormPackage.findFirst({
+      where: { id: req.params.id, ...req.schoolId ? { schoolId: req.schoolId } : {} }
+    });
+    if (!row || !row.active) return res.status(404).send("Package SCORM introuvable");
+    const entry = String(row.entryUrl).replace(/"/g, "&quot;");
+    const title = String(row.title).replace(/</g, "&lt;");
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>${title}</title>
+<style>html,body{margin:0;height:100%;font-family:system-ui,sans-serif}iframe{border:0;width:100%;height:calc(100% - 40px)}.bar{padding:8px 12px;background:#1c1917;color:#fff;font-size:14px}</style>
+</head><body>
+<div class="bar">SCORM \u2014 ${title}</div>
+<iframe id="sco" src="${entry}" title="Contenu SCORM"></iframe>
+<script>
+(function(){
+  var store = {};
+  var key = 'scorm:' + ${JSON.stringify(row.id)};
+  try { store = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch(e) { store = {}; }
+  function save(){ try { localStorage.setItem(key, JSON.stringify(store)); } catch(e) {} }
+  var api = {
+    LMSInitialize: function(){ return 'true'; },
+    LMSFinish: function(){ save(); return 'true'; },
+    LMSGetValue: function(n){ return store[n] != null ? String(store[n]) : ''; },
+    LMSSetValue: function(n,v){ store[n]=v; save(); return 'true'; },
+    LMSCommit: function(){ save(); return 'true'; },
+    LMSGetLastError: function(){ return '0'; },
+    LMSGetErrorString: function(){ return 'No error'; },
+    LMSGetDiagnostic: function(){ return ''; }
+  };
+  window.API = api;
+  window.API_1484_11 = {
+    Initialize: api.LMSInitialize, Terminate: api.LMSFinish,
+    GetValue: api.LMSGetValue, SetValue: api.LMSSetValue, Commit: api.LMSCommit,
+    GetLastError: api.LMSGetLastError, GetErrorString: api.LMSGetErrorString, GetDiagnostic: api.LMSGetDiagnostic
+  };
+})();
+</script></body></html>`;
+    res.type("html").send(html);
+  } catch (e) {
+    res.status(500).send(errorMsg(e));
+  }
+});
+router17.post("/lti/launch", async (req, res) => {
+  try {
+    const claims = req.body?.claims ?? req.body ?? {};
+    const iss = typeof claims.iss === "string" ? claims.iss : typeof req.body?.iss === "string" ? req.body.iss : "";
+    const clientId = typeof claims.aud === "string" ? claims.aud : Array.isArray(claims.aud) ? String(claims.aud[0] ?? "") : typeof req.body?.clientId === "string" ? req.body.clientId : "";
+    const cfg = await prisma_default.ltiPlatformConfig.findFirst({
+      where: req.schoolId ? { schoolId: req.schoolId } : {},
+      orderBy: { updatedAt: "desc" }
+    });
+    if (cfg?.enabled) {
+      if (iss && cfg.issuer && iss !== cfg.issuer) {
+        return res.status(401).json({ error: "Issuer LTI non reconnu" });
+      }
+      if (clientId && cfg.clientId && clientId !== cfg.clientId) {
+        return res.status(401).json({ error: "client_id LTI non reconnu" });
+      }
+    }
+    const targetLinkUri = typeof claims.target_link_uri === "string" ? claims.target_link_uri : typeof req.body?.targetLinkUri === "string" ? req.body.targetLinkUri : null;
+    const row = await prisma_default.ltiLaunch.create({
+      data: {
+        schoolId: req.schoolId ?? null,
+        userId: req.user?.id ?? null,
+        resourceLinkId: typeof claims.resource_link_id === "string" ? claims.resource_link_id : typeof req.body?.resourceLinkId === "string" ? req.body.resourceLinkId : null,
+        targetLinkUri,
+        rawClaims: claims
+      }
+    });
+    res.status(201).json({
+      ok: true,
+      launch: row,
+      redirectUrl: targetLinkUri || null
+    });
+  } catch (e) {
+    res.status(500).json({ error: errorMsg(e) });
+  }
+});
+router17.get("/integrations/pix", async (_req, res) => {
+  const launchUrl = process.env.PIX_LAUNCH_URL?.trim() || null;
+  res.json({ enabled: Boolean(launchUrl), launchUrl });
+});
+router17.get("/integrations/visio", async (_req, res) => {
+  res.json({
+    jitsiBase: process.env.JITSI_BASE_URL?.trim() || "https://meet.jit.si",
+    bbbBase: process.env.BBB_BASE_URL?.trim() || null
+  });
+});
+router17.get("/sso/config", async (req, res) => {
+  try {
+    const row = await prisma_default.schoolSsoConfig.findFirst({
+      where: req.schoolId ? { schoolId: req.schoolId } : {},
+      orderBy: { updatedAt: "desc" }
+    });
+    if (!row) {
+      return res.json({ enabled: false, status: "not_configured", provider: null });
+    }
+    res.json({
+      status: row.enabled ? "ready" : "configured",
+      enabled: row.enabled,
+      provider: row.provider,
+      entityId: row.entityId,
+      entryPoint: row.entryPoint,
+      issuer: row.issuer,
+      metadataUrl: row.metadataUrl,
+      clientId: row.clientId,
+      hasCert: Boolean(row.cert),
+      hasClientSecret: Boolean(row.clientSecret)
+    });
+  } catch (e) {
+    res.status(500).json({ error: errorMsg(e) });
+  }
+});
+router17.put("/sso/config", async (req, res) => {
+  try {
+    const provider = String(req.body?.provider ?? "").trim().toUpperCase();
+    if (provider !== "SAML" && provider !== "OIDC") {
+      return res.status(400).json({ error: "provider doit \xEAtre SAML ou OIDC" });
+    }
+    const existing = await prisma_default.schoolSsoConfig.findFirst({
+      where: req.schoolId ? { schoolId: req.schoolId } : {}
+    });
+    const data = {
+      schoolId: req.schoolId ?? null,
+      provider,
+      enabled: Boolean(req.body?.enabled),
+      entityId: typeof req.body?.entityId === "string" ? req.body.entityId : null,
+      entryPoint: typeof req.body?.entryPoint === "string" ? req.body.entryPoint : null,
+      cert: typeof req.body?.cert === "string" ? req.body.cert : null,
+      clientId: typeof req.body?.clientId === "string" ? req.body.clientId : null,
+      clientSecret: typeof req.body?.clientSecret === "string" ? req.body.clientSecret : null,
+      issuer: typeof req.body?.issuer === "string" ? req.body.issuer : null,
+      metadataUrl: typeof req.body?.metadataUrl === "string" ? req.body.metadataUrl : null
+    };
+    const row = existing ? await prisma_default.schoolSsoConfig.update({ where: { id: existing.id }, data }) : await prisma_default.schoolSsoConfig.create({ data });
+    res.json({
+      id: row.id,
+      status: row.enabled ? "ready" : "configured",
+      enabled: row.enabled,
+      provider: row.provider
+    });
+  } catch (e) {
+    res.status(500).json({ error: errorMsg(e) });
+  }
+});
 var admin_gaps_routes_default = router17;
 
 // src/routes/admin-mena.routes.ts
@@ -273864,7 +274299,7 @@ var import_express18 = __toESM(require_express2(), 1);
 init_prisma();
 
 // src/utils/mena-export.util.ts
-var import_crypto7 = require("crypto");
+var import_crypto8 = require("crypto");
 init_prisma();
 init_app_branding_prisma_util();
 init_school_context_util();
@@ -274166,7 +274601,7 @@ async function buildMenaStudentExportPackage(schoolId, isDefaultSchool, academic
   };
 }
 function checksumMenaPackage(pkg) {
-  return (0, import_crypto7.createHash)("sha256").update(JSON.stringify(pkg)).digest("hex").slice(0, 32);
+  return (0, import_crypto8.createHash)("sha256").update(JSON.stringify(pkg)).digest("hex").slice(0, 32);
 }
 function menaPackageToStudentsCsv(pkg) {
   const header = [
@@ -276101,9 +276536,9 @@ var import_express_validator5 = __toESM(require_lib8(), 1);
 init_prisma();
 
 // src/utils/digital-card.util.ts
-var import_crypto8 = require("crypto");
+var import_crypto9 = require("crypto");
 function generateDigitalCardPublicId() {
-  return `sc_${(0, import_crypto8.randomBytes)(18).toString("base64url").replace(/=+$/, "")}`;
+  return `sc_${(0, import_crypto9.randomBytes)(18).toString("base64url").replace(/=+$/, "")}`;
 }
 
 // src/utils/student-enrollment-dossier.util.ts
@@ -285327,7 +285762,7 @@ function computeTuitionBillingStatus(totalPaid, amountDue) {
 }
 
 // src/utils/payment-receipt.util.ts
-var import_crypto9 = __toESM(require("crypto"), 1);
+var import_crypto10 = __toESM(require("crypto"), 1);
 var RECEIPT_PREFIX = "REC";
 function parseReceiptSeq(num, year) {
   const prefix = `${RECEIPT_PREFIX}-${year}-`;
@@ -285337,7 +285772,7 @@ function parseReceiptSeq(num, year) {
   return Number.isFinite(n) ? n : 0;
 }
 function generatePaymentVerificationCode() {
-  return import_crypto9.default.randomBytes(8).toString("hex").slice(0, 12).toUpperCase();
+  return import_crypto10.default.randomBytes(8).toString("hex").slice(0, 12).toUpperCase();
 }
 async function assignPaymentReceiptFields(db, paymentId, paidAt = /* @__PURE__ */ new Date()) {
   const existing = await db.payment.findUnique({
@@ -285571,16 +286006,16 @@ init_whatsapp_util();
 init_integration_settings_util();
 
 // src/utils/secure-compare.util.ts
-var import_crypto10 = __toESM(require("crypto"), 1);
+var import_crypto11 = __toESM(require("crypto"), 1);
 function secureCompareStrings(a, b) {
   if (typeof a !== "string" || typeof b !== "string") return false;
   const bufA = Buffer.from(a, "utf8");
   const bufB = Buffer.from(b, "utf8");
   if (bufA.length !== bufB.length) {
-    import_crypto10.default.timingSafeEqual(bufA, bufA);
+    import_crypto11.default.timingSafeEqual(bufA, bufA);
     return false;
   }
-  return import_crypto10.default.timingSafeEqual(bufA, bufB);
+  return import_crypto11.default.timingSafeEqual(bufA, bufB);
 }
 
 // src/utils/online-payment.util.ts
@@ -293329,7 +293764,7 @@ router33.post("/tuition-fees/counter-payment", async (req, res) => {
 });
 router33.get("/material/rooms", async (req, res) => {
   try {
-    const { search, isActive } = req.query;
+    const { search, isActive, fablab } = req.query;
     const andClauses = [];
     if (search && typeof search === "string" && search.trim()) {
       andClauses.push({
@@ -293342,6 +293777,21 @@ router33.get("/material/rooms", async (req, res) => {
     }
     if (isActive !== void 0) {
       andClauses.push({ isActive: isActive === "true" });
+    }
+    if (fablab === "true" || fablab === "1") {
+      andClauses.push({
+        OR: [
+          { name: { contains: "fablab" } },
+          { name: { contains: "FabLab" } },
+          { name: { contains: "Fab Lab" } },
+          { name: { contains: "makerspace" } },
+          { name: { contains: "Makerspace" } },
+          { code: { contains: "FAB" } },
+          { description: { contains: "fablab" } },
+          { description: { contains: "FabLab" } },
+          { description: { contains: "makerspace" } }
+        ]
+      });
     }
     if (req.schoolId) {
       andClauses.push(resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false));
@@ -294761,6 +295211,93 @@ async function upsertTeacherAttendance(params) {
   return result.attendance;
 }
 
+// src/utils/ics-schedule.util.ts
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+function escapeIcsText(value) {
+  return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+}
+function parseHm(hm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hm.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(min) || h > 23 || min > 59) return null;
+  return { h, m: min };
+}
+function nextDateForDow(from, dayOfWeek) {
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  const current = d.getDay();
+  const delta = (dayOfWeek - current + 7) % 7;
+  d.setDate(d.getDate() + delta);
+  return d;
+}
+function formatIcsLocal(dt) {
+  return `${dt.getFullYear()}${pad2(dt.getMonth() + 1)}${pad2(dt.getDate())}T${pad2(dt.getHours())}${pad2(dt.getMinutes())}${pad2(dt.getSeconds())}`;
+}
+function formatIcsUtcStamp(dt) {
+  return `${dt.getUTCFullYear()}${pad2(dt.getUTCMonth() + 1)}${pad2(dt.getUTCDate())}T${pad2(dt.getUTCHours())}${pad2(dt.getUTCMinutes())}${pad2(dt.getUTCSeconds())}Z`;
+}
+function buildScheduleIcs(schedules, options = {}) {
+  const weeks = Math.min(52, Math.max(1, options.weeks ?? 16));
+  const from = options.from ?? /* @__PURE__ */ new Date();
+  const calName = escapeIcsText(options.calendarName ?? "Emploi du temps");
+  const nowStamp = formatIcsUtcStamp(/* @__PURE__ */ new Date());
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Ecole a jour//Emploi du temps//FR",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${calName}`
+  ];
+  for (const slot of schedules) {
+    const startHm = parseHm(slot.startTime);
+    const endHm = parseHm(slot.endTime);
+    if (!startHm || !endHm) continue;
+    if (slot.dayOfWeek < 0 || slot.dayOfWeek > 6) continue;
+    const firstDay = nextDateForDow(from, slot.dayOfWeek);
+    const start = new Date(firstDay);
+    start.setHours(startHm.h, startHm.m, 0, 0);
+    const end = new Date(firstDay);
+    end.setHours(endHm.h, endHm.m, 0, 0);
+    if (end <= start) {
+      end.setDate(end.getDate() + 1);
+    }
+    const teacher = slot.substituteTeacher?.user ?? slot.course.teacher?.user ?? null;
+    const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : "";
+    const summary = escapeIcsText(
+      `${slot.course.name}${slot.class?.name ? ` \u2014 ${slot.class.name}` : ""}`
+    );
+    const location = escapeIcsText(slot.room?.trim() || "Salle non pr\xE9cis\xE9e");
+    const description = escapeIcsText(
+      [
+        `Cours : ${slot.course.name} (${slot.course.code})`,
+        slot.class?.name ? `Classe : ${slot.class.name}` : null,
+        teacherName ? `Enseignant : ${teacherName}` : null,
+        slot.replacementNote ? `Note : ${slot.replacementNote}` : null
+      ].filter(Boolean).join("\n")
+    );
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:schedule-${slot.id}@ecole-a-jour`,
+      `DTSTAMP:${nowStamp}`,
+      `DTSTART:${formatIcsLocal(start)}`,
+      `DTEND:${formatIcsLocal(end)}`,
+      `RRULE:FREQ=WEEKLY;COUNT=${weeks}`,
+      `SUMMARY:${summary}`,
+      `LOCATION:${location}`,
+      `DESCRIPTION:${description}`,
+      "END:VEVENT"
+    );
+  }
+  lines.push("END:VCALENDAR");
+  return `${lines.join("\r\n")}\r
+`;
+}
+
 // src/routes/teacher.routes.ts
 init_report_card_util();
 
@@ -296126,6 +296663,32 @@ router34.get("/schedule", async (req, res) => {
     res.status(500).json({ error: error.message || "Erreur serveur" });
   }
 });
+router34.get("/schedule.ics", async (req, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user.id);
+    if (!teacherId) {
+      return res.status(404).json({ error: "Profil enseignant non trouv\xE9" });
+    }
+    const courses = await prisma_default.course.findMany({
+      where: { teacherId },
+      select: { id: true }
+    });
+    const courseIds = courses.map((c) => c.id);
+    const schedule = await findSchedulesWithRelations({
+      OR: [{ courseId: { in: courseIds } }, { substituteTeacherId: teacherId }]
+    });
+    const ics = buildScheduleIcs(schedule, {
+      calendarName: "EDT enseignant",
+      weeks: Number(req.query.weeks) > 0 ? Number(req.query.weeks) : 16
+    });
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="emploi-du-temps-enseignant.ics"');
+    res.send(ics);
+  } catch (error) {
+    console.error("GET /teacher/schedule.ics:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
 router34.get("/performance-reviews", async (req, res) => {
   try {
     const teacherId = await getTeacherId(req.user.id);
@@ -297020,6 +297583,64 @@ router34.delete("/lesson-logs/:id", async (req, res) => {
     res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
   }
 });
+router34.get("/student-projects", async (req, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user.id);
+    if (!teacherId) return res.status(404).json({ error: "Enseignant non trouv\xE9" });
+    const membership = await prisma_default.schoolMember.findFirst({
+      where: { userId: req.user.id },
+      select: { schoolId: true }
+    });
+    const studentId = typeof req.query.studentId === "string" ? req.query.studentId.trim() : "";
+    const publishedOnly = req.query.published === "true";
+    const where = {};
+    if (membership?.schoolId) where.schoolId = membership.schoolId;
+    if (studentId) where.studentId = studentId;
+    if (publishedOnly) where.published = true;
+    const rows = await prisma_default.studentProject.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            user: { select: { firstName: true, lastName: true } }
+          }
+        }
+      }
+    });
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
+router34.put("/student-projects/:id/feedback", async (req, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user.id);
+    if (!teacherId) return res.status(404).json({ error: "Enseignant non trouv\xE9" });
+    const membership = await prisma_default.schoolMember.findFirst({
+      where: { userId: req.user.id },
+      select: { schoolId: true }
+    });
+    const existing = await prisma_default.studentProject.findFirst({
+      where: {
+        id: req.params.id,
+        ...membership?.schoolId ? { schoolId: membership.schoolId } : {}
+      }
+    });
+    if (!existing) return res.status(404).json({ error: "Projet introuvable" });
+    const feedback = typeof req.body?.teacherFeedback === "string" ? req.body.teacherFeedback.trim().slice(0, 4e3) : typeof req.body?.feedback === "string" ? req.body.feedback.trim().slice(0, 4e3) : "";
+    const row = await prisma_default.studentProject.update({
+      where: { id: existing.id },
+      data: { teacherFeedback: feedback || null }
+    });
+    res.json(row);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : "Erreur serveur" });
+  }
+});
 var teacher_routes_default = router34;
 
 // src/routes/student.routes.ts
@@ -297051,77 +297672,6 @@ function schoolYearEndDateFromLabel(academicYear) {
 
 // src/routes/student.routes.ts
 init_upload_access_token_util();
-
-// src/utils/audit-log.util.ts
-init_prisma();
-init_field_encryption_util();
-var REDACT_KEYS = /* @__PURE__ */ new Set([
-  "password",
-  "hashedPassword",
-  "token",
-  "refreshToken",
-  "authorization",
-  "newPassword"
-]);
-function valuesDiffer(b, a) {
-  const jb = JSON.stringify(b ?? null);
-  const ja = JSON.stringify(a ?? null);
-  return jb !== ja;
-}
-function buildFieldChanges(before, after, keys) {
-  const out = {};
-  for (const k of keys) {
-    if (REDACT_KEYS.has(k)) continue;
-    const bv = before && k in before ? before[k] : void 0;
-    const av = after && k in after ? after[k] : void 0;
-    if (valuesDiffer(bv, av)) {
-      out[k] = { before: bv ?? null, after: av ?? null };
-    }
-  }
-  return Object.keys(out).length > 0 ? out : void 0;
-}
-function auditActorFromRequest(req, user) {
-  return {
-    actorUserId: user?.id,
-    actorEmail: user?.email,
-    actorRole: user?.role,
-    ipAddress: req.ip || req.socket.remoteAddress || void 0,
-    userAgent: req.get("user-agent") || void 0
-  };
-}
-async function recordAuditLog(params) {
-  const a = auditActorFromRequest(params.req, params.actor ?? void 0);
-  try {
-    await prisma_default.auditLog.create({
-      data: {
-        actorUserId: a.actorUserId,
-        actorEmail: a.actorEmail,
-        actorRole: a.actorRole,
-        action: params.action,
-        entityType: params.entityType,
-        entityId: params.entityId,
-        summary: params.summary,
-        changes: params.changes,
-        ipAddress: a.ipAddress,
-        userAgent: a.userAgent
-      }
-    });
-  } catch (e) {
-    console.error("[AuditLog] \xE9chec enregistrement:", e);
-  }
-}
-function studentSelfProfileSnapshotForAudit(s) {
-  return {
-    address: s.address ? decryptSensitiveString(s.address) : null,
-    emergencyContact: s.emergencyContact ? decryptSensitiveString(s.emergencyContact) : null,
-    emergencyPhone: s.emergencyPhone ? decryptSensitiveString(s.emergencyPhone) : null,
-    medicalInfo: s.medicalInfo ? decryptSensitiveString(s.medicalInfo) : null
-  };
-}
-var STUDENT_SELF_KEYS = ["address", "emergencyContact", "emergencyPhone", "medicalInfo"];
-function diffStudentSelfProfile(before, after) {
-  return buildFieldChanges(before, after, [...STUDENT_SELF_KEYS]);
-}
 
 // src/utils/payment-cash-notify.util.ts
 init_notify_important_util();
@@ -297507,6 +298057,30 @@ router35.get("/schedule", async (req, res) => {
     res.json(schedule);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+router35.get("/schedule.ics", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({
+      where: { userId: req.user.id },
+      include: { class: true, user: { select: { firstName: true, lastName: true } } }
+    });
+    if (!student?.classId) {
+      return res.status(404).json({ error: "Classe non trouv\xE9e" });
+    }
+    const schedule = await findSchedulesWithRelations({ classId: student.classId });
+    const ics = buildScheduleIcs(schedule, {
+      calendarName: `EDT ${student.user.firstName} ${student.user.lastName}`,
+      weeks: Number(req.query.weeks) > 0 ? Number(req.query.weeks) : 16
+    });
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="emploi-du-temps-${student.studentId}.ics"`
+    );
+    res.send(ics);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
   }
 });
 router35.get("/absences", async (req, res) => {
@@ -298010,9 +298584,18 @@ router35.post("/assignments/:assignmentId/submit", async (req, res) => {
 });
 router35.get("/messages", async (req, res) => {
   try {
-    const { unread } = req.query;
+    const { unread, q, archived } = req.query;
+    const showArchived = archived === "1" || archived === "true";
+    const search = typeof q === "string" && q.trim().length > 0 ? {
+      OR: [
+        { subject: { contains: q.trim() } },
+        { content: { contains: q.trim() } }
+      ]
+    } : {};
     const receivedWhere = {
-      receiverId: req.user.id
+      receiverId: req.user.id,
+      receiverArchived: showArchived,
+      ...search
     };
     if (unread === "true") {
       receivedWhere.read = false;
@@ -298037,7 +298620,11 @@ router35.get("/messages", async (req, res) => {
         }
       }),
       prisma_default.message.findMany({
-        where: { senderId: req.user.id },
+        where: {
+          senderId: req.user.id,
+          senderArchived: showArchived,
+          ...search
+        },
         include: {
           receiver: {
             select: {
@@ -298056,6 +298643,23 @@ router35.get("/messages", async (req, res) => {
     res.json({ received, sent });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+router35.put("/messages/:id/archive", async (req, res) => {
+  try {
+    const archived = req.body?.archived !== false;
+    const msg = await prisma_default.message.findFirst({
+      where: {
+        id: req.params.id,
+        OR: [{ receiverId: req.user.id }, { senderId: req.user.id }]
+      }
+    });
+    if (!msg) return res.status(404).json({ error: "Message introuvable" });
+    const data = msg.receiverId === req.user.id ? { receiverArchived: archived } : { senderArchived: archived };
+    const updated = await prisma_default.message.update({ where: { id: msg.id }, data });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
   }
 });
 router35.post("/messages", async (req, res) => {
@@ -299259,6 +299863,86 @@ router35.get("/campus/transport-routes/:routeId/tracking", async (req, res) => {
     res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
   }
 });
+router35.get("/projects", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const rows = await prisma_default.studentProject.findMany({
+      where: { studentId: student.id },
+      orderBy: { updatedAt: "desc" }
+    });
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router35.post("/projects", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+    if (!title) return res.status(400).json({ error: "Titre requis" });
+    const description = typeof req.body?.description === "string" ? req.body.description.trim().slice(0, 8e3) : null;
+    const mediaUrls = Array.isArray(req.body?.mediaUrls) ? req.body.mediaUrls.filter((u) => typeof u === "string").map((u) => u.slice(0, 2e3)).slice(0, 20) : [];
+    const steps = req.body?.steps ?? null;
+    const row = await prisma_default.studentProject.create({
+      data: {
+        studentId: student.id,
+        schoolId: student.schoolId ?? null,
+        title: title.slice(0, 200),
+        description,
+        mediaUrls,
+        steps: steps ?? void 0,
+        published: Boolean(req.body?.published)
+      }
+    });
+    res.status(201).json(row);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router35.put("/projects/:id", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const existing = await prisma_default.studentProject.findFirst({
+      where: { id: req.params.id, studentId: student.id }
+    });
+    if (!existing) return res.status(404).json({ error: "Projet introuvable" });
+    const b = req.body ?? {};
+    const row = await prisma_default.studentProject.update({
+      where: { id: existing.id },
+      data: {
+        ...typeof b.title === "string" && b.title.trim() ? { title: b.title.trim().slice(0, 200) } : {},
+        ...b.description !== void 0 ? {
+          description: typeof b.description === "string" && b.description.trim() ? b.description.trim().slice(0, 8e3) : null
+        } : {},
+        ...b.mediaUrls !== void 0 && Array.isArray(b.mediaUrls) ? {
+          mediaUrls: b.mediaUrls.filter((u) => typeof u === "string").map((u) => u.slice(0, 2e3)).slice(0, 20)
+        } : {},
+        ...b.steps !== void 0 ? { steps: b.steps } : {},
+        ...b.published !== void 0 ? { published: Boolean(b.published) } : {}
+      }
+    });
+    res.json(row);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
+router35.delete("/projects/:id", async (req, res) => {
+  try {
+    const student = await prisma_default.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) return res.status(403).json({ error: "Profil \xE9l\xE8ve introuvable" });
+    const existing = await prisma_default.studentProject.findFirst({
+      where: { id: req.params.id, studentId: student.id }
+    });
+    if (!existing) return res.status(404).json({ error: "Projet introuvable" });
+    await prisma_default.studentProject.delete({ where: { id: existing.id } });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
 var student_routes_default = router35;
 
 // src/routes/parent.routes.ts
@@ -300330,6 +301014,38 @@ router36.get("/children/:studentId/schedule", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router36.get("/children/:studentId/schedule.ics", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parent = await prisma_default.parent.findFirst({
+      where: { userId: req.user.id },
+      include: { students: { where: { studentId } } }
+    });
+    if (!parent || parent.students.length === 0) {
+      return res.status(403).json({ error: "Acc\xE8s refus\xE9" });
+    }
+    const student = await prisma_default.student.findUnique({
+      where: { id: studentId },
+      include: { user: { select: { firstName: true, lastName: true } }, class: true }
+    });
+    if (!student?.classId) {
+      return res.status(404).json({ error: "Classe non trouv\xE9e" });
+    }
+    const schedule = await findSchedulesWithRelations({ classId: student.classId });
+    const ics = buildScheduleIcs(schedule, {
+      calendarName: `EDT ${student.user.firstName} ${student.user.lastName}`,
+      weeks: Number(req.query.weeks) > 0 ? Number(req.query.weeks) : 16
+    });
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="emploi-du-temps-${student.studentId}.ics"`
+    );
+    res.send(ics);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
+  }
+});
 router36.get("/children/:studentId/assignments", async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -301396,9 +302112,18 @@ router36.get("/children/:studentId/orientation/placements", async (req, res) => 
 });
 router36.get("/messages", async (req, res) => {
   try {
-    const { unread } = req.query;
+    const { unread, q, archived } = req.query;
+    const showArchived = archived === "1" || archived === "true";
+    const search = typeof q === "string" && q.trim().length > 0 ? {
+      OR: [
+        { subject: { contains: q.trim() } },
+        { content: { contains: q.trim() } }
+      ]
+    } : {};
     const receivedWhere = {
-      receiverId: req.user.id
+      receiverId: req.user.id,
+      receiverArchived: showArchived,
+      ...search
     };
     if (unread === "true") {
       receivedWhere.read = false;
@@ -301418,10 +302143,15 @@ router36.get("/messages", async (req, res) => {
             }
           }
         },
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
+        take: 200
       }),
       prisma_default.message.findMany({
-        where: { senderId: req.user.id },
+        where: {
+          senderId: req.user.id,
+          senderArchived: showArchived,
+          ...search
+        },
         include: {
           receiver: {
             select: {
@@ -301711,6 +302441,21 @@ router36.put("/messages/:id/read", async (req, res) => {
     res.json(message);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+router36.put("/messages/:id/archive", async (req, res) => {
+  try {
+    const archived = req.body?.archived !== false;
+    const msg = await prisma_default.message.findUnique({ where: { id: req.params.id } });
+    if (!msg) return res.status(404).json({ error: "Message introuvable" });
+    if (msg.receiverId !== req.user.id && msg.senderId !== req.user.id) {
+      return res.status(403).json({ error: "Acc\xE8s refus\xE9" });
+    }
+    const data = msg.receiverId === req.user.id ? { receiverArchived: archived } : { senderArchived: archived };
+    const updated = await prisma_default.message.update({ where: { id: msg.id }, data });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Erreur serveur" });
   }
 });
 router36.get("/my-profile", async (req, res) => {
@@ -305063,6 +305808,15 @@ router43.post(
         });
       }
       const reference = await generateUniqueReference();
+      const guardianSignatureRaw = typeof req.body?.guardianSignature === "string" ? req.body.guardianSignature.trim() : typeof req.body?.guardianSignatureData === "string" ? req.body.guardianSignatureData.trim() : "";
+      const guardianConsentAccepted = parseBooleanFormField(req.body?.guardianConsentAccepted);
+      const guardianConsentText = typeof req.body?.guardianConsentText === "string" ? req.body.guardianConsentText.trim().slice(0, 2e3) : "J\u2019atteste l\u2019exactitude des informations et autorise le traitement des donn\xE9es pour l\u2019instruction du dossier d\u2019admission.";
+      if (!guardianConsentAccepted || guardianSignatureRaw.length < 2) {
+        discardUploadedFile(req.file);
+        return res.status(400).json({
+          error: "Signature \xE9lectronique et consentement du responsable l\xE9gal sont obligatoires pour soumettre le dossier."
+        });
+      }
       const admission = await prisma_default.admission.create({
         data: {
           reference,
@@ -305084,6 +305838,11 @@ router43.post(
           parentEmail: parentEmail ? String(parentEmail).trim().toLowerCase() : void 0,
           address: address ? String(address).trim() : void 0,
           motivation: motivation ? String(motivation).trim() : void 0,
+          guardianSignatureData: guardianSignatureRaw.slice(0, 2e5),
+          guardianSignedAt: /* @__PURE__ */ new Date(),
+          guardianSignIp: req.ip || req.socket.remoteAddress || void 0,
+          guardianConsentAccepted: true,
+          guardianConsentText,
           ...admissionGradeDataForCreate(levelTrim, req.body),
           ...reportCard ?? {}
         },
@@ -305095,6 +305854,7 @@ router43.post(
           lastName: true,
           academicYear: true,
           desiredLevel: true,
+          guardianSignedAt: true,
           createdAt: true
         }
       });
@@ -305222,6 +305982,132 @@ init_app_branding_prisma_util();
 init_school_context_util();
 init_ensure_default_school_util();
 init_report_card_util();
+
+// src/utils/public-mock-exam-results.util.ts
+init_report_card_util();
+function normalizePersonName(value) {
+  return value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+}
+function matriculeVariants(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  return Array.from(/* @__PURE__ */ new Set([trimmed, trimmed.toUpperCase(), trimmed.toLowerCase()]));
+}
+async function lookupPublicMockExamBulletin(client, input) {
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  const matricule = input.matricule.trim();
+  if (firstName.length < 2 || lastName.length < 2 || matricule.length < 2) {
+    throw Object.assign(
+      new Error("Nom, pr\xE9nom et num\xE9ro matricule sont requis (2 caract\xE8res minimum chacun)."),
+      { status: 400 }
+    );
+  }
+  const variants = matriculeVariants(matricule);
+  const students = await client.student.findMany({
+    where: {
+      OR: [{ studentId: { in: variants } }, { nationalMatricule: { in: variants } }]
+    },
+    take: 15,
+    select: {
+      id: true,
+      studentId: true,
+      nationalMatricule: true,
+      schoolId: true,
+      user: { select: { firstName: true, lastName: true } },
+      class: { select: { name: true, level: true, schoolId: true } }
+    }
+  });
+  const wantFirst = normalizePersonName(firstName);
+  const wantLast = normalizePersonName(lastName);
+  const schoolId = input.schoolId?.trim() || null;
+  const matched = students.find((s) => {
+    if (schoolId) {
+      const studentSchool = s.schoolId || s.class?.schoolId || null;
+      if (studentSchool && studentSchool !== schoolId) return false;
+    }
+    const fn = normalizePersonName(s.user.firstName || "");
+    const ln = normalizePersonName(s.user.lastName || "");
+    const firstOk = fn === wantFirst || fn.startsWith(wantFirst) || wantFirst.startsWith(fn);
+    const lastOk = ln === wantLast || ln.startsWith(wantLast) || wantLast.startsWith(ln);
+    return firstOk && lastOk;
+  });
+  if (!matched) return null;
+  const academicYear = typeof input.academicYear === "string" && /^\d{4}-\d{4}$/.test(input.academicYear.trim()) ? input.academicYear.trim() : getCurrentAcademicYear();
+  const attempts = await client.mockExamAttempt.findMany({
+    where: {
+      studentId: matched.id,
+      submittedAt: { not: null },
+      mockExam: {
+        academicYear,
+        OR: [{ isPublicListed: true }, { isPublished: true }]
+      }
+    },
+    orderBy: { submittedAt: "desc" },
+    select: {
+      scoreOn20: true,
+      passed: true,
+      submittedAt: true,
+      mockExam: {
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          examKind: true,
+          isPublicListed: true
+        }
+      }
+    }
+  });
+  const preferred = attempts.filter((a) => a.mockExam.isPublicListed);
+  const pool = preferred.length > 0 ? preferred : attempts;
+  const byExam = /* @__PURE__ */ new Map();
+  for (const attempt of pool) {
+    const score = attempt.scoreOn20;
+    if (score == null || !Number.isFinite(score)) continue;
+    const examId = attempt.mockExam.id;
+    const existing = byExam.get(examId);
+    if (!existing) {
+      byExam.set(examId, {
+        examId,
+        title: attempt.mockExam.title,
+        subject: attempt.mockExam.subject,
+        examKind: attempt.mockExam.examKind,
+        scoreOn20: score,
+        passed: attempt.passed,
+        submittedAt: attempt.submittedAt ? attempt.submittedAt.toISOString() : null,
+        attemptsCount: 1
+      });
+      continue;
+    }
+    existing.attemptsCount += 1;
+    if (score > existing.scoreOn20) {
+      existing.scoreOn20 = score;
+      existing.passed = attempt.passed;
+      existing.submittedAt = attempt.submittedAt ? attempt.submittedAt.toISOString() : null;
+    }
+  }
+  const lines = Array.from(byExam.values()).sort((a, b) => {
+    const kind = a.examKind.localeCompare(b.examKind, "fr");
+    if (kind !== 0) return kind;
+    return (a.subject || a.title).localeCompare(b.subject || b.title, "fr");
+  });
+  const averageOn20 = lines.length > 0 ? Math.round(lines.reduce((sum, l) => sum + l.scoreOn20, 0) / lines.length * 100) / 100 : null;
+  return {
+    student: {
+      firstName: matched.user.firstName,
+      lastName: matched.user.lastName,
+      studentId: matched.studentId,
+      className: matched.class?.name ?? null,
+      classLevel: matched.class?.level ?? null
+    },
+    academicYear,
+    averageOn20,
+    lines
+  };
+}
+
+// src/routes/public.routes.ts
 var EMPTY_PUBLIC_BRANDING = {
   navigationLogoUrl: null,
   loginLogoUrl: null,
@@ -305455,6 +306341,74 @@ router44.post("/fne-lookup", fneLookupLimiter, async (req, res) => {
     console.error("POST /public/fne-lookup:", error);
     const status = /critère|Sélectionnez|Indiquez/i.test(message) ? 400 : 502;
     res.status(status).json({ error: message });
+  }
+});
+router44.post("/mock-exam-results-lookup", fneLookupLimiter, async (req, res) => {
+  try {
+    const body27 = req.body ?? {};
+    const firstName = String(body27.firstName || body27.prenoms || "").trim();
+    const lastName = String(body27.lastName || body27.nom || "").trim();
+    const matricule = String(body27.matricule || "").trim();
+    const schoolId = await resolvePublicSchoolId(req);
+    const bulletin = await lookupPublicMockExamBulletin(prisma_default, {
+      firstName,
+      lastName,
+      matricule,
+      schoolId,
+      academicYear: typeof body27.academicYear === "string" ? body27.academicYear : null
+    });
+    if (!bulletin) {
+      return res.status(404).json({
+        error: "Aucun \xE9l\xE8ve trouv\xE9 avec ces informations, ou aucune note d\u2019examen blanc disponible."
+      });
+    }
+    res.json(bulletin);
+  } catch (error) {
+    const status = error?.status ?? 500;
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    if (status >= 500) console.error("POST /public/mock-exam-results-lookup:", error);
+    res.status(status).json({ error: message });
+  }
+});
+router44.get("/mock-exams", async (req, res) => {
+  try {
+    const schoolId = await resolvePublicSchoolId(req);
+    const brandingDelegate = getAppBrandingDelegate();
+    let academicYear = getCurrentAcademicYear();
+    if (typeof req.query.academicYear === "string" && /^\d{4}-\d{4}$/.test(req.query.academicYear.trim())) {
+      academicYear = req.query.academicYear.trim();
+    } else if (brandingDelegate) {
+      const brandingId = await brandingIdForSchool(schoolId);
+      const row = await brandingDelegate.findUnique({ where: { id: brandingId } });
+      const year = row?.currentAcademicYear;
+      if (year && /^\d{4}-\d{4}$/.test(year)) academicYear = year;
+    }
+    const exams = await prisma_default.mockExam.findMany({
+      where: {
+        isPublicListed: true,
+        academicYear,
+        OR: [{ schoolId }, { schoolId: null }]
+      },
+      orderBy: [{ startsAt: "asc" }, { examKind: "asc" }, { title: "asc" }],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        subject: true,
+        examKind: true,
+        academicYear: true,
+        targetLevels: true,
+        durationMinutes: true,
+        startsAt: true,
+        endsAt: true,
+        class: { select: { name: true, level: true } }
+      }
+    });
+    res.json({ academicYear, exams });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    console.error("GET /public/mock-exams:", error);
+    res.status(500).json({ error: message });
   }
 });
 router44.get("/academic-results", async (req, res) => {
@@ -309268,7 +310222,7 @@ var academic_validation_routes_default = router54;
 var import_express55 = __toESM(require_express2(), 1);
 var import_fs6 = __toESM(require("fs"), 1);
 var import_path8 = __toESM(require("path"), 1);
-var import_crypto11 = __toESM(require("crypto"), 1);
+var import_crypto12 = __toESM(require("crypto"), 1);
 init_prisma();
 
 // src/utils/digital-library.util.ts
@@ -309368,7 +310322,7 @@ router55.post("/resources/:id/download-grant", async (req, res) => {
     }
     const ttlHours = Math.min(Math.max(resource.downloadTtlHours || 48, 1), 168);
     const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1e3);
-    const token = import_crypto11.default.randomBytes(24).toString("hex");
+    const token = import_crypto12.default.randomBytes(24).toString("hex");
     const grant = await prisma_default.digitalLibraryDownloadGrant.create({
       data: {
         resourceId: resource.id,
@@ -311549,7 +312503,7 @@ router61.post(
 var assistant_routes_default = router61;
 
 // src/routes/oauth.routes.ts
-var import_crypto12 = __toESM(require("crypto"), 1);
+var import_crypto13 = __toESM(require("crypto"), 1);
 var import_express62 = __toESM(require_express2(), 1);
 var import_jsonwebtoken3 = __toESM(require_jsonwebtoken(), 1);
 init_prisma();
@@ -311596,7 +312550,7 @@ function oauthEnabled(provider) {
 function signOAuthState(provider, client) {
   const payload = {
     p: provider,
-    n: import_crypto12.default.randomBytes(8).toString("hex"),
+    n: import_crypto13.default.randomBytes(8).toString("hex"),
     c: client
   };
   return import_jsonwebtoken3.default.sign(payload, uploadAccessSigningMaterial(), {
@@ -311750,10 +312704,10 @@ async function findOAuthUser(provider, profile) {
   throw new Error("Compte SSO non autoris\xE9. Contactez un administrateur.");
 }
 function hashExchangeCode(code) {
-  return import_crypto12.default.createHash("sha256").update(code).digest("hex");
+  return import_crypto13.default.createHash("sha256").update(code).digest("hex");
 }
 async function createExchangeCode(userId, provider) {
-  const code = import_crypto12.default.randomBytes(32).toString("base64url");
+  const code = import_crypto13.default.randomBytes(32).toString("base64url");
   await prisma_default.oAuthExchangeCode.create({
     data: {
       codeHash: hashExchangeCode(code),

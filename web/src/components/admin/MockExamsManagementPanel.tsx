@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -19,6 +20,18 @@ type QuestionDraft = {
   optionsText: string;
   correctAnswer: string;
   points: string;
+};
+
+type MockExamRow = {
+  id: string;
+  title: string;
+  subject?: string | null;
+  examKind: string;
+  isPublished: boolean;
+  isPublicListed?: boolean;
+  targetLevels?: string[];
+  class?: { name: string; level: string } | null;
+  _count?: { questions?: number; attempts?: number };
 };
 
 const emptyQuestion = (): QuestionDraft => ({
@@ -42,6 +55,7 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
   const [durationMinutes, setDurationMinutes] = useState('60');
   const [countsAsGrade, setCountsAsGrade] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
+  const [isPublicListed, setIsPublicListed] = useState(false);
   const [questions, setQuestions] = useState<QuestionDraft[]>([emptyQuestion()]);
 
   const listKey = mode === 'admin' ? ['admin-mock-exams'] : ['teacher-mock-exams'];
@@ -75,6 +89,9 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
     [examClasses, classId, courseId, mode]
   );
 
+  const examRows = exams as MockExamRow[];
+  const publicListedCount = examRows.filter((e) => e.isPublicListed).length;
+
   const create = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -84,10 +101,17 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
         academicYear: year,
         classId: mode === 'admin' ? classId || undefined : selectedClass?.id,
         courseId: mode === 'teacher' ? courseId || selectedClass?.courseId : undefined,
-        targetLevels: selectedClass?.level ? [selectedClass.level] : examKind === 'BEPC' ? ['3ème'] : examKind === 'BAC' ? ['Terminale'] : [],
+        targetLevels: selectedClass?.level
+          ? [selectedClass.level]
+          : examKind === 'BEPC'
+            ? ['3ème']
+            : examKind === 'BAC'
+              ? ['Terminale']
+              : [],
         durationMinutes: parseInt(durationMinutes, 10) || 60,
         countsAsGrade,
         isPublished,
+        isPublicListed: mode === 'admin' ? isPublicListed : false,
         maxAttempts: 2,
         questions: questions.map((q) => ({
           prompt: q.prompt,
@@ -109,33 +133,60 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
     },
     onSuccess: () => {
       toast.success('Examen blanc créé');
-      qc.invalidateQueries({ queryKey: listKey });
+      void qc.invalidateQueries({ queryKey: listKey });
       setTitle('');
       setSubject('');
       setQuestions([emptyQuestion()]);
+      setIsPublicListed(false);
     },
     onError: (e: { response?: { data?: { error?: string } } }) =>
       toast.error(e.response?.data?.error || 'Erreur création'),
   });
 
   const togglePublish = useMutation({
-    mutationFn: (row: { id: string; isPublished: boolean }) =>
+    mutationFn: (row: MockExamRow) =>
       mode === 'admin'
         ? adminApi.updateMockExam(row.id, { isPublished: !row.isPublished })
         : teacherApi.publishMockExam(row.id, !row.isPublished),
     onSuccess: () => {
-      toast.success('Publication mise à jour');
-      qc.invalidateQueries({ queryKey: listKey });
+      toast.success('Publication élèves mise à jour');
+      void qc.invalidateQueries({ queryKey: listKey });
     },
     onError: (e: { response?: { data?: { error?: string } } }) =>
       toast.error(e.response?.data?.error || 'Erreur'),
+  });
+
+  const togglePublicList = useMutation({
+    mutationFn: (row: MockExamRow) =>
+      adminApi.updateMockExam(row.id, { isPublicListed: !row.isPublicListed }),
+    onSuccess: () => {
+      toast.success('Visibilité page publique mise à jour');
+      void qc.invalidateQueries({ queryKey: listKey });
+    },
+    onError: (e: { response?: { data?: { error?: string } } }) =>
+      toast.error(e.response?.data?.error || 'Erreur'),
+  });
+
+  const syncPublicList = useMutation({
+    mutationFn: () =>
+      adminApi.syncMockExamsPublicList({ academicYear: year, onlyPublished: true }),
+    onSuccess: (data) => {
+      toast.success(
+        data.updatedCount > 0
+          ? `${data.updatedCount} examen(s) importé(s) sur la page publique`
+          : 'Aucun examen publié à importer'
+      );
+      void qc.invalidateQueries({ queryKey: listKey });
+    },
+    onError: (e: { response?: { data?: { error?: string } } }) =>
+      toast.error(e.response?.data?.error || 'Import impossible'),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => adminApi.deleteMockExam(id),
     onSuccess: () => {
       toast.success('Examen blanc supprimé');
-      qc.invalidateQueries({ queryKey: listKey });
+      void qc.invalidateQueries({ queryKey: listKey });
     },
     onError: (e: { response?: { data?: { error?: string } } }) =>
       toast.error(e.response?.data?.error || 'Erreur'),
@@ -143,22 +194,54 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
 
   return (
     <div className={`space-y-4 ${compact ? 'text-sm' : ''}`}>
-      <Card className="p-4 border border-indigo-100 bg-indigo-50/40 space-y-2">
+      <Card className="space-y-2 border border-indigo-100 bg-indigo-50/40 p-4">
         <h3 className="text-sm font-semibold text-indigo-950">Examens blancs</h3>
-        <p className="text-xs text-indigo-900/80 leading-relaxed">
+        <p className="text-xs leading-relaxed text-indigo-900/80">
           Destinés aux classes d’examen (<strong>3ème</strong> → BEPC, <strong>Terminale</strong> → BAC).
-          Les élèves concernés passent le QCM en ligne ; optionnellement, une note « Examen blanc » est
-          enregistrée.
+          Les élèves passent le QCM en ligne. Sur la{' '}
+          <Link
+            href="/examens-blancs"
+            className="font-semibold underline underline-offset-2"
+            target="_blank"
+          >
+            page publique
+          </Link>
+          , les familles recherchent nom / prénom / matricule pour consulter les notes sous forme de
+          bulletin. Importez ou marquez les examens « Sur le site » pour les rendre consultables.
         </p>
+        {mode === 'admin' ? (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={syncPublicList.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Importer tous les examens blancs publiés (${year}) sur la page publique /examens-blancs ?`
+                  )
+                ) {
+                  syncPublicList.mutate();
+                }
+              }}
+            >
+              Importer la liste sur la page publique
+            </Button>
+            <span className="text-[11px] text-indigo-800/80">
+              {publicListedCount} visible{publicListedCount > 1 ? 's' : ''} publiquement
+            </span>
+          </div>
+        ) : null}
       </Card>
 
-      <Card className="p-4 space-y-3">
+      <Card className="space-y-3 p-4">
         <h3 className="text-sm font-semibold text-gray-900">Créer un examen blanc</h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Input label="Matière" value={subject} onChange={(e) => setSubject(e.target.value)} />
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+            <label className="mb-1 block text-xs font-medium text-gray-700">Type</label>
             <select
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={examKind}
@@ -171,7 +254,7 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-xs font-medium text-gray-700">
               {mode === 'teacher' ? 'Cours / classe' : 'Classe d’examen'}
             </label>
             <select
@@ -194,7 +277,10 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
             >
               <option value="">Sélectionner…</option>
               {examClasses.map((c) => (
-                <option key={mode === 'teacher' ? c.courseId || c.id : c.id} value={mode === 'teacher' ? c.courseId : c.id}>
+                <option
+                  key={mode === 'teacher' ? c.courseId || c.id : c.id}
+                  value={mode === 'teacher' ? c.courseId : c.id}
+                >
                   {mode === 'teacher'
                     ? `${c.courseName} — ${c.name} (${c.level})`
                     : `${c.name} (${c.level})`}
@@ -208,15 +294,15 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(e.target.value)}
           />
-          <label className="flex items-end gap-2 text-xs pb-2">
+          <label className="flex items-end gap-2 pb-2 text-xs">
             <input
               type="checkbox"
               checked={isPublished}
               onChange={(e) => setIsPublished(e.target.checked)}
             />
-            Publié immédiatement
+            Publié pour les élèves
           </label>
-          <label className="flex items-end gap-2 text-xs pb-2">
+          <label className="flex items-end gap-2 pb-2 text-xs">
             <input
               type="checkbox"
               checked={countsAsGrade}
@@ -224,41 +310,33 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
             />
             Compter comme note
           </label>
+          {mode === 'admin' ? (
+            <label className="flex items-end gap-2 pb-2 text-xs">
+              <input
+                type="checkbox"
+                checked={isPublicListed}
+                onChange={(e) => setIsPublicListed(e.target.checked)}
+              />
+              Visible sur la page publique
+            </label>
+          ) : null}
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-gray-800 uppercase tracking-wide">Questions</h4>
-            <Button type="button" size="sm" variant="secondary" onClick={() => setQuestions([...questions, emptyQuestion()])}>
-              + Question
-            </Button>
-          </div>
           {questions.map((q, idx) => (
-            <div key={idx} className="rounded-lg border p-3 space-y-2 bg-gray-50/80">
-              <div className="flex justify-between gap-2">
-                <span className="text-xs font-medium text-gray-600">Q{idx + 1}</span>
-                {questions.length > 1 && (
-                  <button
-                    type="button"
-                    className="text-xs text-red-600"
-                    onClick={() => setQuestions(questions.filter((_, i) => i !== idx))}
-                  >
-                    Retirer
-                  </button>
-                )}
-              </div>
-              <Input
-                label="Énoncé"
-                value={q.prompt}
-                onChange={(e) => {
-                  const next = [...questions];
-                  next[idx] = { ...q, prompt: e.target.value };
-                  setQuestions(next);
-                }}
-              />
+            <div key={idx} className="space-y-2 rounded-xl border border-stone-200 bg-white p-3">
               <div className="grid gap-2 sm:grid-cols-3">
+                <Input
+                  label={`Question ${idx + 1}`}
+                  value={q.prompt}
+                  onChange={(e) => {
+                    const next = [...questions];
+                    next[idx] = { ...q, prompt: e.target.value };
+                    setQuestions(next);
+                  }}
+                />
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Type</label>
                   <select
                     className="w-full rounded-lg border px-3 py-2 text-sm"
                     value={q.kind}
@@ -267,7 +345,6 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
                       next[idx] = {
                         ...q,
                         kind: e.target.value as QuestionDraft['kind'],
-                        correctAnswer: e.target.value === 'TRUE_FALSE' ? 'Vrai' : q.correctAnswer,
                       };
                       setQuestions(next);
                     }}
@@ -275,7 +352,7 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
                   >
                     <option value="MCQ">QCM</option>
                     <option value="TRUE_FALSE">Vrai / Faux</option>
-                    <option value="SHORT_TEXT">Réponse courte</option>
+                    <option value="SHORT_TEXT">Texte court</option>
                   </select>
                 </div>
                 <Input
@@ -302,7 +379,7 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
                 <label className="block text-xs text-gray-600">
                   Options (une par ligne)
                   <textarea
-                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[80px]"
+                    className="mt-1 min-h-[80px] w-full rounded-lg border px-3 py-2 text-sm"
                     value={q.optionsText}
                     onChange={(e) => {
                       const next = [...questions];
@@ -316,21 +393,31 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
           ))}
         </div>
 
-        <Button
-          type="button"
-          size="sm"
-          disabled={!title.trim() || questions.every((q) => !q.prompt.trim()) || create.isPending}
-          onClick={() => create.mutate()}
-        >
-          Créer l’examen blanc
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setQuestions((prev) => [...prev, emptyQuestion()])}
+          >
+            Ajouter une question
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!title.trim() || questions.every((q) => !q.prompt.trim()) || create.isPending}
+            onClick={() => create.mutate()}
+          >
+            Créer l’examen blanc
+          </Button>
+        </div>
       </Card>
 
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="p-6 text-center text-gray-500">Chargement…</div>
-        ) : (exams as any[]).length === 0 ? (
-          <div className="p-6 text-center text-gray-500 text-sm">Aucun examen blanc pour le moment.</div>
+        ) : examRows.length === 0 ? (
+          <div className="p-6 text-center text-sm text-gray-500">Aucun examen blanc pour le moment.</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-gray-600">
@@ -343,33 +430,49 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
               </tr>
             </thead>
             <tbody>
-              {(exams as any[]).map((exam) => (
+              {examRows.map((exam) => (
                 <tr key={exam.id} className="border-t">
                   <td className="px-3 py-2">
                     <div className="font-medium">{exam.title}</div>
                     <div className="text-xs text-gray-500">{exam.subject || '—'}</div>
                   </td>
                   <td className="px-3 py-2">
-                    <Badge variant={exam.examKind === 'BAC' ? 'danger' : 'warning'}>{exam.examKind}</Badge>
+                    <Badge variant={exam.examKind === 'BAC' ? 'danger' : 'warning'}>
+                      {exam.examKind}
+                    </Badge>
                     {!exam.isPublished && (
                       <span className="ml-1 text-[10px] text-amber-700">Brouillon</span>
                     )}
+                    {exam.isPublicListed ? (
+                      <span className="ml-1 text-[10px] text-emerald-700">Site public</span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-xs">
-                    {exam.class ? `${exam.class.name} (${exam.class.level})` : (exam.targetLevels || []).join(', ') || '—'}
+                    {exam.class
+                      ? `${exam.class.name} (${exam.class.level})`
+                      : (exam.targetLevels || []).join(', ') || '—'}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-xs">
+                  <td className="px-3 py-2 text-right text-xs tabular-nums">
                     {exam._count?.questions ?? 0} / {exam._count?.attempts ?? 0}
                   </td>
-                  <td className="px-3 py-2 text-right space-x-2">
+                  <td className="space-x-2 whitespace-nowrap px-3 py-2 text-right">
                     <button
                       type="button"
                       className="text-xs text-indigo-700"
                       onClick={() => togglePublish.mutate(exam)}
                     >
-                      {exam.isPublished ? 'Dépublier' : 'Publier'}
+                      {exam.isPublished ? 'Dépublier élèves' : 'Publier élèves'}
                     </button>
-                    {mode === 'admin' && (
+                    {mode === 'admin' ? (
+                      <button
+                        type="button"
+                        className="text-xs text-emerald-700"
+                        onClick={() => togglePublicList.mutate(exam)}
+                      >
+                        {exam.isPublicListed ? 'Retirer du site' : 'Sur le site'}
+                      </button>
+                    ) : null}
+                    {mode === 'admin' ? (
                       <button
                         type="button"
                         className="text-xs text-red-600"
@@ -379,7 +482,7 @@ export default function MockExamsManagementPanel({ mode = 'admin', compact = fal
                       >
                         Suppr.
                       </button>
-                    )}
+                    ) : null}
                   </td>
                 </tr>
               ))}

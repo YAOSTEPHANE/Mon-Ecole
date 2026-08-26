@@ -55,6 +55,7 @@ const NAV_LINKS = [
   { href: '/a-propos', label: 'À propos' },
   { href: '#etablissement', label: 'Établissement' },
   { href: '#resultats', label: 'Résultats' },
+  { href: '/examens-blancs', label: 'Examens blancs' },
   { href: '#galerie', label: 'Galerie' },
   { href: '#matricule-fne', label: 'Matricule FNE' },
   { href: '#parcours', label: 'Admissions' },
@@ -1307,6 +1308,13 @@ export default function Home() {
                 )}
               </div>
               <p className="mt-12 text-sm text-stone-500">
+                <Link
+                  href="/examens-blancs"
+                  className="font-medium text-tran-mustard-200/90 underline decoration-tran-mustard-400/40 underline-offset-4 hover:text-white"
+                >
+                  Examens blancs
+                </Link>
+                <span className="mx-2 text-stone-600">·</span>
                 <Link
                   href="/faq"
                   className="font-medium text-tran-mustard-200/90 underline decoration-tran-mustard-400/40 underline-offset-4 hover:text-white"

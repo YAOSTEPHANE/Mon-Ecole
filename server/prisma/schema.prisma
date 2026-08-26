@@ -3649,6 +3649,8 @@ model MockExam {
   startsAt        DateTime?
   endsAt          DateTime?
   isPublished     Boolean      @default(false)
+  /// Visible sur la page publique (liste consultable sans compte) — sans questions/réponses
+  isPublicListed  Boolean      @default(false)
   /// Si vrai : une note MOCK_EXAM est créée à la soumission
   countsAsGrade   Boolean      @default(false)
   maxAttempts     Int          @default(2)
@@ -3668,6 +3670,7 @@ model MockExam {
 
   @@index([academicYear, isPublished])
   @@index([examKind, isPublished])
+  @@index([academicYear, isPublicListed])
   @@index([classId])
   @@index([teacherId])
   @@index([schoolId])

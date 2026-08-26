@@ -131,4 +131,57 @@ export const publicApi = {
       } | null;
     };
   },
+  /** Liste publique des examens blancs (sans questions). */
+  getMockExams: async (params?: { school?: string; academicYear?: string }) => {
+    const response = await api.get('/public/mock-exams', { params });
+    return response.data as {
+      academicYear: string;
+      exams: Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        subject: string | null;
+        examKind: string;
+        academicYear: string;
+        targetLevels: string[];
+        durationMinutes: number | null;
+        startsAt: string | null;
+        endsAt: string | null;
+        class: { name: string; level: string } | null;
+      }>;
+    };
+  },
+  /** Recherche publique des notes d’examens blancs (bulletin). */
+  lookupMockExamResults: async (data: {
+    firstName: string;
+    lastName: string;
+    matricule: string;
+    academicYear?: string;
+    school?: string;
+  }) => {
+    const response = await api.post('/public/mock-exam-results-lookup', data, {
+      params: data.school?.trim() ? { school: data.school.trim() } : undefined,
+    });
+    return response.data as {
+      student: {
+        firstName: string;
+        lastName: string;
+        studentId: string;
+        className: string | null;
+        classLevel: string | null;
+      };
+      academicYear: string;
+      averageOn20: number | null;
+      lines: Array<{
+        examId: string;
+        title: string;
+        subject: string | null;
+        examKind: string;
+        scoreOn20: number;
+        passed: boolean | null;
+        submittedAt: string | null;
+        attemptsCount: number;
+      }>;
+    };
+  },
 };

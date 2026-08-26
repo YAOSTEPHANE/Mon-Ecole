@@ -192,6 +192,15 @@ const Footer = () => {
               </li>
               <li>
                 <Link
+                  href="/examens-blancs"
+                  className="text-sm text-stone-400 hover:text-amber-100 transition-colors flex items-center rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                >
+                  <FiBook className="w-4 h-4 mr-2" />
+                  Examens blancs
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/faq"
                   className="text-sm text-stone-400 hover:text-amber-100 transition-colors flex items-center rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
                 >

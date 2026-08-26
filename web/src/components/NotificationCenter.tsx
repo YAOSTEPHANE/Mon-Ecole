@@ -5,7 +5,14 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type RefObject,
+} from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { FiBell } from "react-icons/fi";
 import {
@@ -37,16 +44,33 @@ interface NotificationCenterProps {
   /** Pour ADMIN : filtre les notifications sur l’utilisateur connecté */
   currentUserId?: string | null;
   variant?: "default" | "ghost";
+  /** Masque le bouton cloche (ouverture contrôlée depuis un menu parent). */
+  hideTrigger?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Ancre pour positionner le panneau en mode contrôlé sans trigger. */
+  anchorRef?: RefObject<HTMLElement | null>;
 }
 
 export default function NotificationCenter({
   role,
   currentUserId,
   variant = "default",
+  hideTrigger = false,
+  open: openProp,
+  onOpenChange,
+  anchorRef,
 }: NotificationCenterProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = (next: boolean | ((prev: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(open) : next;
+    onOpenChange?.(value);
+    if (openProp === undefined) setInternalOpen(value);
+  };
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 16 });
 
   const enabled = role !== "ADMIN" || Boolean(currentUserId);
 
@@ -136,6 +160,37 @@ export default function NotificationCenter({
 
   const displayed = useMemo(() => items.slice(0, 12), [items]);
 
+  useLayoutEffect(() => {
+    if (!open || !hideTrigger) return;
+    const updatePosition = () => {
+      const rect = anchorRef?.current?.getBoundingClientRect();
+      if (!rect) {
+        setPanelPos({ top: 72, right: 16 });
+        return;
+      }
+      setPanelPos({
+        top: Math.min(rect.bottom + 8, window.innerHeight - 120),
+        right: Math.max(12, window.innerWidth - rect.right),
+      });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, hideTrigger, anchorRef]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   const navigateLink = (href: string) => {
     if (href.startsWith("http://") || href.startsWith("https://")) {
       window.open(href, "_blank", "noopener,noreferrer");
@@ -153,6 +208,119 @@ export default function NotificationCenter({
       navigateLink(n.link);
     }
   };
+
+  const panel = open ? (
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-[45] cursor-default bg-stone-900/15 backdrop-blur-[2px]"
+        aria-label="Fermer les notifications"
+        onClick={() => setOpen(false)}
+      />
+      <div
+        role="dialog"
+        aria-label="Centre de notifications"
+        className={
+          hideTrigger
+            ? "premium-surface fixed z-[60] w-[min(calc(100vw-1.5rem),22rem)] bg-white/98 shadow-lux-soft backdrop-blur-xl animate-fade-in"
+            : "premium-surface absolute right-0 z-[60] mt-2 w-[min(calc(100vw-1.5rem),22rem)] bg-white/98 shadow-lux-soft backdrop-blur-xl animate-fade-in"
+        }
+        style={hideTrigger ? { top: panelPos.top, right: panelPos.right } : undefined}
+      >
+        <div className="flex items-center justify-between border-b border-stone-200/70 px-4 py-3 bg-gradient-to-r from-amber-50/90 to-stone-50/80">
+          <p className="text-sm font-bold text-stone-900">Notifications</p>
+          {unreadCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => markAll.mutate()}
+              disabled={markAll.isPending}
+              className="text-[11px] font-semibold text-amber-800 hover:text-amber-950 disabled:opacity-50"
+            >
+              Tout marquer comme lu
+            </button>
+          ) : null}
+        </div>
+
+        <div className="max-h-[min(55vh,22rem)] overflow-y-auto overscroll-contain">
+          {isLoading ? (
+            <p className="px-4 py-8 text-center text-sm text-stone-500">
+              Chargement…
+            </p>
+          ) : displayed.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-stone-500">
+              Aucune notification pour le moment.
+            </p>
+          ) : (
+            <ul className="divide-y divide-stone-100">
+              {displayed.map((n) => (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => void onRowActivate(n)}
+                    className={`flex w-full flex-col gap-0.5 px-4 py-3 text-left transition hover:bg-stone-50/95 ${
+                      !n.read ? "bg-amber-50/40" : ""
+                    }`}
+                  >
+                    <span className="flex items-start justify-between gap-2">
+                      <span
+                        className={`text-xs font-semibold leading-snug ${
+                          !n.read ? "text-stone-900" : "text-stone-700"
+                        }`}
+                      >
+                        {n.title}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-stone-400 tabular-nums">
+                        {formatDistanceToNow(new Date(n.createdAt), {
+                          addSuffix: true,
+                          locale: fr,
+                        })}
+                      </span>
+                    </span>
+                    <span className="line-clamp-2 text-[11px] leading-relaxed text-stone-600">
+                      {n.content}
+                    </span>
+                    {n.type ? (
+                      <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-stone-400">
+                        {n.type}
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {role === "ADMIN" ? (
+          <div className="border-t border-stone-200/80 bg-stone-50/50 px-3 py-2">
+            <Link
+              href="/admin/notifications"
+              onClick={() => setOpen(false)}
+              className="block w-full rounded-xl px-2 py-2 text-center text-xs font-semibold text-amber-900 hover:bg-amber-50/80"
+            >
+              Voir toutes les notifications
+            </Link>
+          </div>
+        ) : null}
+        {role === "PARENT" ? (
+          <div className="border-t border-stone-200/80 bg-stone-50/50 px-3 py-2">
+            <Link
+              href="/parent?tab=notifications"
+              onClick={() => setOpen(false)}
+              className="block w-full rounded-xl px-2 py-2 text-center text-xs font-semibold text-amber-900 hover:bg-amber-50/80"
+            >
+              Voir toutes les notifications
+            </Link>
+          </div>
+        ) : null}
+      </div>
+    </>
+  ) : null;
+
+  if (hideTrigger) {
+    if (!open || typeof document === "undefined") return null;
+    return createPortal(<div data-portal className="fixed inset-0 z-[200]">{panel}</div>, document.body);
+  }
 
   return (
     <div className="relative z-50">
@@ -176,108 +344,7 @@ export default function NotificationCenter({
         ) : null}
       </button>
 
-      {open && (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-[45] cursor-default bg-stone-900/15 backdrop-blur-[2px]"
-            aria-label="Fermer les notifications"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            role="dialog"
-            aria-label="Centre de notifications"
-            className="premium-surface absolute right-0 z-[60] mt-2 w-[min(calc(100vw-1.5rem),22rem)] bg-white/98 shadow-lux-soft backdrop-blur-xl animate-fade-in"
-          >
-            <div className="flex items-center justify-between border-b border-stone-200/70 px-4 py-3 bg-gradient-to-r from-amber-50/90 to-stone-50/80">
-              <p className="text-sm font-bold text-stone-900">Notifications</p>
-              {unreadCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => markAll.mutate()}
-                  disabled={markAll.isPending}
-                  className="text-[11px] font-semibold text-amber-800 hover:text-amber-950 disabled:opacity-50"
-                >
-                  Tout marquer comme lu
-                </button>
-              ) : null}
-            </div>
-
-            <div className="max-h-[min(55vh,22rem)] overflow-y-auto overscroll-contain">
-              {isLoading ? (
-                <p className="px-4 py-8 text-center text-sm text-stone-500">
-                  Chargement…
-                </p>
-              ) : displayed.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-stone-500">
-                  Aucune notification pour le moment.
-                </p>
-              ) : (
-                <ul className="divide-y divide-stone-100">
-                  {displayed.map((n) => (
-                    <li key={n.id}>
-                      <button
-                        type="button"
-                        onClick={() => void onRowActivate(n)}
-                        className={`flex w-full flex-col gap-0.5 px-4 py-3 text-left transition hover:bg-stone-50/95 ${
-                          !n.read ? "bg-amber-50/40" : ""
-                        }`}
-                      >
-                        <span className="flex items-start justify-between gap-2">
-                          <span
-                            className={`text-xs font-semibold leading-snug ${
-                              !n.read ? "text-stone-900" : "text-stone-700"
-                            }`}
-                          >
-                            {n.title}
-                          </span>
-                          <span className="shrink-0 text-[10px] text-stone-400 tabular-nums">
-                            {formatDistanceToNow(new Date(n.createdAt), {
-                              addSuffix: true,
-                              locale: fr,
-                            })}
-                          </span>
-                        </span>
-                        <span className="line-clamp-2 text-[11px] leading-relaxed text-stone-600">
-                          {n.content}
-                        </span>
-                        {n.type ? (
-                          <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-stone-400">
-                            {n.type}
-                          </span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {role === "ADMIN" ? (
-              <div className="border-t border-stone-200/80 bg-stone-50/50 px-3 py-2">
-                <Link
-                  href="/admin/notifications"
-                  onClick={() => setOpen(false)}
-                  className="block w-full rounded-xl px-2 py-2 text-center text-xs font-semibold text-amber-900 hover:bg-amber-50/80"
-                >
-                  Voir toutes les notifications
-                </Link>
-              </div>
-            ) : null}
-            {role === "PARENT" ? (
-              <div className="border-t border-stone-200/80 bg-stone-50/50 px-3 py-2">
-                <Link
-                  href="/parent?tab=notifications"
-                  onClick={() => setOpen(false)}
-                  className="block w-full rounded-xl px-2 py-2 text-center text-xs font-semibold text-amber-900 hover:bg-amber-50/80"
-                >
-                  Voir toutes les notifications
-                </Link>
-              </div>
-            ) : null}
-          </div>
-        </>
-      )}
+      {panel}
     </div>
   );
 }

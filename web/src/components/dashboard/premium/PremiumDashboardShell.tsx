@@ -52,7 +52,7 @@ export default function PremiumDashboardShell({
   const atmosphere = VARIANT_ATMOSPHERE[variant] ?? VARIANT_ATMOSPHERE.admin;
 
   return (
-    <div className={`relative min-h-full overflow-hidden ${atmosphere.mesh}`}>
+    <div className={`relative min-h-full overflow-x-hidden ${atmosphere.mesh}`}>
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         <div
           className={`absolute -left-32 top-0 h-[22rem] w-[22rem] rounded-full ${atmosphere.orbs[0]} blur-3xl`}

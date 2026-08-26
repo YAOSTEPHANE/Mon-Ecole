@@ -587,8 +587,8 @@ export default function AdminOpsDashboard({
 
   return (
     <div className="min-h-full w-full bg-white p-4 sm:p-6 lg:p-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <div className="mb-6 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-center gap-2.5">
+      <div className="mb-6 flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-2.5">
           {onOpenSidebar ? (
             <button
               type="button"
@@ -598,7 +598,28 @@ export default function AdminOpsDashboard({
             >
               <FiMenu className="h-4 w-4" />
             </button>
-          ) : null}
+          ) : (
+            <span className="hidden lg:block" aria-hidden />
+          )}
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+            <SchoolSwitcher className="hidden max-w-[11rem] sm:flex" />
+            {onLogout ? (
+              <AccountHeaderControls
+                user={
+                  user ?? {
+                    firstName,
+                    lastName,
+                    avatar,
+                    role: 'ADMIN',
+                  }
+                }
+                role="ADMIN"
+                onLogout={onLogout}
+                variant="ops"
+                onOpenSettings={onOpenSettings}
+              />
+            ) : null}
+          </div>
         </div>
         <nav
           className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-full bg-stone-100/90 p-1"
@@ -622,25 +643,6 @@ export default function AdminOpsDashboard({
             );
           })}
         </nav>
-        <div className="flex items-center justify-end gap-2">
-          <SchoolSwitcher className="hidden max-w-[11rem] sm:flex" />
-          {onLogout ? (
-            <AccountHeaderControls
-              user={
-                user ?? {
-                  firstName,
-                  lastName,
-                  avatar,
-                  role: 'ADMIN',
-                }
-              }
-              role="ADMIN"
-              onLogout={onLogout}
-              variant="ops"
-              onOpenSettings={onOpenSettings}
-            />
-          ) : null}
-        </div>
       </div>
 
       <div className="mb-5 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

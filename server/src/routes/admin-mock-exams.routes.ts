@@ -110,6 +110,39 @@ router.get('/mock-exams', async (req: SchoolContextRequest, res) => {
   }
 });
 
+/**
+ * Importe / synchronise la liste admin vers la page publique :
+ * marque isPublicListed=true pour les examens de l’année (publiés élèves par défaut).
+ */
+router.post('/mock-exams/sync-public-list', async (req: SchoolContextRequest, res) => {
+  try {
+    const body = (req.body || {}) as { academicYear?: string; onlyPublished?: boolean };
+    const year =
+      typeof body.academicYear === 'string' && body.academicYear.trim()
+        ? body.academicYear.trim()
+        : getCurrentAcademicYear();
+    const onlyPublished = body.onlyPublished !== false;
+
+    const result = await prisma.mockExam.updateMany({
+      where: {
+        academicYear: year,
+        ...(req.schoolId ? { schoolId: req.schoolId } : {}),
+        ...(onlyPublished ? { isPublished: true } : {}),
+      },
+      data: { isPublicListed: true },
+    });
+
+    res.json({
+      ok: true,
+      academicYear: year,
+      updatedCount: result.count,
+      publicPath: '/examens-blancs',
+    });
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
 router.get('/mock-exams/:id', async (req, res) => {
   try {
     const row = await prisma.mockExam.findUnique({
@@ -174,6 +207,7 @@ router.post('/mock-exams', async (req: AuthRequest & SchoolContextRequest, res) 
       startsAt: parseDate(body.startsAt),
       endsAt: parseDate(body.endsAt),
       isPublished: Boolean(body.isPublished),
+      isPublicListed: Boolean(body.isPublicListed),
       countsAsGrade: Boolean(body.countsAsGrade),
       maxAttempts:
         body.maxAttempts != null && Number.isFinite(Number(body.maxAttempts))
@@ -211,6 +245,7 @@ router.patch('/mock-exams/:id', async (req, res) => {
       data.courseId = body.courseId || null;
     }
     if (typeof body.isPublished === 'boolean') data.isPublished = body.isPublished;
+    if (typeof body.isPublicListed === 'boolean') data.isPublicListed = body.isPublicListed;
     if (typeof body.countsAsGrade === 'boolean') data.countsAsGrade = body.countsAsGrade;
     if (body.durationMinutes != null) data.durationMinutes = Number(body.durationMinutes) || null;
     if (body.maxAttempts != null) {
