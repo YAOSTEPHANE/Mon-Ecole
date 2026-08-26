@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import express from 'express';
 
 /**
@@ -5,11 +6,42 @@ import express from 'express';
  *
  * Callback URL (prod) : https://VOTRE_DOMAINE/api/webhooks/whatsapp
  * Verify token : WHATSAPP_VERIFY_TOKEN (identique dans Meta et Vercel/.env)
+ * Signature POST : WHATSAPP_APP_SECRET → en-tête X-Hub-Signature-256
  */
 const router = express.Router();
 
 function expectedVerifyToken(): string {
   return (process.env.WHATSAPP_VERIFY_TOKEN || '').trim();
+}
+
+function appSecret(): string {
+  return (process.env.WHATSAPP_APP_SECRET || '').trim();
+}
+
+function timingSafeEqualHex(a: string, b: string): boolean {
+  try {
+    const left = Buffer.from(a, 'hex');
+    const right = Buffer.from(b, 'hex');
+    if (left.length === 0 || left.length !== right.length) return false;
+    return crypto.timingSafeEqual(left, right);
+  } catch {
+    return false;
+  }
+}
+
+/** Vérifie X-Hub-Signature-256 (HMAC SHA-256 du corps brut). */
+export function verifyWhatsAppSignature(
+  rawBody: Buffer | undefined,
+  signatureHeader: string | undefined,
+  secret: string,
+): boolean {
+  if (!rawBody || !signatureHeader || !secret) return false;
+  const provided = signatureHeader.startsWith('sha256=')
+    ? signatureHeader.slice('sha256='.length).trim()
+    : signatureHeader.trim();
+  if (!/^[a-f0-9]{64}$/i.test(provided)) return false;
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  return timingSafeEqualHex(provided.toLowerCase(), expected.toLowerCase());
 }
 
 function handleVerify(req: express.Request, res: express.Response): void {
@@ -32,7 +64,6 @@ function handleVerify(req: express.Request, res: express.Response): void {
   }
 
   if (mode === 'subscribe' && token === expected && challenge) {
-    // Meta exige le challenge en texte brut (pas JSON)
     res.status(200).type('text/plain').send(challenge);
     return;
   }
@@ -41,6 +72,23 @@ function handleVerify(req: express.Request, res: express.Response): void {
 }
 
 function handleIncoming(req: express.Request, res: express.Response): void {
+  const secret = appSecret();
+  const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody;
+  const signature = req.get('X-Hub-Signature-256') || undefined;
+
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(503).json({ error: 'WHATSAPP_APP_SECRET non configuré' });
+      return;
+    }
+    console.warn(
+      '[whatsapp-webhook] WHATSAPP_APP_SECRET absent — signature non vérifiée (dev uniquement).',
+    );
+  } else if (!verifyWhatsAppSignature(rawBody, signature, secret)) {
+    res.status(401).json({ error: 'Signature WhatsApp invalide' });
+    return;
+  }
+
   res.status(200).json({ ok: true });
 
   try {
@@ -85,7 +133,6 @@ function handleIncoming(req: express.Request, res: express.Response): void {
   }
 }
 
-// Chemins avec et sans préfixe /api (Vercel peut stripper ou non le routePrefix)
 router.get('/webhooks/whatsapp', handleVerify);
 router.post('/webhooks/whatsapp', handleIncoming);
 router.get('/api/webhooks/whatsapp', handleVerify);

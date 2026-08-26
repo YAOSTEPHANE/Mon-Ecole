@@ -3,6 +3,10 @@ const SENSITIVE_UPLOAD_SEGMENTS = [
   '/identity-documents/',
   '/admission-documents/',
   '/teacher-admin-documents/',
+  '/assignments/',
+  '/courses/',
+  '/elearning/',
+  '/digital-library/',
 ] as const;
 
 export function normalizeUploadRequestPath(urlPath: string): string {

@@ -47,13 +47,13 @@ interface AuthContextType {
     email: string,
     password: string,
     twoFactorCode?: string
-  ) => Promise<{ token: string; user: User; twoFactorEnabled?: boolean }>;
-  /** Finalise une session après SSO (jeton JWT déjà émis par le backend). */
+  ) => Promise<{ token?: string; user: User; twoFactorEnabled?: boolean }>;
+  /** Finalise une session après SSO (jeton JWT déjà émis par le backend — mobile / legacy). */
   acceptSession: (sessionToken: string) => Promise<User>;
   logout: () => void | Promise<void>;
   loading: boolean;
   /** Recharge le profil depuis l’API (sans message de succès). */
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
   /** Met à jour le profil via PUT /auth/me puis recharge l’utilisateur. */
   updateProfile: (data: ProfileUpdatePayload) => Promise<void>;
   /** Préférences interface (thème, fuseau horaire, etc.). */
@@ -173,13 +173,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = async (): Promise<User | null> => {
     try {
       const userData = await authApi.getMe();
       if (userData) {
-        setUser(userData as User);
+        const u = userData as User;
+        setUser(u);
         await saveUserSnapshot(userData);
+        return u;
       }
+      return null;
     } catch (error: unknown) {
       const err = error as { response?: { status?: number } };
       if (err.response?.status === 401) {
@@ -187,14 +190,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMemoryAccessToken(null);
         setToken(null);
         setUser(null);
-        return;
+        return null;
       }
       if (isTransientSessionError(error)) {
         const offlineUser = await loadUserSnapshot<User>();
         if (offlineUser?.id) {
           setUser(offlineUser);
+          return offlineUser;
         }
       }
+      return null;
     }
   };
 
@@ -216,9 +221,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, twoFactorCode?: string) => {
     try {
       const response = await authApi.login(email, password, twoFactorCode);
-      if (response && response.token && response.user) {
-        setMemoryAccessToken(response.token);
-        setToken(response.token);
+      if (response && response.user) {
+        // Session web = cookie HttpOnly ; Bearer mémoire uniquement si le serveur le renvoie (clients legacy).
+        if (typeof response.token === 'string' && response.token) {
+          setMemoryAccessToken(response.token);
+          setToken(response.token);
+        } else {
+          setMemoryAccessToken(null);
+          setToken(null);
+        }
         setUser(response.user as User);
         const schoolId =
           typeof window !== 'undefined' ? localStorage.getItem('activeSchoolId') || '' : '';

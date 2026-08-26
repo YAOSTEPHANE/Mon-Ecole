@@ -11,7 +11,7 @@ import { authApi } from "@/services/api";
 export default function OAuthCallbackClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { acceptSession, user, loading } = useAuth();
+  const { refreshUser, user, loading } = useAuth();
   const [status, setStatus] = useState<"working" | "error">("working");
 
   useEffect(() => {
@@ -33,9 +33,10 @@ export default function OAuthCallbackClient() {
     let cancelled = false;
     void (async () => {
       try {
-        const { token } = await authApi.exchangeOAuthCode(code);
-        const sessionUser = await acceptSession(token);
+        await authApi.exchangeOAuthCode(code);
+        const sessionUser = await refreshUser();
         if (cancelled) return;
+        if (!sessionUser) throw new Error("Session introuvable");
         toast.success("Connexion SSO réussie");
         router.replace(getRoleDashboardPath(sessionUser.role));
       } catch {
@@ -48,7 +49,7 @@ export default function OAuthCallbackClient() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, acceptSession, router]);
+  }, [searchParams, refreshUser, router]);
 
   useEffect(() => {
     if (!loading && user) {

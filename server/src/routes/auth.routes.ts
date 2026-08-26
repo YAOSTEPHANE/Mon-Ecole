@@ -17,6 +17,7 @@ import {
   extractAccessToken,
   setAuthSessionCookie,
 } from '../utils/auth-cookie.util';
+import { clientWantsBearerTokenInBody } from '../utils/auth-client.util';
 import {
   authLoginLimiter,
   authRegisterLimiter,
@@ -141,11 +142,14 @@ router.post(
       const token = generateToken(user.id, user.email, user.role, 0);
       setAuthSessionCookie(res, token);
 
-      res.status(201).json({
+      const payload: Record<string, unknown> = {
         message: 'Inscription réussie',
         user,
-        token,
-      });
+      };
+      if (clientWantsBearerTokenInBody(req)) {
+        payload.token = token;
+      }
+      res.status(201).json(payload);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur serveur';
       const status = message.includes('mot de passe') ? 400 : 500;
@@ -284,12 +288,15 @@ router.post(
 
       setAuthSessionCookie(res, token);
 
-      res.json({
+      const payload: Record<string, unknown> = {
         message: 'Connexion réussie',
         user: decryptSessionUserPayload(userForSession),
-        token,
         twoFactorEnabled: Boolean(twoFactor?.enabled),
-      });
+      };
+      if (clientWantsBearerTokenInBody(req)) {
+        payload.token = token;
+      }
+      res.json(payload);
     } catch (error: unknown) {
       console.error('Erreur lors de la connexion:', error);
       const dbMsg = prismaConnectionErrorMessage(error);

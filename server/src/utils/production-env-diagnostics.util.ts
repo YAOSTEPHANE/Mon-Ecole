@@ -19,6 +19,14 @@ export function logProductionEnvDiagnostics(): void {
     );
   }
 
+  const waSecret = (process.env.WHATSAPP_APP_SECRET ?? '').trim();
+  const waToken = (process.env.WHATSAPP_TOKEN ?? '').trim();
+  if (waToken && !waSecret) {
+    console.warn(
+      '[Config] WHATSAPP_TOKEN présent sans WHATSAPP_APP_SECRET — les webhooks POST seront rejetés en production.',
+    );
+  }
+
   if (!process.env.SENSITIVE_FIELD_ENCRYPTION_KEY?.trim()) {
     console.warn(
       '[Config] SENSITIVE_FIELD_ENCRYPTION_KEY absent — champs sensibles élève non chiffrés.',

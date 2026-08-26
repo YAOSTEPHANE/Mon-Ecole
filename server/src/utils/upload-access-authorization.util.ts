@@ -58,7 +58,6 @@ export async function userCanAccessSensitiveUpload(
     if (user.role === 'SUPER_ADMIN') return true;
     if (ADMIN_ROLES.has(user.role)) return true;
     if (user.role === 'TEACHER') {
-      const filename = path.split('/').pop() ?? '';
       const teacher = await prisma.teacher.findFirst({
         where: { userId: user.id },
         select: { id: true },
@@ -71,6 +70,17 @@ export async function userCanAccessSensitiveUpload(
       return docs.some((d) => urlMatchesStored(d.fileUrl, path));
     }
     return false;
+  }
+
+  // Devoirs, supports de cours, e-learning, bibliothèque : tout utilisateur authentifié actif.
+  // Les pièces d’identité / RH restent restreintes ci-dessus ; les liens ?access= restent valides.
+  if (
+    pathLower.includes('/assignments/') ||
+    pathLower.includes('/courses/') ||
+    pathLower.includes('/elearning/') ||
+    pathLower.includes('/digital-library/')
+  ) {
+    return true;
   }
 
   return false;

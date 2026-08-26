@@ -30,6 +30,7 @@ describe('blob-storage.util', () => {
 
   it('détecte les dossiers sensibles pour l’upload', () => {
     assert.equal(isSensitiveBlobFolder('identity-documents'), true);
+    assert.equal(isSensitiveBlobFolder('assignments'), true);
     assert.equal(isSensitiveBlobFolder('branding'), false);
   });
 
@@ -40,7 +41,7 @@ describe('blob-storage.util', () => {
 
   it('génère un nom de fichier sûr', () => {
     const name = buildSafeUploadFilename('avatar', 'photo (1).jpg');
-    assert.match(name, /^avatar-\d+-\d+\.jpg$/);
+    assert.match(name, /^avatar-\d+-[a-f0-9]{24}\.jpg$/);
   });
 
   it('useBlobStorage dépend du token', () => {

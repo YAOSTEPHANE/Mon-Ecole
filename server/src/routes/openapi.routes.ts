@@ -1,13 +1,35 @@
 import express from 'express';
 import openapi from '../openapi/openapi.json';
+import { authenticate, authorize, type AuthRequest } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
-router.get('/openapi.json', (_req, res) => {
+function openApiPubliclyEnabled(): boolean {
+  const raw = process.env.OPENAPI_PUBLIC?.trim().toLowerCase();
+  if (raw) return ['1', 'true', 'yes', 'on'].includes(raw);
+  return process.env.NODE_ENV !== 'production';
+}
+
+function requireOpenApiAccess(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  if (openApiPubliclyEnabled()) {
+    next();
+    return;
+  }
+  void authenticate(req as AuthRequest, res, () =>
+    authorize('SUPER_ADMIN')(req as AuthRequest, res, next),
+  );
+}
+
+router.get('/openapi.json', requireOpenApiAccess, (_req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
   res.json(openapi);
 });
 
-router.get('/docs', (_req, res) => {
+router.get('/docs', requireOpenApiAccess, (_req, res) => {
   res.type('html').send(`<!doctype html>
 <html lang="fr">
 <head>

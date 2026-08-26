@@ -38,8 +38,8 @@ async function resolveUserFromBearer(req: Request): Promise<AuthRequest['user'] 
 }
 
 /**
- * Bloque l’accès anonyme aux pièces d’identité, bulletins d’admission, dossiers RH enseignants.
- * Autorise : jeton signé `?access=` (15 min) ou session Bearer + contrôle métier.
+ * Bloque l’accès anonyme aux pièces d’identité, devoirs, e-learning, etc.
+ * Autorise : jeton signé `?access=` (courte durée) ou session + contrôle métier.
  */
 export async function protectSensitiveUploads(
   req: Request,
@@ -61,12 +61,6 @@ export async function protectSensitiveUploads(
 
   if (accessToken && verifyUploadAccessToken(uploadPath, accessToken)) {
     next();
-    return;
-  }
-
-  const pathLower = uploadPath.toLowerCase();
-  if (pathLower.includes('/identity-documents/')) {
-    res.status(401).json({ error: 'Accès au fichier refusé. Connectez-vous ou utilisez un lien valide.' });
     return;
   }
 

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import path from 'path';
 import { put, del, get } from '@vercel/blob';
 
@@ -5,6 +6,10 @@ const SENSITIVE_BLOB_FOLDER_PREFIXES = [
   'identity-documents/',
   'admission-documents/',
   'teacher-admin-documents/',
+  'assignments/',
+  'courses/',
+  'elearning/',
+  'digital-library/',
 ] as const;
 
 /** Stockage Blob actif (Vercel injecte `BLOB_READ_WRITE_TOKEN` quand un store est lié). */
@@ -53,7 +58,7 @@ export function buildSafeUploadFilename(fieldname: string, originalname: string)
   const baseName = path.basename(originalname).replace(/[^\w.\-()+ ]/g, '_');
   const ext = path.extname(baseName).toLowerCase().slice(0, 12);
   const safeExt = /^\.[a-z0-9]+$/.test(ext) ? ext : '';
-  const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;
   return `${fieldname}-${uniqueSuffix}${safeExt}`;
 }
 

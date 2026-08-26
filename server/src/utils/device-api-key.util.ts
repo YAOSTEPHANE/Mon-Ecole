@@ -1,25 +1,20 @@
 import { getNfcApiKeyFromIntegrations } from './integration-settings.util';
 
-const DEFAULT_DEV_KEY = 'nfc-device-key-2024';
+const WEAK_KEYS = new Set(['', 'nfc-device-key-2024', 'changez-moi', 'secret']);
 
 /** Clé API pour terminaux NFC / reconnaissance faciale (matériel de pointage). */
 export function getDeviceApiKey(): string {
-  const raw = getNfcApiKeyFromIntegrations();
-  const isProd = process.env.NODE_ENV === 'production';
+  const raw = (getNfcApiKeyFromIntegrations() || '').trim();
 
-  if (isProd) {
-    if (!raw || raw === DEFAULT_DEV_KEY || raw.length < 32) {
-      throw new Error(
-        'NFC_API_KEY doit être défini (admin → Intégrations ou .env, ≥ 32 caractères, valeur unique).'
-      );
-    }
-    return raw;
+  if (!raw || WEAK_KEYS.has(raw) || raw.length < 32) {
+    throw new Error(
+      'NFC_API_KEY doit être défini (admin → Intégrations ou .env), ≥ 32 caractères, valeur unique.',
+    );
   }
-
-  return raw.length > 0 ? raw : DEFAULT_DEV_KEY;
+  return raw;
 }
 
-/** Échoue au démarrage si la clé matériel est absente ou faible en production. */
+/** Échoue au démarrage si la clé matériel est absente ou faible. */
 export function ensureDeviceApiKeyConfiguration(): void {
   getDeviceApiKey();
 }

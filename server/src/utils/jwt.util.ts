@@ -1,25 +1,25 @@
 /**
- * JWT d’accès : HS256, secret fort en prod, tokenVersion pour révocation.
+ * JWT d’accès : HS256, secret fort obligatoire, tokenVersion pour révocation.
  */
 import jwt, { type SignOptions } from 'jsonwebtoken';
 
-const DEV_FALLBACK = 'dev-jwt-secret-change-in-production';
-const WEAK_SECRETS = new Set(['', 'secret', DEV_FALLBACK]);
+const WEAK_SECRETS = new Set([
+  '',
+  'secret',
+  'changez-moi-par-une-longue-chaine-aleatoire',
+  'changez-moi-par-une-longue-chaine-aleatoire-min-32-chars',
+  'dev-jwt-secret-change-in-production',
+]);
 
 function jwtSecret(): string {
   const raw = (process.env.JWT_SECRET ?? '').trim();
-  const isProd = process.env.NODE_ENV === 'production';
 
-  if (isProd) {
-    if (!raw || WEAK_SECRETS.has(raw) || raw.length < 32) {
-      throw new Error(
-        'JWT_SECRET doit être défini en production, être unique et faire au moins 32 caractères.',
-      );
-    }
-    return raw;
+  if (!raw || WEAK_SECRETS.has(raw) || raw.length < 32) {
+    throw new Error(
+      'JWT_SECRET doit être défini, unique, et faire au moins 32 caractères (pas de valeur d’exemple).',
+    );
   }
-
-  return raw.length > 0 ? raw : DEV_FALLBACK;
+  return raw;
 }
 
 function expiresInOption(): SignOptions['expiresIn'] {

@@ -18,12 +18,16 @@ try {
   ensureJwtConfiguration();
 } catch (e) {
   console.error(e);
+  throw e;
 }
 
 try {
   ensureDeviceApiKeyConfiguration();
 } catch (e) {
   console.error(e);
+  if (process.env.NODE_ENV === 'production') {
+    throw e;
+  }
 }
 
 try {

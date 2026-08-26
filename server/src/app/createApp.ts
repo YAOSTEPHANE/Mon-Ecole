@@ -33,6 +33,7 @@ import { recordRequestMetric } from '../utils/performance-metrics.util';
 import { securityHeaders } from '../middleware/security-headers.middleware';
 import { protectSensitiveUploads } from '../middleware/protected-uploads.middleware';
 import { apiGlobalLimiter } from '../middleware/rate-limit.middleware';
+import { csrfOriginGuard } from '../middleware/csrf-origin.middleware';
 
 /**
  * Construit l’application Express (middlewares, routes, gestion d’erreurs).
@@ -88,7 +89,7 @@ export function createApp(): express.Express {
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-School-Id', 'X-NFC-API-Key', 'X-CSRF-Token'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-School-Id', 'X-NFC-API-Key', 'X-Client'],
     })
   );
 
@@ -103,15 +104,20 @@ export function createApp(): express.Express {
     express.json({
       limit: '10mb',
       verify: (req, _res, buffer) => {
-        // rawBody uniquement pour les webhooks paiement (signature HMAC).
+        // rawBody pour webhooks (signature HMAC).
         const path = req.url || '';
-        if (path.includes('/webhooks/') || path.includes('/payments/webhooks')) {
+        if (
+          path.includes('/webhooks/') ||
+          path.includes('/payments/webhooks') ||
+          path.includes('/whatsapp')
+        ) {
           (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
         }
       },
     }),
   );
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(csrfOriginGuard);
 
   if (apiPrefix) {
     app.use(apiPrefix, apiGlobalLimiter);

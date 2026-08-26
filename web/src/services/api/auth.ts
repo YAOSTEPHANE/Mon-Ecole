@@ -8,7 +8,7 @@ export const authApi = {
         password,
         ...(twoFactorCode ? { twoFactorCode } : {}),
       });
-      if (response.data && response.data.token && response.data.user) {
+      if (response.data && response.data.user) {
         return response.data;
       } else {
         throw new Error('Réponse invalide du serveur');
@@ -49,9 +49,10 @@ export const authApi = {
     const response = await api.post('/auth/reset-password', { token, password });
     return response.data;
   },
-  exchangeOAuthCode: async (code: string): Promise<{ token: string }> => {
+  /** Échange code OAuth → cookie HttpOnly (web). Pas de JWT dans le corps. */
+  exchangeOAuthCode: async (code: string): Promise<{ ok?: boolean; token?: string }> => {
     const response = await api.post('/auth/oauth/exchange', { code });
-    return response.data as { token: string };
+    return response.data as { ok?: boolean; token?: string };
   },
   setupTwoFactor: async () => {
     const response = await api.post('/auth/2fa/setup');

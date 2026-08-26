@@ -29,9 +29,7 @@ try {
   ensureJwtConfiguration();
 } catch (e) {
   console.error(e);
-  if (process.env.NODE_ENV === 'production') {
-    process.exit(1);
-  }
+  process.exit(1);
 }
 
 try {
@@ -40,6 +38,10 @@ try {
   console.error(e);
   if (process.env.NODE_ENV === 'production') {
     process.exit(1);
+  } else {
+    console.warn(
+      '[Config] NFC_API_KEY absent ou faible — routes NFC / visage indisponibles jusqu’à configuration.',
+    );
   }
 }
 
