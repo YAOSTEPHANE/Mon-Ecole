@@ -22,6 +22,7 @@ import digitalLibraryRoutes from '../routes/digital-library.routes';
 import healthRoutes from '../routes/health.routes';
 import elearningRoutes from '../routes/elearning.routes';
 import paymentsWebhookRoutes from '../routes/payments-webhook.routes';
+import whatsappWebhookRoutes from '../routes/whatsapp-webhook.routes';
 import openapiRoutes from '../routes/openapi.routes';
 import assistantRoutes from '../routes/assistant.routes';
 import oauthRoutes from '../routes/oauth.routes';
@@ -206,6 +207,7 @@ export function createApp(): express.Express {
   app.use(`${apiPrefix}/health`, healthRoutes);
   app.use(`${apiPrefix}/elearning`, elearningRoutes);
   app.use(`${apiPrefix}/payments`, paymentsWebhookRoutes);
+  app.use(`${apiPrefix}`, whatsappWebhookRoutes);
   app.use(`${apiPrefix}`, openapiRoutes);
 
   app.use((req, res) => {

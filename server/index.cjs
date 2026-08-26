@@ -262811,6 +262811,76 @@ async function clearFaceDescriptor(personType, personId) {
 // src/utils/attendance-punch.util.ts
 init_prisma();
 
+// src/utils/personnel-late-admin-notify.util.ts
+init_notify_important_util();
+
+// src/utils/staff-notify.util.ts
+init_prisma();
+init_staff_visible_modules_util();
+async function resolveStaffUserIdsWithAnyModule(moduleIds) {
+  if (moduleIds.length === 0) return [];
+  const staffRows = await prisma_default.staffMember.findMany({
+    where: {
+      staffCategory: "SUPPORT",
+      user: { role: "STAFF", isActive: true }
+    },
+    select: {
+      userId: true,
+      staffCategory: true,
+      supportKind: true,
+      visibleStaffModules: true
+    }
+  });
+  const ids = [];
+  for (const staff of staffRows) {
+    const modules = resolveVisibleStaffModules(
+      staff.staffCategory,
+      staff.supportKind,
+      staff.visibleStaffModules
+    );
+    if (moduleIds.some((m) => modules.includes(m))) {
+      ids.push(staff.userId);
+    }
+  }
+  return [...new Set(ids)];
+}
+async function resolveActiveAdminUserIds() {
+  const users = await prisma_default.user.findMany({
+    where: { role: { in: ["ADMIN", "SUPER_ADMIN"] }, isActive: true },
+    select: { id: true }
+  });
+  return users.map((u) => u.id);
+}
+
+// src/utils/personnel-late-admin-notify.util.ts
+async function notifyAdminsOfPersonnelLate(payload) {
+  try {
+    const adminIds = await resolveActiveAdminUserIds();
+    if (adminIds.length === 0) return;
+    const timeStr = payload.at.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    const dateStr = payload.at.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long"
+    });
+    const mins = Math.max(0, Math.round(payload.minutesLate));
+    const context2 = payload.contextLabel?.trim() ? ` \u2014 ${payload.contextLabel.trim()}` : "";
+    const title = `Retard \u2014 ${payload.roleLabel}`;
+    const content = `${payload.personName} a point\xE9 en retard (${mins} min) le ${dateStr} \xE0 ${timeStr}${context2}.`;
+    await notifyUsersImportant(adminIds, {
+      type: "personnel_late",
+      title,
+      content,
+      link: payload.link ?? "/admin?tab=hr"
+    });
+  } catch (error) {
+    console.error("notifyAdminsOfPersonnelLate:", error);
+  }
+}
+
 // src/utils/schedule-slot.util.ts
 init_prisma();
 function parseTimeOnDate(hhmm, base) {
@@ -262935,6 +263005,10 @@ function earlyCheckInMinutes() {
   const n = parseInt(process.env.ATTENDANCE_EARLY_CHECKIN_MINUTES || "20", 10);
   return Number.isFinite(n) ? Math.max(0, n) : 20;
 }
+function staffWorkStartTime() {
+  const raw = process.env.STAFF_WORK_START_TIME?.trim() || "08:00";
+  return /^\d{1,2}:\d{2}$/.test(raw) ? raw : "08:00";
+}
 async function punchStudentCourseAttendance(params) {
   const { studentId, courseId, teacherId, at, source } = params;
   const notifyParents = params.notifyParents !== false;
@@ -263029,8 +263103,38 @@ async function punchStudentCourseAttendance(params) {
   }
   return { absence: existing, punchPhase: "ALREADY_COMPLETE" };
 }
+async function notifyStaffLateIfNeeded(params) {
+  if (params.status !== "LATE" || params.alreadyNotifiedLate) return;
+  const grace = lateGraceMinutes();
+  const start = parseTimeOnDate(staffWorkStartTime(), params.at);
+  const minutesLate = Math.max(
+    0,
+    Math.round((params.at.getTime() - start.getTime()) / 6e4) - grace
+  );
+  const staff = await prisma_default.staffMember.findUnique({
+    where: { id: params.staffId },
+    select: {
+      jobTitle: true,
+      employeeId: true,
+      user: { select: { firstName: true, lastName: true } }
+    }
+  });
+  if (!staff) return;
+  const personName = `${staff.user.firstName} ${staff.user.lastName}`.trim();
+  void notifyAdminsOfPersonnelLate({
+    roleLabel: "Personnel",
+    personName,
+    minutesLate: Math.max(1, minutesLate),
+    contextLabel: staff.jobTitle || staff.employeeId,
+    at: params.at,
+    link: "/admin?tab=hr"
+  });
+}
 async function punchStaffAttendance(params) {
   const dateKey = toAttendanceDateKey(params.at);
+  const grace = lateGraceMinutes();
+  const expectedStart = staffWorkStartTime();
+  const status = resolveLateStatus(params.at, expectedStart, grace);
   let row = await prisma_default.staffAttendance.findUnique({
     where: {
       staffId_attendanceDate: { staffId: params.staffId, attendanceDate: dateKey }
@@ -263041,23 +263145,36 @@ async function punchStaffAttendance(params) {
       data: {
         staffId: params.staffId,
         attendanceDate: dateKey,
-        status: "PRESENT",
+        status,
         source: params.source,
         checkInAt: params.at,
         recordedByUserId: params.recordedByUserId ?? void 0
       }
     });
+    await notifyStaffLateIfNeeded({
+      staffId: params.staffId,
+      at: params.at,
+      status,
+      alreadyNotifiedLate: false
+    });
     return { attendance: row, punchPhase: "CHECK_IN" };
   }
   if (!row.checkInAt) {
+    const wasLate = row.status === "LATE";
     row = await prisma_default.staffAttendance.update({
       where: { id: row.id },
       data: {
         checkInAt: params.at,
-        status: "PRESENT",
+        status,
         source: params.source,
         recordedByUserId: params.recordedByUserId ?? void 0
       }
+    });
+    await notifyStaffLateIfNeeded({
+      staffId: params.staffId,
+      at: params.at,
+      status,
+      alreadyNotifiedLate: wasLate
     });
     return { attendance: row, punchPhase: "CHECK_IN" };
   }
@@ -263193,6 +263310,10 @@ async function punchTeacherCourseAttendance(params) {
     throw err;
   }
   const sessionKey = `${dateKey}:${courseId}`;
+  const previous = await prisma_default.teacherAttendance.findUnique({
+    where: { teacherId_sessionKey: { teacherId: params.teacherId, sessionKey } },
+    select: { checkInAt: true, status: true }
+  });
   const checkInAt = params.at;
   const plannedMinutes = durationMinutesFromHHMM(slot.startTime, slot.endTime);
   const startTiming = computeStartTiming(checkInAt, slot.startTime, grace);
@@ -263245,6 +263366,19 @@ async function punchTeacherCourseAttendance(params) {
       }
     }
   });
+  const alreadyNotifiedLate = previous?.status === "LATE" && Boolean(previous.checkInAt);
+  if (status === "LATE" && !alreadyNotifiedLate) {
+    const personName = `${saved.teacher.user.firstName} ${saved.teacher.user.lastName}`.trim();
+    const courseLabel = slot.course ? `${slot.course.name}${slot.course.code ? ` (${slot.course.code})` : ""}` : null;
+    void notifyAdminsOfPersonnelLate({
+      roleLabel: "Enseignant",
+      personName,
+      minutesLate: startTiming.minutesLateStart || 1,
+      contextLabel: courseLabel,
+      at: checkInAt,
+      link: "/admin?tab=teachers"
+    });
+  }
   return {
     attendance: saved,
     punchPhase: "CHECK_IN",
@@ -264377,6 +264511,34 @@ router2.post("/staff/:id/attendances", async (req, res) => {
         recordedByUserId: req.user?.id ?? null
       }
     });
+    if (st === "LATE" && inAt) {
+      const staffWithUser = await prisma_default.staffMember.findUnique({
+        where: { id: staff.id },
+        select: {
+          jobTitle: true,
+          employeeId: true,
+          user: { select: { firstName: true, lastName: true } }
+        }
+      });
+      if (staffWithUser) {
+        const startHhmm = process.env.STAFF_WORK_START_TIME?.trim() || "08:00";
+        const start = parseTimeOnDate(/^\d{1,2}:\d{2}$/.test(startHhmm) ? startHhmm : "08:00", inAt);
+        const grace = parseInt(process.env.ATTENDANCE_LATE_GRACE_MINUTES || "10", 10);
+        const graceSafe = Number.isFinite(grace) ? Math.max(0, grace) : 10;
+        const minutesLate = Math.max(
+          1,
+          Math.round((inAt.getTime() - start.getTime()) / 6e4) - graceSafe
+        );
+        void notifyAdminsOfPersonnelLate({
+          roleLabel: "Personnel",
+          personName: `${staffWithUser.user.firstName} ${staffWithUser.user.lastName}`.trim(),
+          minutesLate,
+          contextLabel: staffWithUser.jobTitle || staffWithUser.employeeId,
+          at: inAt,
+          link: "/admin?tab=hr"
+        });
+      }
+    }
     res.status(201).json(row);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur serveur";
@@ -284769,46 +284931,6 @@ var library_management_routes_default = router32;
 
 // src/utils/material-stock-notify.util.ts
 init_notify_important_util();
-
-// src/utils/staff-notify.util.ts
-init_prisma();
-init_staff_visible_modules_util();
-async function resolveStaffUserIdsWithAnyModule(moduleIds) {
-  if (moduleIds.length === 0) return [];
-  const staffRows = await prisma_default.staffMember.findMany({
-    where: {
-      staffCategory: "SUPPORT",
-      user: { role: "STAFF", isActive: true }
-    },
-    select: {
-      userId: true,
-      staffCategory: true,
-      supportKind: true,
-      visibleStaffModules: true
-    }
-  });
-  const ids = [];
-  for (const staff of staffRows) {
-    const modules = resolveVisibleStaffModules(
-      staff.staffCategory,
-      staff.supportKind,
-      staff.visibleStaffModules
-    );
-    if (moduleIds.some((m) => modules.includes(m))) {
-      ids.push(staff.userId);
-    }
-  }
-  return [...new Set(ids)];
-}
-async function resolveActiveAdminUserIds() {
-  const users = await prisma_default.user.findMany({
-    where: { role: { in: ["ADMIN", "SUPER_ADMIN"] }, isActive: true },
-    select: { id: true }
-  });
-  return users.map((u) => u.id);
-}
-
-// src/utils/material-stock-notify.util.ts
 function isRupture(qty) {
   return qty <= 0;
 }

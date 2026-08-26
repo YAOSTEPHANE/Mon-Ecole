@@ -11,7 +11,13 @@ export const apiGlobalLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => {
     const p = req.path || '';
-    return p.endsWith('/health') || p === '/health';
+    const url = req.originalUrl || '';
+    return (
+      p.endsWith('/health') ||
+      p === '/health' ||
+      p.includes('/webhooks/whatsapp') ||
+      url.includes('/webhooks/whatsapp')
+    );
   },
 });
 

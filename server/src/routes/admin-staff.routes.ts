@@ -25,6 +25,8 @@ import {
   sortedPeriodBuckets,
   type PeriodBucket,
 } from '../utils/hours-summary.util';
+import { notifyAdminsOfPersonnelLate } from '../utils/personnel-late-admin-notify.util';
+import { parseTimeOnDate } from '../utils/schedule-slot.util';
 
 const router = express.Router();
 
@@ -978,6 +980,36 @@ router.post('/staff/:id/attendances', async (req: SchoolContextRequest, res) => 
         recordedByUserId: (req as express.Request & { user?: { id: string } }).user?.id ?? null,
       },
     });
+
+    if (st === 'LATE' && inAt) {
+      const staffWithUser = await prisma.staffMember.findUnique({
+        where: { id: staff.id },
+        select: {
+          jobTitle: true,
+          employeeId: true,
+          user: { select: { firstName: true, lastName: true } },
+        },
+      });
+      if (staffWithUser) {
+        const startHhmm = process.env.STAFF_WORK_START_TIME?.trim() || '08:00';
+        const start = parseTimeOnDate(/^\d{1,2}:\d{2}$/.test(startHhmm) ? startHhmm : '08:00', inAt);
+        const grace = parseInt(process.env.ATTENDANCE_LATE_GRACE_MINUTES || '10', 10);
+        const graceSafe = Number.isFinite(grace) ? Math.max(0, grace) : 10;
+        const minutesLate = Math.max(
+          1,
+          Math.round((inAt.getTime() - start.getTime()) / 60_000) - graceSafe,
+        );
+        void notifyAdminsOfPersonnelLate({
+          roleLabel: 'Personnel',
+          personName: `${staffWithUser.user.firstName} ${staffWithUser.user.lastName}`.trim(),
+          minutesLate,
+          contextLabel: staffWithUser.jobTitle || staffWithUser.employeeId,
+          at: inAt,
+          link: '/admin?tab=hr',
+        });
+      }
+    }
+
     res.status(201).json(row);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur serveur';

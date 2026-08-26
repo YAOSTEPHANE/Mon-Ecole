@@ -1,6 +1,7 @@
 import type { AbsenceStatus } from '@prisma/client';
 import prisma from './prisma';
 import { notifyParentsOfStudentPunch } from './attendance-parent-notify.util';
+import { notifyAdminsOfPersonnelLate } from './personnel-late-admin-notify.util';
 import { parseTimeOnDate, toAttendanceDateKey, findActiveScheduleSlotForCourse, findActiveScheduleSlotForTeacher, resolveLateStatus, durationMinutesFromHHMM, computeTeacherTeachingMinutes } from './schedule-slot.util';
 import { computeStartTiming, computeEndTiming } from './teacher-session-timing.util';
 
@@ -24,6 +25,12 @@ function lateGraceMinutes(): number {
 function earlyCheckInMinutes(): number {
   const n = parseInt(process.env.ATTENDANCE_EARLY_CHECKIN_MINUTES || '20', 10);
   return Number.isFinite(n) ? Math.max(0, n) : 20;
+}
+
+/** Heure d’arrivée attendue du personnel admin (HH:MM). */
+function staffWorkStartTime(): string {
+  const raw = process.env.STAFF_WORK_START_TIME?.trim() || '08:00';
+  return /^\d{1,2}:\d{2}$/.test(raw) ? raw : '08:00';
 }
 
 export async function punchStudentCourseAttendance(params: {
@@ -146,6 +153,39 @@ export async function punchStudentCourseAttendance(params: {
   return { absence: existing, punchPhase: 'ALREADY_COMPLETE' as PunchPhase };
 }
 
+async function notifyStaffLateIfNeeded(params: {
+  staffId: string;
+  at: Date;
+  status: AbsenceStatus;
+  alreadyNotifiedLate: boolean;
+}) {
+  if (params.status !== 'LATE' || params.alreadyNotifiedLate) return;
+  const grace = lateGraceMinutes();
+  const start = parseTimeOnDate(staffWorkStartTime(), params.at);
+  const minutesLate = Math.max(
+    0,
+    Math.round((params.at.getTime() - start.getTime()) / 60_000) - grace,
+  );
+  const staff = await prisma.staffMember.findUnique({
+    where: { id: params.staffId },
+    select: {
+      jobTitle: true,
+      employeeId: true,
+      user: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!staff) return;
+  const personName = `${staff.user.firstName} ${staff.user.lastName}`.trim();
+  void notifyAdminsOfPersonnelLate({
+    roleLabel: 'Personnel',
+    personName,
+    minutesLate: Math.max(1, minutesLate),
+    contextLabel: staff.jobTitle || staff.employeeId,
+    at: params.at,
+    link: '/admin?tab=hr',
+  });
+}
+
 export async function punchStaffAttendance(params: {
   staffId: string;
   at: Date;
@@ -153,6 +193,9 @@ export async function punchStaffAttendance(params: {
   recordedByUserId?: string | null;
 }) {
   const dateKey = toAttendanceDateKey(params.at);
+  const grace = lateGraceMinutes();
+  const expectedStart = staffWorkStartTime();
+  const status = resolveLateStatus(params.at, expectedStart, grace);
 
   let row = await prisma.staffAttendance.findUnique({
     where: {
@@ -165,24 +208,37 @@ export async function punchStaffAttendance(params: {
       data: {
         staffId: params.staffId,
         attendanceDate: dateKey,
-        status: 'PRESENT',
+        status,
         source: params.source,
         checkInAt: params.at,
         recordedByUserId: params.recordedByUserId ?? undefined,
       },
     });
+    await notifyStaffLateIfNeeded({
+      staffId: params.staffId,
+      at: params.at,
+      status,
+      alreadyNotifiedLate: false,
+    });
     return { attendance: row, punchPhase: 'CHECK_IN' as PunchPhase };
   }
 
   if (!row.checkInAt) {
+    const wasLate = row.status === 'LATE';
     row = await prisma.staffAttendance.update({
       where: { id: row.id },
       data: {
         checkInAt: params.at,
-        status: 'PRESENT',
+        status,
         source: params.source,
         recordedByUserId: params.recordedByUserId ?? undefined,
       },
+    });
+    await notifyStaffLateIfNeeded({
+      staffId: params.staffId,
+      at: params.at,
+      status,
+      alreadyNotifiedLate: wasLate,
     });
     return { attendance: row, punchPhase: 'CHECK_IN' as PunchPhase };
   }
@@ -358,6 +414,10 @@ export async function punchTeacherCourseAttendance(params: {
   }
 
   const sessionKey = `${dateKey}:${courseId}`;
+  const previous = await prisma.teacherAttendance.findUnique({
+    where: { teacherId_sessionKey: { teacherId: params.teacherId, sessionKey } },
+    select: { checkInAt: true, status: true },
+  });
   const checkInAt = params.at;
   const plannedMinutes = durationMinutesFromHHMM(slot.startTime, slot.endTime);
   const startTiming = computeStartTiming(checkInAt, slot.startTime, grace);
@@ -411,6 +471,22 @@ export async function punchTeacherCourseAttendance(params: {
       },
     },
   });
+
+  const alreadyNotifiedLate = previous?.status === 'LATE' && Boolean(previous.checkInAt);
+  if (status === 'LATE' && !alreadyNotifiedLate) {
+    const personName = `${saved.teacher.user.firstName} ${saved.teacher.user.lastName}`.trim();
+    const courseLabel = slot.course
+      ? `${slot.course.name}${slot.course.code ? ` (${slot.course.code})` : ''}`
+      : null;
+    void notifyAdminsOfPersonnelLate({
+      roleLabel: 'Enseignant',
+      personName,
+      minutesLate: startTiming.minutesLateStart || 1,
+      contextLabel: courseLabel,
+      at: checkInAt,
+      link: '/admin?tab=teachers',
+    });
+  }
 
   return {
     attendance: saved,
