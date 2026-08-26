@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import prisma from '../utils/prisma';
 import { findSchedulesWithRelations } from '../utils/safe-schedule-query.util';
+import { buildScheduleIcs } from '../utils/ics-schedule.util';
 import {
   decryptParentTeacherAppointmentRow,
   decryptStudentRecord,
@@ -1266,6 +1267,39 @@ router.get('/children/:studentId/schedule', async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/children/:studentId/schedule.ics', async (req: AuthRequest, res) => {
+  try {
+    const { studentId } = req.params;
+    const parent = await prisma.parent.findFirst({
+      where: { userId: req.user!.id },
+      include: { students: { where: { studentId } } },
+    });
+    if (!parent || parent.students.length === 0) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: { select: { firstName: true, lastName: true } }, class: true },
+    });
+    if (!student?.classId) {
+      return res.status(404).json({ error: 'Classe non trouvée' });
+    }
+    const schedule = await findSchedulesWithRelations({ classId: student.classId });
+    const ics = buildScheduleIcs(schedule, {
+      calendarName: `EDT ${student.user.firstName} ${student.user.lastName}`,
+      weeks: Number(req.query.weeks) > 0 ? Number(req.query.weeks) : 16,
+    });
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="emploi-du-temps-${student.studentId}.ics"`,
+    );
+    res.send(ics);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 // Obtenir les devoirs d'un enfant
 router.get('/children/:studentId/assignments', async (req: AuthRequest, res) => {
   try {
@@ -2499,10 +2533,22 @@ router.get('/children/:studentId/orientation/placements', async (req: AuthReques
 
 router.get('/messages', async (req: AuthRequest, res) => {
   try {
-    const { unread } = req.query;
+    const { unread, q, archived } = req.query;
+    const showArchived = archived === '1' || archived === 'true';
+    const search =
+      typeof q === 'string' && q.trim().length > 0
+        ? {
+            OR: [
+              { subject: { contains: q.trim() } },
+              { content: { contains: q.trim() } },
+            ],
+          }
+        : {};
 
-    const receivedWhere: { receiverId: string; read?: boolean } = {
+    const receivedWhere: Record<string, unknown> = {
       receiverId: req.user!.id,
+      receiverArchived: showArchived,
+      ...search,
     };
     if (unread === 'true') {
       receivedWhere.read = false;
@@ -2524,9 +2570,14 @@ router.get('/messages', async (req: AuthRequest, res) => {
           },
         },
         orderBy: { createdAt: 'desc' },
+        take: 200,
       }),
       prisma.message.findMany({
-        where: { senderId: req.user!.id },
+        where: {
+          senderId: req.user!.id,
+          senderArchived: showArchived,
+          ...search,
+        },
         include: {
           receiver: {
             select: {
@@ -2866,6 +2917,25 @@ router.put('/messages/:id/read', async (req: AuthRequest, res) => {
     res.json(message);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/messages/:id/archive', async (req: AuthRequest, res) => {
+  try {
+    const archived = req.body?.archived !== false;
+    const msg = await prisma.message.findUnique({ where: { id: req.params.id } });
+    if (!msg) return res.status(404).json({ error: 'Message introuvable' });
+    if (msg.receiverId !== req.user!.id && msg.senderId !== req.user!.id) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    const data =
+      msg.receiverId === req.user!.id
+        ? { receiverArchived: archived }
+        : { senderArchived: archived };
+    const updated = await prisma.message.update({ where: { id: msg.id }, data });
+    res.json(updated);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 

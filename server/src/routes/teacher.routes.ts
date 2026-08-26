@@ -9,6 +9,8 @@ import { appointmentInclude } from '../utils/parent-teacher-appointment.util';
 import { punchStudentCourseAttendance } from '../utils/attendance-punch.util';
 import { toAttendanceDateKey, upsertTeacherAttendance } from '../utils/teacher-attendance.util';
 import { punchTeacherCourseAttendance } from '../utils/attendance-punch.util';
+import { findSchedulesWithRelations } from '../utils/safe-schedule-query.util';
+import { buildScheduleIcs } from '../utils/ics-schedule.util';
 import { EVALUATION_TYPE_VALUES } from '../utils/evaluation-type.util';
 import {
   createGradeChangeRequest,
@@ -1490,6 +1492,33 @@ router.get('/schedule', async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/schedule.ics', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) {
+      return res.status(404).json({ error: 'Profil enseignant non trouvé' });
+    }
+    const courses = await prisma.course.findMany({
+      where: { teacherId },
+      select: { id: true },
+    });
+    const courseIds = courses.map((c) => c.id);
+    const schedule = await findSchedulesWithRelations({
+      OR: [{ courseId: { in: courseIds } }, { substituteTeacherId: teacherId }],
+    });
+    const ics = buildScheduleIcs(schedule, {
+      calendarName: 'EDT enseignant',
+      weeks: Number(req.query.weeks) > 0 ? Number(req.query.weeks) : 16,
+    });
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="emploi-du-temps-enseignant.ics"');
+    res.send(ics);
+  } catch (error: unknown) {
+    console.error('GET /teacher/schedule.ics:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
 router.get('/performance-reviews', async (req: AuthRequest, res) => {
   try {
     const teacherId = await getTeacherId(req.user!.id);
@@ -2531,6 +2560,72 @@ router.delete('/lesson-logs/:id', async (req: AuthRequest, res) => {
     if (!existing) return res.status(404).json({ error: 'Séance introuvable' });
     await prisma.lessonLog.delete({ where: { id: existing.id } });
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+/** Portfolios élèves — lecture + feedback enseignant */
+router.get('/student-projects', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+    const membership = await prisma.schoolMember.findFirst({
+      where: { userId: req.user!.id },
+      select: { schoolId: true },
+    });
+    const studentId = typeof req.query.studentId === 'string' ? req.query.studentId.trim() : '';
+    const publishedOnly = req.query.published === 'true';
+    const where: Record<string, unknown> = {};
+    if (membership?.schoolId) where.schoolId = membership.schoolId;
+    if (studentId) where.studentId = studentId;
+    if (publishedOnly) where.published = true;
+    const rows = await prisma.studentProject.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
+  }
+});
+
+router.put('/student-projects/:id/feedback', async (req: AuthRequest, res) => {
+  try {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId) return res.status(404).json({ error: 'Enseignant non trouvé' });
+    const membership = await prisma.schoolMember.findFirst({
+      where: { userId: req.user!.id },
+      select: { schoolId: true },
+    });
+    const existing = await prisma.studentProject.findFirst({
+      where: {
+        id: req.params.id,
+        ...(membership?.schoolId ? { schoolId: membership.schoolId } : {}),
+      },
+    });
+    if (!existing) return res.status(404).json({ error: 'Projet introuvable' });
+    const feedback =
+      typeof req.body?.teacherFeedback === 'string'
+        ? req.body.teacherFeedback.trim().slice(0, 4000)
+        : typeof req.body?.feedback === 'string'
+          ? req.body.feedback.trim().slice(0, 4000)
+          : '';
+    const row = await prisma.studentProject.update({
+      where: { id: existing.id },
+      data: { teacherFeedback: feedback || null },
+    });
+    res.json(row);
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' });
   }

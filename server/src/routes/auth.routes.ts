@@ -4,7 +4,7 @@ import type { StaffCategory, SupportStaffKind } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { generateToken, verifyAccessToken } from '../utils/jwt.util';
 import { hashPassword, comparePassword, assertPasswordPolicy, PASSWORD_POLICY_HINT } from '../utils/password.util';
-import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { authenticate, authorize, AuthRequest } from '../middleware/auth.middleware';
 import { bumpUserTokenVersion } from '../utils/session-invalidation.util';
 import {
   createPasswordResetToken,
@@ -32,6 +32,8 @@ import {
   syncStaffVisibleModulesIfStale,
 } from '../utils/staff-visible-modules.util';
 import { buildGdprDataExport } from '../utils/gdpr-data-export.util';
+import { executeGdprErasure, GdprErasureError } from '../utils/gdpr-erasure.util';
+import { recordAuditLog } from '../utils/audit-log.util';
 import QRCode from 'qrcode';
 import { generateTwoFactorSecret, verifyTwoFactorToken } from '../utils/two-factor.util';
 import { prismaConnectionErrorMessage } from '../utils/production-env-diagnostics.util';
@@ -829,6 +831,42 @@ router.post(
       res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
     }
   }
+);
+
+/** Exécution d’effacement RGPD (admin) — anonymise le compte après confirmation. */
+router.post(
+  '/gdpr/erasure-confirm',
+  authenticate,
+  authorize('ADMIN', 'SUPER_ADMIN'),
+  [
+    body('userId').isString().notEmpty(),
+    body('confirmPhrase').equals('EFFACER').withMessage('Saisissez EFFACER pour confirmer'),
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const userId = String(req.body.userId);
+      const result = await executeGdprErasure(userId);
+      await recordAuditLog({
+        req,
+        actor: req.user,
+        action: 'DELETE',
+        entityType: 'User',
+        entityId: userId,
+        summary: 'Effacement RGPD (anonymisation) exécuté',
+      });
+      res.json({ ok: true, ...result });
+    } catch (error: unknown) {
+      if (error instanceof GdprErasureError) {
+        return res.status(error.status).json({ error: error.message });
+      }
+      console.error('POST /auth/gdpr/erasure-confirm:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  },
 );
 
 export default router;

@@ -1123,6 +1123,7 @@ model Student {
   mockExamAttempts            MockExamAttempt[]
   absencePermissionRequests   StudentAbsencePermissionRequest[]
   reenrollmentRequests        StudentReenrollmentRequest[]
+  projects                    StudentProject[]
 
   @@index([nfcId])
   @@index([biometricId])
@@ -2320,6 +2321,8 @@ model Message {
   attachmentUrls String[]  @default([])
   read        Boolean        @default(false)
   readAt      DateTime?
+  senderArchived   Boolean   @default(false)
+  receiverArchived Boolean   @default(false)
   sentViaSMS  Boolean        @default(false) // Indique si le SMS a été envoyé
   sentViaEmail Boolean       @default(false) // Indique si l'email a été envoyé
   smsStatus   String?        // Statut de l'envoi SMS ("pending", "sent", "failed")
@@ -2331,6 +2334,8 @@ model Message {
   receiver    User           @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   @@index([threadKey])
+  @@index([receiverId, receiverArchived])
+  @@index([senderId, senderArchived])
   @@map("messages")
 }
 
@@ -2861,6 +2866,13 @@ model Admission {
   term3ReportCardUrl         String?
   term3ReportCardOriginalName String?
   term3ReportCardMimeType    String?
+
+  /// Signature électronique du responsable légal (nom tapé ou PNG base64)
+  guardianSignatureData    String?
+  guardianSignedAt         DateTime?
+  guardianSignIp           String?
+  guardianConsentAccepted  Boolean   @default(false)
+  guardianConsentText      String?
 
   proposedClassId  String?   @db.ObjectId
   proposedClass    Class?    @relation(fields: [proposedClassId], references: [id])
@@ -4319,5 +4331,48 @@ model EstateAsset {
   @@index([schoolId])
   @@index([buildingId])
   @@map("estate_assets")
+}
+
+/// Config SSO école (SAML / OIDC IdP académique) — stockage ; handshake à brancher côté IdP.
+model SchoolSsoConfig {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String?  @db.ObjectId
+  /// SAML | OIDC
+  provider     String
+  enabled      Boolean  @default(false)
+  entityId     String?
+  entryPoint   String?
+  cert         String?
+  clientId     String?
+  clientSecret String?
+  issuer       String?
+  metadataUrl  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([schoolId])
+  @@map("school_sso_configs")
+}
+
+/// Portfolio projet élève (FabLab / TPE / projets)
+model StudentProject {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId       String   @db.ObjectId
+  schoolId        String?  @db.ObjectId
+  title           String
+  description     String?
+  /// Étapes [{ title, done, note? }]
+  steps           Json?
+  mediaUrls       String[] @default([])
+  published       Boolean  @default(false)
+  teacherFeedback String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([schoolId, published])
+  @@map("student_projects")
 }
 

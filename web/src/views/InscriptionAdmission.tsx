@@ -87,6 +87,10 @@ const InscriptionAdmission = () => {
   const showLyceeGrades = isLyceeAdmissionLevel(form.desiredLevel);
   const gradeKeys = getAdmissionGradeKeysForLevel(form.desiredLevel);
   const [term3ReportCard, setTerm3ReportCard] = useState<File | null>(null);
+  const [guardianConsentAccepted, setGuardianConsentAccepted] = useState(false);
+  const [guardianSignature, setGuardianSignature] = useState('');
+  const GUARDIAN_CONSENT_TEXT =
+    'Je certifie l’exactitude des informations et autorise l’établissement à traiter ces données pour la pré-inscription et l’admission.';
   const [submitting, setSubmitting] = useState(false);
   const [successRef, setSuccessRef] = useState<string | null>(null);
   const [submittedSnapshot, setSubmittedSnapshot] = useState<{
@@ -245,6 +249,14 @@ const InscriptionAdmission = () => {
         return;
       }
     }
+    if (!guardianConsentAccepted) {
+      toast.error('Vous devez accepter le consentement pour envoyer le dossier.');
+      return;
+    }
+    if (guardianSignature.trim().length < 2) {
+      toast.error('Saisissez votre signature (nom et prénom du responsable légal).');
+      return;
+    }
     setSubmitting(true);
     setSuccessRef(null);
     setSubmittedSnapshot(null);
@@ -279,6 +291,9 @@ const InscriptionAdmission = () => {
         if (n !== null) fd.append(key, String(n));
       }
       fd.append('term3ReportCard', term3ReportCard!);
+      fd.append('guardianConsentAccepted', 'true');
+      fd.append('guardianConsentText', GUARDIAN_CONSENT_TEXT);
+      fd.append('guardianSignature', guardianSignature.trim());
       res = await publicApi.submitAdmission(fd, schoolSlug || undefined);
       const ref = res.admission?.reference;
       if (ref) {
@@ -314,6 +329,8 @@ const InscriptionAdmission = () => {
         gradeAnnualLiterary: '',
       }));
       setTerm3ReportCard(null);
+      setGuardianConsentAccepted(false);
+      setGuardianSignature('');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { reference?: string; error?: string } } };
       if (axiosErr.response?.status === 409 && axiosErr.response?.data?.reference) {
@@ -890,6 +907,40 @@ const InscriptionAdmission = () => {
                 className={fieldClassName}
               />
             </div>
+
+            <fieldset className="rounded-xl border border-stone-200 bg-stone-50/80 p-4 space-y-3">
+              <legend className="px-1 text-sm font-semibold text-stone-900">
+                Consentement et signature électronique
+              </legend>
+              <label className="flex items-start gap-3 cursor-pointer text-sm text-stone-700 leading-relaxed">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-stone-300"
+                  checked={guardianConsentAccepted}
+                  onChange={(e) => setGuardianConsentAccepted(e.target.checked)}
+                  required
+                />
+                <span>{GUARDIAN_CONSENT_TEXT}</span>
+              </label>
+              <div>
+                <label htmlFor="adm-guardian-signature" className="block text-sm font-medium text-stone-800 mb-1.5">
+                  Signature du responsable légal (nom et prénom)
+                </label>
+                <input
+                  id="adm-guardian-signature"
+                  name="guardianSignature"
+                  value={guardianSignature}
+                  onChange={(e) => setGuardianSignature(e.target.value)}
+                  autoComplete="name"
+                  placeholder="Ex. Aminata Diallo"
+                  className={fieldClassName}
+                  required
+                />
+                <p className="mt-1 text-xs text-stone-500">
+                  Horodatée à l’envoi ; vaut acceptation électronique du dossier.
+                </p>
+              </div>
+            </fieldset>
 
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <Button type="submit" disabled={submitting} isLoading={submitting} className="inline-flex items-center gap-2">

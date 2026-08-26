@@ -4,6 +4,8 @@ export type UserUiPreferences = {
   timezone: string;
   dateFormat: string;
   timeFormat: '12h' | '24h';
+  /** Widgets ENT visibles sur le tableau de bord (ordre = affichage). */
+  dashboardWidgets?: string[];
 };
 
 export const DEFAULT_USER_UI_PREFERENCES: UserUiPreferences = {
@@ -12,6 +14,7 @@ export const DEFAULT_USER_UI_PREFERENCES: UserUiPreferences = {
   timezone: 'Europe/Paris',
   dateFormat: 'DD/MM/YYYY',
   timeFormat: '24h',
+  dashboardWidgets: ['news', 'agenda', 'messages', 'assignments', 'absences', 'grades', 'payments'],
 };
 
 const ALLOWED_THEMES = new Set<UserUiPreferences['theme']>(['light', 'dark', 'auto']);
@@ -23,10 +26,31 @@ const ALLOWED_TIMEZONES = new Set([
   'Europe/London',
   'America/New_York',
 ]);
+const ALLOWED_DASHBOARD_WIDGETS = new Set([
+  'news',
+  'agenda',
+  'messages',
+  'assignments',
+  'absences',
+  'grades',
+  'payments',
+]);
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
+}
+
+function normalizeDashboardWidgets(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [...(DEFAULT_USER_UI_PREFERENCES.dashboardWidgets ?? [])];
+  }
+  const out: string[] = [];
+  for (const item of raw) {
+    const id = String(item ?? '').trim();
+    if (ALLOWED_DASHBOARD_WIDGETS.has(id) && !out.includes(id)) out.push(id);
+  }
+  return out.length > 0 ? out : [...(DEFAULT_USER_UI_PREFERENCES.dashboardWidgets ?? [])];
 }
 
 export function normalizeUserUiPreferences(input: unknown): UserUiPreferences {
@@ -49,6 +73,7 @@ export function normalizeUserUiPreferences(input: unknown): UserUiPreferences {
     timeFormat: ALLOWED_TIME_FORMATS.has(timeFormatRaw as UserUiPreferences['timeFormat'])
       ? (timeFormatRaw as UserUiPreferences['timeFormat'])
       : DEFAULT_USER_UI_PREFERENCES.timeFormat,
+    dashboardWidgets: normalizeDashboardWidgets(raw.dashboardWidgets),
   };
 }
 

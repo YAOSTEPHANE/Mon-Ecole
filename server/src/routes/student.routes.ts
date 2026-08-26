@@ -46,6 +46,7 @@ import {
 } from '../utils/parent-academic-result-access.util';
 import { getOfficialPublishedReportCard } from '../utils/report-card.util';
 import { findSchedulesWithRelations } from '../utils/safe-schedule-query.util';
+import { buildScheduleIcs } from '../utils/ics-schedule.util';
 import {
   applyApprovedPermissionToAbsences,
   enrichPermissionRequestWithReviewer,
@@ -401,6 +402,32 @@ router.get('/schedule', async (req: AuthRequest, res) => {
     res.json(schedule);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+/** Export ICS de l’emploi du temps (agenda personnel). */
+router.get('/schedule.ics', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user!.id },
+      include: { class: true, user: { select: { firstName: true, lastName: true } } },
+    });
+    if (!student?.classId) {
+      return res.status(404).json({ error: 'Classe non trouvée' });
+    }
+    const schedule = await findSchedulesWithRelations({ classId: student.classId });
+    const ics = buildScheduleIcs(schedule, {
+      calendarName: `EDT ${student.user.firstName} ${student.user.lastName}`,
+      weeks: Number(req.query.weeks) > 0 ? Number(req.query.weeks) : 16,
+    });
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="emploi-du-temps-${student.studentId}.ics"`,
+    );
+    res.send(ics);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 
@@ -985,10 +1012,22 @@ router.post('/assignments/:assignmentId/submit', async (req: AuthRequest, res) =
 // Obtenir les messages (reçus + envoyés vers l'école)
 router.get('/messages', async (req: AuthRequest, res) => {
   try {
-    const { unread } = req.query;
+    const { unread, q, archived } = req.query;
+    const showArchived = archived === '1' || archived === 'true';
+    const search =
+      typeof q === 'string' && q.trim().length > 0
+        ? {
+            OR: [
+              { subject: { contains: q.trim() } },
+              { content: { contains: q.trim() } },
+            ],
+          }
+        : {};
 
-    const receivedWhere: { receiverId: string; read?: boolean } = {
+    const receivedWhere: Record<string, unknown> = {
       receiverId: req.user!.id,
+      receiverArchived: showArchived,
+      ...search,
     };
     if (unread === 'true') {
       receivedWhere.read = false;
@@ -1014,7 +1053,11 @@ router.get('/messages', async (req: AuthRequest, res) => {
         },
       }),
       prisma.message.findMany({
-        where: { senderId: req.user!.id },
+        where: {
+          senderId: req.user!.id,
+          senderArchived: showArchived,
+          ...search,
+        },
         include: {
           receiver: {
             select: {
@@ -1034,6 +1077,27 @@ router.get('/messages', async (req: AuthRequest, res) => {
     res.json({ received, sent });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/messages/:id/archive', async (req: AuthRequest, res) => {
+  try {
+    const archived = req.body?.archived !== false;
+    const msg = await prisma.message.findFirst({
+      where: {
+        id: req.params.id,
+        OR: [{ receiverId: req.user!.id }, { senderId: req.user!.id }],
+      },
+    });
+    if (!msg) return res.status(404).json({ error: 'Message introuvable' });
+    const data =
+      msg.receiverId === req.user!.id
+        ? { receiverArchived: archived }
+        : { senderArchived: archived };
+    const updated = await prisma.message.update({ where: { id: msg.id }, data });
+    res.json(updated);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });
 
@@ -2419,6 +2483,106 @@ router.get('/campus/transport-routes/:routeId/tracking', async (req: AuthRequest
     res.json({ route, latest });
   } catch (error: unknown) {
     console.error('GET /student/campus/transport-routes/:routeId/tracking:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+/** Portfolios / projets élève (FabLab, TPE, etc.) */
+router.get('/projects', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const rows = await prisma.studentProject.findMany({
+      where: { studentId: student.id },
+      orderBy: { updatedAt: 'desc' },
+    });
+    res.json(rows);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.post('/projects', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+    if (!title) return res.status(400).json({ error: 'Titre requis' });
+    const description =
+      typeof req.body?.description === 'string' ? req.body.description.trim().slice(0, 8000) : null;
+    const mediaUrls = Array.isArray(req.body?.mediaUrls)
+      ? req.body.mediaUrls.filter((u: unknown) => typeof u === 'string').map((u: string) => u.slice(0, 2000)).slice(0, 20)
+      : [];
+    const steps = req.body?.steps ?? null;
+    const row = await prisma.studentProject.create({
+      data: {
+        studentId: student.id,
+        schoolId: student.schoolId ?? null,
+        title: title.slice(0, 200),
+        description,
+        mediaUrls,
+        steps: steps ?? undefined,
+        published: Boolean(req.body?.published),
+      },
+    });
+    res.status(201).json(row);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.put('/projects/:id', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const existing = await prisma.studentProject.findFirst({
+      where: { id: req.params.id, studentId: student.id },
+    });
+    if (!existing) return res.status(404).json({ error: 'Projet introuvable' });
+    const b = req.body ?? {};
+    const row = await prisma.studentProject.update({
+      where: { id: existing.id },
+      data: {
+        ...(typeof b.title === 'string' && b.title.trim()
+          ? { title: b.title.trim().slice(0, 200) }
+          : {}),
+        ...(b.description !== undefined
+          ? {
+              description:
+                typeof b.description === 'string' && b.description.trim()
+                  ? b.description.trim().slice(0, 8000)
+                  : null,
+            }
+          : {}),
+        ...(b.mediaUrls !== undefined && Array.isArray(b.mediaUrls)
+          ? {
+              mediaUrls: b.mediaUrls
+                .filter((u: unknown) => typeof u === 'string')
+                .map((u: string) => u.slice(0, 2000))
+                .slice(0, 20),
+            }
+          : {}),
+        ...(b.steps !== undefined ? { steps: b.steps } : {}),
+        ...(b.published !== undefined ? { published: Boolean(b.published) } : {}),
+      },
+    });
+    res.json(row);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
+  }
+});
+
+router.delete('/projects/:id', async (req: AuthRequest, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user!.id } });
+    if (!student) return res.status(403).json({ error: 'Profil élève introuvable' });
+    const existing = await prisma.studentProject.findFirst({
+      where: { id: req.params.id, studentId: student.id },
+    });
+    if (!existing) return res.status(404).json({ error: 'Projet introuvable' });
+    await prisma.studentProject.delete({ where: { id: existing.id } });
+    res.json({ ok: true });
+  } catch (error: unknown) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Erreur serveur' });
   }
 });

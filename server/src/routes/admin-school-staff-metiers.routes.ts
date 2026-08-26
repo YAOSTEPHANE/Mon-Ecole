@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { SupportStaffKind } from '@prisma/client';
+import type { Prisma, SupportStaffKind } from '@prisma/client';
 import type { SchoolContextRequest } from '../utils/school-context.util';
 import prisma from '../utils/prisma';
 import {
@@ -14,6 +14,7 @@ import {
   STAFF_MODULE_LABELS,
   type StaffModuleId,
 } from '../utils/staff-visible-modules.util';
+import { recordAuditLog } from '../utils/audit-log.util';
 
 const router = Router();
 
@@ -62,7 +63,7 @@ router.put('/school-staff-metiers/:supportKind', async (req: SchoolContextReques
       modules.push(...set);
     }
 
-    const data: Record<string, unknown> = {};
+    const data: Prisma.SchoolStaffMetierUpdateInput = {};
     if (label !== undefined) {
       data.label = typeof label === 'string' && label.trim() ? label.trim() : null;
     }
@@ -76,9 +77,32 @@ router.put('/school-staff-metiers/:supportKind', async (req: SchoolContextReques
       data.sortOrder = Number(sortOrder);
     }
 
+    const beforeRow = existing ?? (await prisma.schoolStaffMetier.findUnique({
+      where: { schoolId_supportKind: { schoolId, supportKind } },
+    }));
+
     const updated = await prisma.schoolStaffMetier.update({
       where: { schoolId_supportKind: { schoolId, supportKind } },
       data,
+    });
+
+    await recordAuditLog({
+      req,
+      actor: req.user
+        ? { id: req.user.id, email: req.user.email, role: req.user.role }
+        : null,
+      action: 'UPDATE',
+      entityType: 'SchoolStaffMetier',
+      entityId: updated.id,
+      summary: `Mise à jour métier ${supportKind} (école ${schoolId})`,
+      changes: {
+        label: { before: beforeRow?.label ?? null, after: updated.label },
+        defaultModules: {
+          before: beforeRow?.defaultModules ?? [],
+          after: updated.defaultModules,
+        },
+        isActive: { before: beforeRow?.isActive ?? null, after: updated.isActive },
+      },
     });
 
     const metiers = await listSchoolStaffMetiers(schoolId);
@@ -96,6 +120,16 @@ router.post('/school-staff-metiers/seed-defaults', async (req: SchoolContextRequ
     const schoolId = req.schoolId!;
     await prisma.schoolStaffMetier.deleteMany({ where: { schoolId } });
     const count = await seedSchoolStaffMetiers(schoolId);
+    await recordAuditLog({
+      req,
+      actor: req.user
+        ? { id: req.user.id, email: req.user.email, role: req.user.role }
+        : null,
+      action: 'UPDATE',
+      entityType: 'SchoolStaffMetier',
+      entityId: schoolId,
+      summary: `Réinitialisation métiers personnel école ${schoolId} (${count} lignes)`,
+    });
     const metiers = await listSchoolStaffMetiers(schoolId);
     res.json({ ok: true, count, metiers });
   } catch (error: unknown) {

@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   applyDocumentTheme,
   parseUserUiPreferences,
+  DASHBOARD_WIDGET_LABELS,
   type UserUiPreferences,
 } from '@/lib/userUiPreferences';
 import { setStoredLocale } from '@/lib/i18n';
@@ -1672,6 +1673,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         />
                         <span className="text-gray-700">12 heures (AM/PM)</span>
                       </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="block text-sm font-semibold text-gray-700 mb-2">
+                      Widgets du tableau de bord (ENT)
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {Object.entries(DASHBOARD_WIDGET_LABELS).map(([id, label]) => {
+                        const selected = userSettings.dashboardWidgets ?? [];
+                        const checked = selected.includes(id);
+                        return (
+                          <label
+                            key={id}
+                            className="flex items-center gap-2 cursor-pointer rounded-lg border border-gray-200 px-3 py-2"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                const next = checked
+                                  ? selected.filter((w) => w !== id)
+                                  : [...selected, id];
+                                setUserSettings({
+                                  ...userSettings,
+                                  dashboardWidgets: next.length > 0 ? next : [id],
+                                });
+                              }}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="text-sm text-gray-700">{label}</span>
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

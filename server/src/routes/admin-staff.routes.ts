@@ -17,6 +17,7 @@ import {
   sanitizeVisibleStaffModulesForSchool,
 } from '../utils/school-staff-metiers.util';
 import { listPersonnelRegistry } from '../utils/personnel-registry.util';
+import { recordAuditLog } from '../utils/audit-log.util';
 import {
   accumulatePeriod,
   minutesToHours,
@@ -523,6 +524,21 @@ router.post(
       }
 
       const { password: _pw, ...userWithoutPassword } = user;
+      await recordAuditLog({
+        req,
+        actor: req.user
+          ? { id: req.user.id, email: req.user.email, role: req.user.role }
+          : null,
+        action: 'CREATE',
+        entityType: 'StaffMember',
+        entityId: user.staffProfile?.id ?? user.id,
+        summary: `Création personnel ${emailNorm} (modules: ${(modulesForCreate ?? []).join(', ') || '—'})`,
+        changes: {
+          visibleStaffModules: { before: null, after: modulesForCreate ?? [] },
+          staffCategory: { before: null, after: staffCategory },
+          supportKind: { before: null, after: staffCategory === 'SUPPORT' ? supportKind : null },
+        },
+      });
       res.status(201).json({ ...userWithoutPassword, passwordSetupEmailSent: shouldSendSetupEmail });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur serveur';
@@ -842,6 +858,45 @@ router.put('/staff/:id', async (req: SchoolContextRequest, res) => {
         },
       },
     });
+
+    if (
+      nextModules !== undefined ||
+      staffCategory !== undefined ||
+      supportKind !== undefined
+    ) {
+      await recordAuditLog({
+        req,
+        actor: req.user
+          ? { id: req.user.id, email: req.user.email, role: req.user.role }
+          : null,
+        action: 'UPDATE',
+        entityType: 'StaffMember',
+        entityId: staff.id,
+        summary: `Mise à jour permissions / métier personnel ${staff.employeeId}`,
+        changes: {
+          ...(nextModules !== undefined
+            ? {
+                visibleStaffModules: {
+                  before: staff.visibleStaffModules ?? [],
+                  after: nextModules,
+                },
+              }
+            : {}),
+          ...(staffCategory !== undefined
+            ? { staffCategory: { before: staff.staffCategory, after: nextCategory } }
+            : {}),
+          ...(supportKind !== undefined
+            ? {
+                supportKind: {
+                  before: staff.supportKind,
+                  after: nextCategory === 'SUPPORT' ? nextSupportKind : null,
+                },
+              }
+            : {}),
+        },
+      });
+    }
+
     res.json(updated);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur serveur';

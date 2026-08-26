@@ -7474,7 +7474,7 @@ router.post('/tuition-fees/counter-payment', async (req: SchoolContextRequest, r
 
 router.get('/material/rooms', async (req: SchoolContextRequest, res) => {
   try {
-    const { search, isActive } = req.query;
+    const { search, isActive, fablab } = req.query;
     const andClauses: Record<string, unknown>[] = [];
     if (search && typeof search === 'string' && search.trim()) {
       andClauses.push({
@@ -7487,6 +7487,22 @@ router.get('/material/rooms', async (req: SchoolContextRequest, res) => {
     }
     if (isActive !== undefined) {
       andClauses.push({ isActive: isActive === 'true' });
+    }
+    /** Filtre FabLab / makerspace (nom, code ou description). */
+    if (fablab === 'true' || fablab === '1') {
+      andClauses.push({
+        OR: [
+          { name: { contains: 'fablab' } },
+          { name: { contains: 'FabLab' } },
+          { name: { contains: 'Fab Lab' } },
+          { name: { contains: 'makerspace' } },
+          { name: { contains: 'Makerspace' } },
+          { code: { contains: 'FAB' } },
+          { description: { contains: 'fablab' } },
+          { description: { contains: 'FabLab' } },
+          { description: { contains: 'makerspace' } },
+        ],
+      });
     }
     if (req.schoolId) {
       andClauses.push(resourceSchoolScopeWhere(req.schoolId, req.school?.isDefault ?? false));

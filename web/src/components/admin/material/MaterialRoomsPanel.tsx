@@ -21,15 +21,17 @@ const emptyForm = {
 const MaterialRoomsPanel: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [fablabOnly, setFablabOnly] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
 
   const { data: rooms, isLoading } = useQuery({
-    queryKey: ['material-rooms', search],
+    queryKey: ['material-rooms', search, fablabOnly],
     queryFn: () =>
       adminApi.getMaterialRooms({
         ...(search.trim() && { search: search.trim() }),
+        ...(fablabOnly ? { fablab: 'true' } : {}),
       }),
   });
 
@@ -74,7 +76,18 @@ const MaterialRoomsPanel: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-        <SearchBar value={search} onChange={setSearch} placeholder="Nom, code, bâtiment…" />
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-1 w-full">
+          <SearchBar value={search} onChange={setSearch} placeholder="Nom, code, bâtiment…" />
+          <label className="inline-flex items-center gap-2 text-sm text-stone-700 whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={fablabOnly}
+              onChange={(e) => setFablabOnly(e.target.checked)}
+              className="rounded border-stone-300"
+            />
+            FabLab / makerspace
+          </label>
+        </div>
         <Button
           type="button"
           onClick={() => {

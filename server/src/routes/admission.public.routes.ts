@@ -178,6 +178,26 @@ router.post(
 
       const reference = await generateUniqueReference();
 
+      const guardianSignatureRaw =
+        typeof req.body?.guardianSignature === 'string'
+          ? req.body.guardianSignature.trim()
+          : typeof req.body?.guardianSignatureData === 'string'
+            ? req.body.guardianSignatureData.trim()
+            : '';
+      const guardianConsentAccepted = parseBooleanFormField(req.body?.guardianConsentAccepted);
+      const guardianConsentText =
+        typeof req.body?.guardianConsentText === 'string'
+          ? req.body.guardianConsentText.trim().slice(0, 2000)
+          : 'J’atteste l’exactitude des informations et autorise le traitement des données pour l’instruction du dossier d’admission.';
+
+      if (!guardianConsentAccepted || guardianSignatureRaw.length < 2) {
+        unlinkUploadedFile(req.file);
+        return res.status(400).json({
+          error:
+            'Signature électronique et consentement du responsable légal sont obligatoires pour soumettre le dossier.',
+        });
+      }
+
       const admission = await prisma.admission.create({
         data: {
           reference,
@@ -199,6 +219,11 @@ router.post(
           parentEmail: parentEmail ? String(parentEmail).trim().toLowerCase() : undefined,
           address: address ? String(address).trim() : undefined,
           motivation: motivation ? String(motivation).trim() : undefined,
+          guardianSignatureData: guardianSignatureRaw.slice(0, 200_000),
+          guardianSignedAt: new Date(),
+          guardianSignIp: req.ip || req.socket.remoteAddress || undefined,
+          guardianConsentAccepted: true,
+          guardianConsentText,
           ...admissionGradeDataForCreate(levelTrim, req.body as Record<string, unknown>),
           ...(reportCard ?? {}),
         },
@@ -210,6 +235,7 @@ router.post(
           lastName: true,
           academicYear: true,
           desiredLevel: true,
+          guardianSignedAt: true,
           createdAt: true,
         },
       });

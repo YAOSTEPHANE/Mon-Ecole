@@ -4,6 +4,8 @@ export type UserUiPreferences = {
   timezone: string;
   dateFormat: string;
   timeFormat: '12h' | '24h';
+  /** Widgets ENT visibles sur le tableau de bord (ordre = affichage). */
+  dashboardWidgets?: string[];
 };
 
 export const DEFAULT_USER_UI_PREFERENCES: UserUiPreferences = {
@@ -12,7 +14,40 @@ export const DEFAULT_USER_UI_PREFERENCES: UserUiPreferences = {
   timezone: 'Europe/Paris',
   dateFormat: 'DD/MM/YYYY',
   timeFormat: '24h',
+  dashboardWidgets: ['news', 'agenda', 'messages', 'assignments', 'absences', 'grades', 'payments'],
 };
+
+const ALLOWED_DASHBOARD_WIDGETS = new Set([
+  'news',
+  'agenda',
+  'messages',
+  'assignments',
+  'absences',
+  'grades',
+  'payments',
+]);
+
+export const DASHBOARD_WIDGET_LABELS: Record<string, string> = {
+  news: 'Actualités',
+  agenda: 'Agenda',
+  messages: 'Messages',
+  assignments: 'Devoirs',
+  absences: 'Absences',
+  grades: 'Notes',
+  payments: 'Paiements',
+};
+
+function normalizeDashboardWidgets(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [...(DEFAULT_USER_UI_PREFERENCES.dashboardWidgets ?? [])];
+  }
+  const out: string[] = [];
+  for (const item of raw) {
+    const id = String(item ?? '').trim();
+    if (ALLOWED_DASHBOARD_WIDGETS.has(id) && !out.includes(id)) out.push(id);
+  }
+  return out.length > 0 ? out : [...(DEFAULT_USER_UI_PREFERENCES.dashboardWidgets ?? [])];
+}
 
 export function parseUserUiPreferences(raw: unknown): UserUiPreferences {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -32,7 +67,14 @@ export function parseUserUiPreferences(raw: unknown): UserUiPreferences {
     o.dateFormat === 'MM/DD/YYYY' || o.dateFormat === 'YYYY-MM-DD' || o.dateFormat === 'DD/MM/YYYY'
       ? o.dateFormat
       : 'DD/MM/YYYY';
-  return { language, theme, timezone, dateFormat, timeFormat };
+  return {
+    language,
+    theme,
+    timezone,
+    dateFormat,
+    timeFormat,
+    dashboardWidgets: normalizeDashboardWidgets(o.dashboardWidgets),
+  };
 }
 
 export function resolveEffectiveTheme(theme: UserUiPreferences['theme']): 'light' | 'dark' {

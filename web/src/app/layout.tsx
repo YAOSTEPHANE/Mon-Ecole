@@ -35,7 +35,17 @@ export default function RootLayout({
   return (
     <html lang="fr" data-scroll-behavior="smooth" className={`${jakarta.variable} ${display.variable}`}>
       <body className="premium-body premium-body-v2 premium-body-v3 min-h-full font-sans antialiased text-base text-stone-900">
-        <Providers>{children}</Providers>
+        <a
+          href="#main-content"
+          className="absolute left-[-10000px] top-auto z-[100] focus:left-4 focus:top-4 focus:w-auto focus:h-auto focus:overflow-visible focus:rounded-lg focus:bg-stone-900 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+        >
+          Aller au contenu principal
+        </a>
+        <Providers>
+          <div id="main-content" tabIndex={-1}>
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );

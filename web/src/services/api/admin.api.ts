@@ -930,7 +930,7 @@ export const adminApi = {
     const response = await api.patch(`/admin/library/penalties/${id}`, data);
     return response.data;
   },
-  getMaterialRooms: async (params?: { search?: string; isActive?: string }) => {
+  getMaterialRooms: async (params?: { search?: string; isActive?: string; fablab?: string }) => {
     const response = await api.get('/admin/material/rooms', { params });
     return response.data;
   },

@@ -667,34 +667,6 @@ router.put('/lti/config', async (req: SchoolContextRequest, res) => {
   }
 });
 
-router.post('/lti/launch', async (req: SchoolContextRequest, res) => {
-  try {
-    const claims = req.body?.claims ?? req.body ?? {};
-    const row = await prisma.ltiLaunch.create({
-      data: {
-        schoolId: req.schoolId ?? null,
-        userId: req.user?.id ?? null,
-        resourceLinkId:
-          typeof claims.resource_link_id === 'string'
-            ? claims.resource_link_id
-            : typeof req.body?.resourceLinkId === 'string'
-              ? req.body.resourceLinkId
-              : null,
-        targetLinkUri:
-          typeof claims.target_link_uri === 'string'
-            ? claims.target_link_uri
-            : typeof req.body?.targetLinkUri === 'string'
-              ? req.body.targetLinkUri
-              : null,
-        rawClaims: claims,
-      },
-    });
-    res.status(201).json({ ok: true, launch: row });
-  } catch (e) {
-    res.status(500).json({ error: errorMsg(e) });
-  }
-});
-
 router.get('/scorm/packages', async (req: SchoolContextRequest, res) => {
   try {
     const rows = await prisma.scormPackage.findMany({
@@ -724,6 +696,177 @@ router.post('/scorm/packages', async (req: SchoolContextRequest, res) => {
       },
     });
     res.status(201).json(row);
+  } catch (e) {
+    res.status(500).json({ error: errorMsg(e) });
+  }
+});
+
+/** Lecteur SCORM 1.2 minimal (API LMS* en localStorage + iframe). */
+router.get('/scorm/packages/:id/player', async (req: SchoolContextRequest, res) => {
+  try {
+    const row = await prisma.scormPackage.findFirst({
+      where: { id: req.params.id, ...(req.schoolId ? { schoolId: req.schoolId } : {}) },
+    });
+    if (!row || !row.active) return res.status(404).send('Package SCORM introuvable');
+    const entry = String(row.entryUrl).replace(/"/g, '&quot;');
+    const title = String(row.title).replace(/</g, '&lt;');
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>${title}</title>
+<style>html,body{margin:0;height:100%;font-family:system-ui,sans-serif}iframe{border:0;width:100%;height:calc(100% - 40px)}.bar{padding:8px 12px;background:#1c1917;color:#fff;font-size:14px}</style>
+</head><body>
+<div class="bar">SCORM — ${title}</div>
+<iframe id="sco" src="${entry}" title="Contenu SCORM"></iframe>
+<script>
+(function(){
+  var store = {};
+  var key = 'scorm:' + ${JSON.stringify(row.id)};
+  try { store = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch(e) { store = {}; }
+  function save(){ try { localStorage.setItem(key, JSON.stringify(store)); } catch(e) {} }
+  var api = {
+    LMSInitialize: function(){ return 'true'; },
+    LMSFinish: function(){ save(); return 'true'; },
+    LMSGetValue: function(n){ return store[n] != null ? String(store[n]) : ''; },
+    LMSSetValue: function(n,v){ store[n]=v; save(); return 'true'; },
+    LMSCommit: function(){ save(); return 'true'; },
+    LMSGetLastError: function(){ return '0'; },
+    LMSGetErrorString: function(){ return 'No error'; },
+    LMSGetDiagnostic: function(){ return ''; }
+  };
+  window.API = api;
+  window.API_1484_11 = {
+    Initialize: api.LMSInitialize, Terminate: api.LMSFinish,
+    GetValue: api.LMSGetValue, SetValue: api.LMSSetValue, Commit: api.LMSCommit,
+    GetLastError: api.LMSGetLastError, GetErrorString: api.LMSGetErrorString, GetDiagnostic: api.LMSGetDiagnostic
+  };
+})();
+</script></body></html>`;
+    res.type('html').send(html);
+  } catch (e) {
+    res.status(500).send(errorMsg(e));
+  }
+});
+
+router.post('/lti/launch', async (req: SchoolContextRequest, res) => {
+  try {
+    const claims = req.body?.claims ?? req.body ?? {};
+    const iss = typeof claims.iss === 'string' ? claims.iss : typeof req.body?.iss === 'string' ? req.body.iss : '';
+    const clientId =
+      typeof claims.aud === 'string'
+        ? claims.aud
+        : Array.isArray(claims.aud)
+          ? String(claims.aud[0] ?? '')
+          : typeof req.body?.clientId === 'string'
+            ? req.body.clientId
+            : '';
+    const cfg = await prisma.ltiPlatformConfig.findFirst({
+      where: req.schoolId ? { schoolId: req.schoolId } : {},
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (cfg?.enabled) {
+      if (iss && cfg.issuer && iss !== cfg.issuer) {
+        return res.status(401).json({ error: 'Issuer LTI non reconnu' });
+      }
+      if (clientId && cfg.clientId && clientId !== cfg.clientId) {
+        return res.status(401).json({ error: 'client_id LTI non reconnu' });
+      }
+    }
+    const targetLinkUri =
+      typeof claims.target_link_uri === 'string'
+        ? claims.target_link_uri
+        : typeof req.body?.targetLinkUri === 'string'
+          ? req.body.targetLinkUri
+          : null;
+    const row = await prisma.ltiLaunch.create({
+      data: {
+        schoolId: req.schoolId ?? null,
+        userId: req.user?.id ?? null,
+        resourceLinkId:
+          typeof claims.resource_link_id === 'string'
+            ? claims.resource_link_id
+            : typeof req.body?.resourceLinkId === 'string'
+              ? req.body.resourceLinkId
+              : null,
+        targetLinkUri,
+        rawClaims: claims,
+      },
+    });
+    res.status(201).json({
+      ok: true,
+      launch: row,
+      redirectUrl: targetLinkUri || null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: errorMsg(e) });
+  }
+});
+
+router.get('/integrations/pix', async (_req, res) => {
+  const launchUrl = process.env.PIX_LAUNCH_URL?.trim() || null;
+  res.json({ enabled: Boolean(launchUrl), launchUrl });
+});
+
+router.get('/integrations/visio', async (_req, res) => {
+  res.json({
+    jitsiBase: process.env.JITSI_BASE_URL?.trim() || 'https://meet.jit.si',
+    bbbBase: process.env.BBB_BASE_URL?.trim() || null,
+  });
+});
+
+router.get('/sso/config', async (req: SchoolContextRequest, res) => {
+  try {
+    const row = await prisma.schoolSsoConfig.findFirst({
+      where: req.schoolId ? { schoolId: req.schoolId } : {},
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!row) {
+      return res.json({ enabled: false, status: 'not_configured', provider: null });
+    }
+    res.json({
+      status: row.enabled ? 'ready' : 'configured',
+      enabled: row.enabled,
+      provider: row.provider,
+      entityId: row.entityId,
+      entryPoint: row.entryPoint,
+      issuer: row.issuer,
+      metadataUrl: row.metadataUrl,
+      clientId: row.clientId,
+      hasCert: Boolean(row.cert),
+      hasClientSecret: Boolean(row.clientSecret),
+    });
+  } catch (e) {
+    res.status(500).json({ error: errorMsg(e) });
+  }
+});
+
+router.put('/sso/config', async (req: SchoolContextRequest, res) => {
+  try {
+    const provider = String(req.body?.provider ?? '').trim().toUpperCase();
+    if (provider !== 'SAML' && provider !== 'OIDC') {
+      return res.status(400).json({ error: 'provider doit être SAML ou OIDC' });
+    }
+    const existing = await prisma.schoolSsoConfig.findFirst({
+      where: req.schoolId ? { schoolId: req.schoolId } : {},
+    });
+    const data = {
+      schoolId: req.schoolId ?? null,
+      provider,
+      enabled: Boolean(req.body?.enabled),
+      entityId: typeof req.body?.entityId === 'string' ? req.body.entityId : null,
+      entryPoint: typeof req.body?.entryPoint === 'string' ? req.body.entryPoint : null,
+      cert: typeof req.body?.cert === 'string' ? req.body.cert : null,
+      clientId: typeof req.body?.clientId === 'string' ? req.body.clientId : null,
+      clientSecret: typeof req.body?.clientSecret === 'string' ? req.body.clientSecret : null,
+      issuer: typeof req.body?.issuer === 'string' ? req.body.issuer : null,
+      metadataUrl: typeof req.body?.metadataUrl === 'string' ? req.body.metadataUrl : null,
+    };
+    const row = existing
+      ? await prisma.schoolSsoConfig.update({ where: { id: existing.id }, data })
+      : await prisma.schoolSsoConfig.create({ data });
+    res.json({
+      id: row.id,
+      status: row.enabled ? 'ready' : 'configured',
+      enabled: row.enabled,
+      provider: row.provider,
+    });
   } catch (e) {
     res.status(500).json({ error: errorMsg(e) });
   }
