@@ -211,21 +211,25 @@ export const sendPasswordResetEmail = async (email: string, token: string, first
   const transporter = await getTransporter();
 
   if (transporter) {
-    await transporter.sendMail({
-      from: getEmailFrom(),
-      to: email,
-      subject: 'Réinitialisation de votre mot de passe',
-      text: `Bonjour ${firstName},\n\nPour définir un nouveau mot de passe, ouvrez ce lien :\n${resetUrl}\n\nCe lien expire dans une heure.\n`,
-      html: `<p>Bonjour ${firstName},</p><p>Pour définir un nouveau mot de passe, cliquez sur le lien ci-dessous :</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Ce lien expire dans une heure.</p>`,
-    });
-    return;
+    try {
+      await transporter.sendMail({
+        from: getEmailFrom(),
+        to: email,
+        subject: 'Réinitialisation de votre mot de passe',
+        text: `Bonjour ${firstName},\n\nPour définir un nouveau mot de passe, ouvrez ce lien :\n${resetUrl}\n\nCe lien expire dans une heure.\n`,
+        html: `<p>Bonjour ${firstName},</p><p>Pour définir un nouveau mot de passe, cliquez sur le lien ci-dessous :</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Ce lien expire dans une heure.</p>`,
+      });
+      return;
+    } catch (error) {
+      console.error('sendPasswordResetEmail SMTP:', error);
+      // Ne pas faire échouer l’API : le token est créé ; on journalise le lien en secours.
+    }
   }
 
-  console.log('\n=== EMAIL DE RÉINITIALISATION DE MOT DE PASSE (SMTP non configuré) ===');
+  console.log('\n=== EMAIL DE RÉINITIALISATION DE MOT DE PASSE (SMTP non configuré ou échec) ===');
   console.log(`Destinataire: ${email}`);
   console.log(`Nom: ${firstName}`);
   console.log(`Lien de réinitialisation: ${resetUrl}`);
-  console.log(`Token: ${token}`);
   console.log('================================================\n');
 };
 

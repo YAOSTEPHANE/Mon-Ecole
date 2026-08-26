@@ -36,9 +36,9 @@ export default function HomeAcademicResultsSection() {
             </span>
             <h2
               id="public-results-title"
-              className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl"
+              className="mt-4 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]"
             >
-              Réussites et palmarès
+              <span className="home-title-lux">Réussites et palmarès</span>
             </h2>
             <div className="home-section-accent mt-4" aria-hidden />
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-stone-600 sm:text-base">
@@ -62,7 +62,7 @@ export default function HomeAcademicResultsSection() {
               {examStats.map((stat) => (
                 <article
                   key={stat.id}
-                  className="overflow-hidden rounded-3xl border border-tran-mustard-200/70 bg-gradient-to-br from-tran-mauve-950 via-tran-mauve-900 to-stone-950 p-5 text-center text-white shadow-xl sm:p-7"
+                  className="overflow-hidden rounded-3xl border border-tran-mustard-200/70 bg-tran-mauve-950 p-5 text-center text-white shadow-xl sm:p-7"
                 >
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-tran-mustard-200">
                     {stat.examLabel}
@@ -99,7 +99,7 @@ export default function HomeAcademicResultsSection() {
                       <article className="group flex flex-col items-center text-center">
                         <div className="relative">
                           <div
-                            className="absolute -inset-1 rounded-full bg-gradient-to-br from-tran-mustard-300 via-tran-mustard-500/90 to-tran-mauve-900 opacity-95 shadow-[0_10px_28px_-10px_rgba(28,39,76,0.45)] transition duration-500 group-hover:opacity-100"
+                            className="absolute -inset-1 rounded-full bg-tran-mustard-500 opacity-95 shadow-[0_10px_28px_-10px_rgba(28,39,76,0.45)] transition duration-500 group-hover:opacity-100"
                             aria-hidden
                           />
                           <div className="relative h-40 w-40 overflow-hidden rounded-full bg-stone-200 ring-[3px] ring-white transition-transform duration-500 ease-out motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:scale-[1.04] sm:h-44 sm:w-44">
@@ -111,7 +111,7 @@ export default function HomeAcademicResultsSection() {
                                 className="h-full w-full object-cover object-center transition-transform duration-700 ease-out motion-safe:group-hover:scale-110"
                               />
                             ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-tran-mauve-900 to-tran-mustard-800 font-display text-3xl font-bold text-white">
+                              <div className="flex h-full w-full items-center justify-center bg-[#8a6a3d] font-display text-3xl font-bold text-white">
                                 {initials(student.firstName, student.lastName)}
                               </div>
                             )}

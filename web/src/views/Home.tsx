@@ -101,7 +101,7 @@ const PILLARS = [
     title: 'Formation de qualité',
     text: SCHOOL_DEFAULTS.mission,
     icon: FiBook,
-    accent: 'from-tran-mauve-600 to-tran-mauve-800',
+    accent: 'bg-tran-mauve-700',
     span: 'md:col-span-2',
     imageSlot: 'homePillarPedagogy' as const,
     image: '/home/pillar-pedagogy.jpg',
@@ -111,7 +111,7 @@ const PILLARS = [
     title: 'Innovation pédagogique',
     text: 'Une approche moderne pour préparer les leaders compétents et responsables de demain.',
     icon: FiZap,
-    accent: 'from-tran-mustard-500 to-tran-mustard-700',
+    accent: 'bg-tran-mustard-600',
     span: 'md:col-span-1',
     imageSlot: 'homePillarPortals' as const,
     image: '/home/pillar-portals.jpg',
@@ -121,7 +121,7 @@ const PILLARS = [
     title: 'Vie scolaire',
     text: 'Discipline, accompagnement et écoute pour garantir un climat de travail serein.',
     icon: FiShield,
-    accent: 'from-tran-mauve-500 to-tran-mauve-700',
+    accent: 'bg-tran-mauve-600',
     span: 'md:col-span-1',
     imageSlot: 'homePillarSecurity' as const,
     image: '/home/pillar-security.jpg',
@@ -131,7 +131,7 @@ const PILLARS = [
     title: 'Administration & familles',
     text: 'Pré-inscriptions, suivi scolaire et lien renforcé avec les parents d’élèves.',
     icon: FiLayers,
-    accent: 'from-tran-mauve-800 to-tran-mustard-700',
+    accent: 'bg-[#8a6a3d]',
     span: 'md:col-span-2',
     imageSlot: 'homePillarAdministration' as const,
     image: '/home/pillar-administration.jpg',
@@ -143,7 +143,7 @@ const ROLES = [
   {
     label: 'Direction',
     desc: 'Pilotage de l’établissement, vie scolaire et orientation vers la réussite.',
-    gradient: 'from-tran-mauve-600 to-tran-mauve-800',
+    gradient: 'bg-tran-mauve-700',
     ring: 'ring-tran-mauve-500/25',
     icon: FiBarChart2,
     imageSlot: 'homeRoleAdmin' as const,
@@ -153,7 +153,7 @@ const ROLES = [
   {
     label: 'Enseignant',
     desc: 'Transmission des savoirs, évaluations et accompagnement personnalisé.',
-    gradient: 'from-tran-mauve-500 to-tran-mauve-700',
+    gradient: 'bg-tran-mauve-600',
     ring: 'ring-tran-mauve-400/25',
     icon: FiBook,
     imageSlot: 'homeRoleTeacher' as const,
@@ -163,7 +163,7 @@ const ROLES = [
   {
     label: 'Élève',
     desc: 'Progression, motivation et révélation du plein potentiel de chaque élève.',
-    gradient: 'from-tran-mustard-500 to-tran-mustard-700',
+    gradient: 'bg-tran-mustard-600',
     ring: 'ring-tran-mustard-500/25',
     icon: FiAward,
     imageSlot: 'homeRoleStudent' as const,
@@ -173,7 +173,7 @@ const ROLES = [
   {
     label: 'Parent',
     desc: 'Partenaire essentiel : suivi, dialogue et engagement pour la réussite scolaire.',
-    gradient: 'from-tran-mauve-700 to-tran-mustard-600',
+    gradient: 'bg-[#8a6a3d]',
     ring: 'ring-tran-mustard-500/20',
     icon: FiHeart,
     imageSlot: 'homeRoleParent' as const,
@@ -202,7 +202,7 @@ const EXPERIENCE_CARDS = [
     text: 'Des apprentissages structurés, une progression lisible et des repères clairs pour accompagner chaque élève.',
     stat: 'Suivi continu',
     icon: FiTarget,
-    accent: 'from-tran-mauve-500 to-tran-mauve-800',
+    accent: 'bg-tran-mauve-700',
     image: '/home/experience-academique.jpg',
     imageAlt: 'Élèves concentrés lors d’une évaluation en classe',
   },
@@ -212,7 +212,7 @@ const EXPERIENCE_CARDS = [
     text: 'Un environnement organisé où la rigueur, le dialogue et l’encadrement renforcent la confiance.',
     stat: 'Cadre maîtrisé',
     icon: FiShield,
-    accent: 'from-tran-mustard-500 to-tran-mustard-800',
+    accent: 'bg-tran-mustard-600',
     image: '/home/experience-vie-scolaire.jpg',
     imageAlt: 'Accompagnement d’élèves dans les couloirs de l’établissement',
   },
@@ -222,7 +222,7 @@ const EXPERIENCE_CARDS = [
     text: 'Une relation école-famille pensée pour rendre les informations plus accessibles et les décisions plus rapides.',
     stat: 'Lien renforcé',
     icon: FiUsers,
-    accent: 'from-tran-mauve-700 to-tran-mustard-700',
+    accent: 'bg-[#8a6a3d]',
     image: '/home/experience-familles.jpg',
     imageAlt: 'Rencontre parents–enseignants dans une salle de classe',
   },
@@ -333,7 +333,7 @@ export default function Home() {
   }, [headerTitle]);
 
   return (
-    <div className="home-page home-page--v3 min-h-screen premium-body premium-body-v2 premium-body-v3 font-sans text-tran-mauve-950 antialiased">
+    <div className="home-page home-page--v3 home-page--v4 min-h-screen premium-body premium-body-v2 premium-body-v3 font-sans text-tran-mauve-950 antialiased">
       <header className="home-header sticky top-0 z-50 glass-nav glass-nav-v2 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 min-h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-6">
           <Link
@@ -344,7 +344,7 @@ export default function Home() {
               className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-tran-mustard-900/25 ring-2 ring-tran-mustard-400/45 transition-transform duration-300 group-hover:scale-[1.03] sm:h-11 sm:w-11 ${
                 navigationLogoAbsolute
                   ? 'bg-white'
-                  : 'bg-gradient-to-br from-tran-mauve-900 via-tran-mauve-800 to-tran-mauve-950 text-tran-mustard-100'
+                  : 'bg-tran-mauve-900 text-tran-mustard-100'
               }`}
             >
               {navigationLogoAbsolute ? (
@@ -466,7 +466,7 @@ export default function Home() {
       <PublicSectionsReveal extraSelector="#resultats article, .home-stats-rail .home-stat-tile">
       <main>
         {/* Hero full-bleed — marque, promesse, CTA */}
-        <section className="home-hero-shell home-hero-shell--cinematic relative isolate min-h-[min(72svh,36rem)] overflow-hidden text-white sm:min-h-[min(88vh,48rem)] lg:min-h-[min(92vh,54rem)]">
+        <section className="home-hero-shell home-hero-shell--cinematic relative isolate min-h-[min(78svh,40rem)] overflow-hidden text-white sm:min-h-[min(92vh,52rem)] lg:min-h-[min(96vh,58rem)]">
           <div className="absolute inset-0" aria-hidden>
             <HomePageImage
               slot="homeHeroPlatform"
@@ -509,12 +509,12 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative z-10 mx-auto flex min-h-[min(72svh,36rem)] max-w-7xl flex-col justify-end px-4 pb-10 pt-16 sm:min-h-[min(88vh,48rem)] sm:px-6 sm:pb-20 sm:pt-24 lg:min-h-[min(92vh,54rem)] lg:justify-center lg:pb-28 lg:pt-32">
+          <div className="relative z-10 mx-auto flex min-h-[min(78svh,40rem)] max-w-7xl flex-col justify-end px-4 pb-10 pt-16 sm:min-h-[min(92vh,52rem)] sm:px-6 sm:pb-20 sm:pt-24 lg:min-h-[min(96vh,58rem)] lg:justify-center lg:pb-28 lg:pt-32">
             <div className="home-section-fade max-w-3xl">
-              <h1 className="home-hero-h1 home-hero-title-line font-display text-[1.75rem] font-black leading-[1.12] tracking-tight text-white [overflow-wrap:anywhere] sm:text-5xl sm:leading-[1.02] lg:text-[4.1rem] lg:leading-[0.98]">
-                <span className="home-hero-h1__line">{schoolDisplayName}</span>
+              <h1 className="home-hero-h1 home-hero-title-line font-display text-[2.35rem] font-semibold leading-[1.02] tracking-tight text-white [overflow-wrap:anywhere] sm:text-6xl sm:leading-[0.96] lg:text-[5.35rem] lg:leading-[0.92]">
+                <span className="home-hero-h1__line home-hero-brand-mark">{schoolDisplayName}</span>
               </h1>
-              <p className="home-hero-sub-line mt-3 max-w-xl text-[0.95rem] leading-relaxed text-stone-200/95 sm:mt-6 sm:text-xl">
+              <p className="home-hero-sub-line mt-4 max-w-xl text-[1.05rem] font-medium leading-relaxed text-stone-100/95 sm:mt-7 sm:text-2xl sm:leading-snug">
                 {headerTagline || SCHOOL_DEFAULTS.tagline}
               </p>
 
@@ -622,8 +622,8 @@ export default function Home() {
                     <span className="home-eyebrow">
                       Expérience scolaire premium
                     </span>
-                    <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
-                      Un établissement pensé comme un parcours de réussite.
+                    <h2 className="mt-5 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[3.15rem]">
+                      <span className="home-title-lux">Un établissement pensé comme un parcours de réussite.</span>
                     </h2>
                     <div className="home-section-accent mx-0 mt-4" aria-hidden />
                     <p className="mt-5 max-w-xl text-lg leading-relaxed text-stone-600">
@@ -647,7 +647,7 @@ export default function Home() {
                             <div className="absolute inset-0 bg-gradient-to-t from-stone-950/55 via-stone-900/10 to-transparent" />
                           </div>
                           <div className="relative p-6">
-                            <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-white shadow-xl ring-4 ring-white`}>
+                            <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl ${accent} text-white shadow-xl ring-4 ring-white`}>
                               <Icon className="h-6 w-6" aria-hidden />
                             </div>
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-tran-mustard-800">
@@ -678,8 +678,8 @@ export default function Home() {
                 <span className="home-eyebrow mx-auto">
                   Notre projet éducatif
                 </span>
-                <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl lg:tracking-tight">
-                  {SCHOOL_DEFAULTS.mottoShort}
+                <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[3.15rem] lg:tracking-tight">
+                  <span className="home-title-lux">{SCHOOL_DEFAULTS.mottoShort}</span>
                 </h2>
                 <div className="home-section-accent home-section-accent--glow" aria-hidden />
                 <p className="mx-auto max-w-2xl text-lg leading-relaxed text-stone-600">
@@ -710,7 +710,7 @@ export default function Home() {
                     </div>
                     <div className="relative p-6 sm:p-7">
                       <div
-                        className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-white shadow-lg ring-2 ring-white/30 transition-transform duration-300 group-hover:scale-105`}
+                        className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl ${accent} text-white shadow-lg ring-2 ring-white/30 transition-transform duration-300 group-hover:scale-105`}
                       >
                         <Icon className="h-6 w-6" aria-hidden />
                       </div>
@@ -734,8 +734,8 @@ export default function Home() {
                 <FiCamera className="mr-1.5 inline h-3.5 w-3.5" aria-hidden />
                 La vie à l’école
               </span>
-              <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
-                Un campus, des visages, une communauté
+              <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[3.15rem]">
+                <span className="home-title-lux">Un campus, des visages, une communauté</span>
               </h2>
               <div className="home-section-accent" aria-hidden />
               <p className="mx-auto max-w-2xl text-lg leading-relaxed text-stone-600">
@@ -796,8 +796,8 @@ export default function Home() {
               <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-200/80 bg-tran-mustard-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-950">
                 {schoolShortName}
               </span>
-              <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                {schoolDisplayName}, un établissement exigeant
+              <h2 className="mt-5 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]">
+                <span className="home-title-lux">{schoolDisplayName}, un établissement exigeant</span>
               </h2>
               <div className="home-section-accent mx-0 mt-3" aria-hidden />
               <p className="mt-5 text-lg leading-relaxed text-stone-600">
@@ -838,7 +838,7 @@ export default function Home() {
         </section>
 
         {/* Parcours d'admission */}
-        <section id="parcours" className="relative overflow-hidden border-y border-stone-200/80 bg-gradient-to-br from-tran-mauve-950 via-tran-mauve-900 to-stone-950 py-12 text-white sm:py-24 scroll-mt-20">
+        <section id="parcours" className="relative overflow-hidden border-y border-stone-200/80 bg-tran-mauve-950 py-12 text-white sm:py-24 scroll-mt-20">
           <div className="page-hero-v2__glow pointer-events-none absolute inset-0 opacity-70" aria-hidden />
           <div className="home-journey-grid pointer-events-none absolute inset-0" aria-hidden />
           <div className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6">
@@ -859,7 +859,7 @@ export default function Home() {
                   <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-300/35 bg-tran-mustard-400/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-100 backdrop-blur-md">
                     Admissions & accompagnement
                   </span>
-                  <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  <h2 className="mt-5 font-display text-[1.85rem] font-semibold tracking-tight text-white sm:text-4xl lg:text-[3.15rem]">
                     Une inscription claire, premium et rassurante.
                   </h2>
                   <p className="mt-5 max-w-xl text-lg leading-relaxed text-stone-300">
@@ -911,8 +911,8 @@ export default function Home() {
             <span className="inline-flex items-center rounded-full border border-cptb-blue/15 bg-cptb-blue/[0.06] px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cptb-blue">
               Communauté
             </span>
-            <h2 className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
-              La communauté Mon Ecole
+            <h2 className="mt-4 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[3.15rem]">
+              <span className="home-title-lux">La communauté Mon Ecole</span>
             </h2>
             <div className="home-section-accent mt-4" aria-hidden />
             <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-stone-600">
@@ -936,7 +936,7 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-stone-950/65 via-transparent to-transparent" />
                   <div
-                    className={`absolute -bottom-5 left-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-xl ring-4 ring-white transition-transform duration-300 group-hover:scale-105`}
+                    className={`absolute -bottom-5 left-5 flex h-14 w-14 items-center justify-center rounded-2xl ${gradient} text-white shadow-xl ring-4 ring-white transition-transform duration-300 group-hover:scale-105`}
                   >
                     <Icon className="h-6 w-6" aria-hidden />
                   </div>
@@ -964,7 +964,7 @@ export default function Home() {
                       <FiCpu className="h-3.5 w-3.5" aria-hidden />
                       Écosystème digital
                     </span>
-                    <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                    <h2 className="mt-5 font-display text-[1.85rem] font-semibold tracking-tight text-white sm:text-4xl lg:text-[3.15rem]">
                       Une vitrine moderne pour une gestion scolaire plus fluide.
                     </h2>
                     <p className="mt-5 max-w-2xl text-lg leading-relaxed text-stone-300">
@@ -1038,8 +1038,8 @@ export default function Home() {
               <span className="home-eyebrow mx-auto">
                 Vie de l&apos;établissement
               </span>
-              <h2 className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                Actualités de Mon Ecole
+              <h2 className="mt-4 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]">
+                <span className="home-title-lux">Actualités de Mon Ecole</span>
               </h2>
               <div className="home-section-accent mt-4" aria-hidden />
             </div>
@@ -1070,7 +1070,7 @@ export default function Home() {
         </section>
 
         {/* Infos pratiques */}
-        <section className="border-y border-stone-200/80 bg-gradient-to-b from-tran-mustard-50/40 via-white to-stone-50/80 py-12 sm:py-20">
+        <section className="border-y border-stone-200/80 bg-stone-50 py-12 sm:py-20">
           <div className="mx-auto max-w-7xl px-3 sm:px-6">
             <HomeReveal>
               <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
@@ -1086,8 +1086,8 @@ export default function Home() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950/40 to-transparent" />
                   </div>
-                  <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                    Infos pratiques
+                  <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]">
+                    <span className="home-title-lux">Infos pratiques</span>
                   </h2>
                   <div className="home-section-accent mx-0 mt-3" aria-hidden />
                   <div className="mt-6 space-y-4">
@@ -1143,12 +1143,12 @@ export default function Home() {
         </section>
 
         {/* Points forts */}
-        <section className="border-y border-stone-200/80 bg-gradient-to-b from-stone-50/90 via-white to-tran-mustard-50/20 py-12 sm:py-24">
+        <section className="border-y border-stone-200/80 bg-white py-12 sm:py-24">
           <div className="mx-auto max-w-7xl px-3 sm:px-6">
             <HomeReveal>
             <div className="text-center">
-              <h2 className="font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                Pourquoi choisir Mon Ecole ?
+              <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]">
+                <span className="home-title-lux">Pourquoi choisir Mon Ecole ?</span>
               </h2>
               <div className="home-section-accent mt-4" aria-hidden />
               <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-stone-600">
@@ -1159,13 +1159,13 @@ export default function Home() {
               {HIGHLIGHTS.map(({ title, text, icon: Icon }, i) => (
                 <HomeReveal key={title} delayMs={i * 80}>
                 <div
-                  className="group relative rounded-3xl bg-gradient-to-br from-tran-mustard-400/30 via-stone-200/40 to-tran-mustard-200/20 p-[1px] shadow-lg shadow-tran-mustard-900/5 transition-transform duration-300 hover:-translate-y-1"
+                  className="group relative rounded-3xl border border-tran-mustard-300/50 bg-tran-mustard-100/40 p-[1px] shadow-lg shadow-tran-mustard-900/5 transition-transform duration-300 hover:-translate-y-1"
                 >
                   <div className="h-full rounded-[1.4rem] bg-white/95 p-5 shadow-inner ring-1 ring-stone-900/[0.03] backdrop-blur-sm sm:p-8">
                     <div className="mb-2 text-xs font-bold uppercase tracking-wider text-tran-mustard-800/70">
                       {String(i + 1).padStart(2, '0')}
                     </div>
-                    <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-tran-mustard-100 to-tran-mustard-50 text-tran-mustard-900 shadow-md ring-1 ring-tran-mustard-200/80 transition-transform group-hover:scale-105">
+                    <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-tran-mustard-100 text-tran-mustard-900 shadow-md ring-1 ring-tran-mustard-200/80 transition-transform group-hover:scale-105">
                       <Icon className="h-7 w-7" aria-hidden />
                     </div>
                     <h3 className="font-display text-xl font-semibold text-stone-900">{title}</h3>
@@ -1183,12 +1183,12 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-3 py-12 sm:px-6 sm:py-20">
           <HomeReveal>
             <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
-              <div className="rounded-3xl border border-tran-mustard-200/70 bg-gradient-to-br from-tran-mustard-50 via-white to-tran-mauve-50/40 p-5 shadow-xl shadow-tran-mauve-900/[0.05] ring-1 ring-white sm:rounded-[2rem] sm:p-8">
+              <div className="rounded-3xl border border-tran-mustard-200/70 bg-tran-mustard-50 p-5 shadow-xl shadow-tran-mauve-900/[0.05] ring-1 ring-white sm:rounded-[2rem] sm:p-8">
                 <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-200/80 bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-950">
                   Confiance
                 </span>
-                <h2 className="mt-5 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                  Une image d’établissement forte et cohérente.
+                <h2 className="mt-5 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]">
+                  <span className="home-title-lux">Une image d’établissement forte et cohérente.</span>
                 </h2>
                 <p className="mt-5 text-lg leading-relaxed text-stone-600">
                   Une page d’accueil premium doit rassurer immédiatement : positionnement clair, accès rapides,
@@ -1227,7 +1227,7 @@ export default function Home() {
         {/* Citation */}
         <section className="mx-auto max-w-7xl px-3 py-12 sm:px-6 sm:py-20">
           <HomeReveal>
-          <div className="home-quote-panel relative overflow-hidden rounded-3xl border border-tran-mustard-200/50 bg-gradient-to-br from-tran-mustard-50/95 via-white to-tran-mauve-50/40 px-4 py-10 text-center shadow-[0_28px_56px_-22px_rgba(90,91,154,0.16)] ring-1 ring-tran-mauve-200/50 sm:rounded-[2rem] sm:px-14 sm:py-16">
+          <div className="home-quote-panel relative overflow-hidden rounded-3xl border border-tran-mustard-200/50 bg-tran-mustard-50 px-4 py-10 text-center shadow-[0_28px_56px_-22px_rgba(90,91,154,0.16)] ring-1 ring-tran-mauve-200/50 sm:rounded-[2rem] sm:px-14 sm:py-16">
             <span
               className="pointer-events-none absolute -left-4 top-6 z-[1] font-display text-[8rem] font-bold leading-none text-tran-mustard-200/45 sm:left-8"
               aria-hidden
@@ -1235,7 +1235,7 @@ export default function Home() {
               «
             </span>
             <FiMessageSquare className="relative z-10 mx-auto h-11 w-11 text-tran-mustard-800 drop-shadow-sm" aria-hidden />
-            <blockquote className="relative z-10 mx-auto mt-8 max-w-3xl font-display text-xl font-medium leading-snug text-stone-900 sm:text-3xl sm:leading-snug">
+            <blockquote className="relative z-10 mx-auto mt-8 max-w-3xl font-display text-2xl font-medium leading-snug text-stone-900 sm:text-4xl sm:leading-snug">
               {SCHOOL_DEFAULTS.motto}
             </blockquote>
             <p className="relative z-10 mt-8 text-sm font-semibold uppercase tracking-wider text-stone-500">
@@ -1254,13 +1254,13 @@ export default function Home() {
         {/* CTA final */}
         <section className="mx-auto max-w-7xl px-3 pb-16 sm:px-6 sm:pb-28">
           <HomeReveal>
-          <div className="home-cta-shell relative overflow-hidden rounded-3xl bg-gradient-to-br from-tran-mauve-950 via-tran-mauve-900 to-tran-mustard-950 px-4 py-12 text-center sm:rounded-[2rem] sm:px-12 sm:py-20 lg:py-24">
+          <div className="home-cta-shell relative overflow-hidden rounded-3xl bg-tran-mauve-950 px-4 py-12 text-center sm:rounded-[2rem] sm:px-12 sm:py-20 lg:py-24">
             <div className="home-cta-aurora pointer-events-none absolute inset-0 z-[1]" aria-hidden />
             <div className="relative z-10 mx-auto max-w-2xl">
-              <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-white/15 to-white/[0.04] shadow-[0_12px_40px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md ring-1 ring-tran-mustard-400/20">
+              <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md ring-1 ring-tran-mustard-400/20">
                 <FiClock className="h-8 w-8 text-tran-mustard-200" aria-hidden />
               </div>
-              <h2 className="font-display text-[1.65rem] font-semibold text-white sm:text-4xl lg:text-5xl">
+              <h2 className="home-cta-title font-display text-[1.85rem] font-semibold sm:text-4xl lg:text-[3.25rem]">
                 Rejoignez {schoolDisplayName}
               </h2>
               <p className="mt-5 text-lg text-stone-400">

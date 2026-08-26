@@ -69,9 +69,9 @@ export default function HomeDirectorSection() {
               </span>
               <h2
                 id="director-message-title"
-                className="mt-5 font-display text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl lg:text-[2rem] lg:leading-tight"
+                className="mt-5 font-display text-[1.75rem] font-semibold tracking-tight text-stone-900 sm:text-3xl lg:text-[2.35rem] lg:leading-tight"
               >
-                {content.messageTitle}
+                <span className="home-title-lux">{content.messageTitle}</span>
               </h2>
               <div className="home-section-accent mx-0 mt-3" aria-hidden />
 

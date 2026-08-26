@@ -103,7 +103,7 @@ export default function HomeFneMatriculeLookup() {
   return (
     <section
       id="matricule-fne"
-      className="relative scroll-mt-24 overflow-hidden border-y border-stone-200/80 bg-gradient-to-b from-[#f7f6fb] via-white to-tran-mustard-50/40 py-10 sm:py-20"
+      className="relative scroll-mt-24 overflow-hidden border-y border-stone-200/80 bg-[#f7f6fb] py-10 sm:py-20"
     >
       <div
         className="pointer-events-none absolute -left-24 top-0 h-64 w-64 rounded-full bg-cptb-blue/10 blur-3xl"
@@ -118,8 +118,8 @@ export default function HomeFneMatriculeLookup() {
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-tran-mustard-800">
             Service élèves & familles
           </p>
-          <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-tran-mauve-950 sm:text-3xl">
-            Vérifier mon matricule FNE
+          <h2 className="mt-2 font-display text-[1.85rem] font-semibold tracking-tight text-tran-mauve-950 sm:text-4xl">
+            <span className="home-title-lux">Vérifier mon matricule FNE</span>
           </h2>
           <div className="home-section-accent mx-auto mt-4" aria-hidden />
           <p className="mt-4 text-sm leading-relaxed text-stone-600 sm:text-base">
