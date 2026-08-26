@@ -33,7 +33,7 @@
     "test:bursar": "tsx scripts/test-bursar-finance-modules.ts",
     "test:extended": "npm run test:repair-db && npm run test:staff-modules && npm run test:staff-admissions && npm run test:bursar",
     "test:smtp": "tsx scripts/test-smtp.ts",
-    "test:web-exports": "tsx --test ../web/src/lib/document-exports.test.ts ../web/src/lib/offline-sync-queue.test.ts ../web/src/lib/accountingJournal.test.ts ../web/src/lib/classFinancialSituation.test.ts ../web/src/lib/tuitionBilling.test.ts ../web/src/lib/gradeEvaluationGroups.test.ts src/utils/tuition-fee-billing.util.test.ts src/utils/teacher-session-timing.util.test.ts",
+    "test:web-exports": "cd ../web && npx vitest run && cd ../server && node --import tsx --test src/utils/tuition-fee-billing.util.test.ts src/utils/teacher-session-timing.util.test.ts",
     "test:all": "npm run test && npm run build && npm run test:web-exports && npm run test:repair-db && npm run test:integration && npm run test:spaces && npm run test:import-export && npm run test:extended"
   },
   "prisma": {
