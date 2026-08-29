@@ -68,6 +68,9 @@ export default function HomeAcademicResultsSection() {
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-tran-mustard-200">
                     {stat.examLabel}
                   </p>
+                  <p className="mt-1 text-[11px] font-semibold tabular-nums text-tran-mustard-100/90">
+                    Session {stat.academicYear || data?.academicYear}
+                  </p>
                   <p className="mt-3 font-sans text-4xl font-extrabold tabular-nums tracking-tight text-white sm:text-5xl">
                     {stat.passRate.toLocaleString('fr-FR')}
                     <span className="ml-1 text-2xl font-bold tracking-normal text-tran-mustard-200">%</span>

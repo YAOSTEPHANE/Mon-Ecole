@@ -81,9 +81,26 @@ export default function OfficialExamShowcasePanel() {
     return Math.round((Math.min(a, c) / c) * 1000) / 10;
   }, [candidates, admitted]);
 
+  const publishedYear = honor?.academicYear || defaultYear;
+  const yearIsLive = /^\d{4}-\d{4}$/.test(year.trim()) && year.trim() === publishedYear;
+
+  const publishYear = useMutation({
+    mutationFn: (nextYear: string) =>
+      adminApi.updateHonorRollSettings({
+        enabled: honor?.enabled,
+        academicYear: nextYear,
+        period: honor?.period ?? null,
+      }),
+    onSuccess: () => {
+      toast.success('Année affichée sur l’accueil mise à jour');
+      void qc.invalidateQueries({ queryKey: ['admin-official-exam-stats'] });
+    },
+    onError: () => toast.error('Impossible de publier cette année'),
+  });
+
   const createStat = useMutation({
-    mutationFn: () =>
-      adminApi.createOfficialExamStat({
+    mutationFn: async () => {
+      const row = await adminApi.createOfficialExamStat({
         examKind,
         examLabel,
         academicYear: year,
@@ -91,7 +108,16 @@ export default function OfficialExamShowcasePanel() {
         admitted: admitted === '' ? null : Number(admitted),
         passRate: passRate === '' ? computedRate : Number(passRate.replace(',', '.')),
         isPublished,
-      }),
+      });
+      if (isPublished && /^\d{4}-\d{4}$/.test(year.trim()) && year.trim() !== publishedYear) {
+        await adminApi.updateHonorRollSettings({
+          enabled: honor?.enabled,
+          academicYear: year.trim(),
+          period: honor?.period ?? null,
+        });
+      }
+      return row;
+    },
     onSuccess: () => {
       toast.success('Taux d’admission enregistré');
       void qc.invalidateQueries({ queryKey: ['admin-official-exam-stats'] });
@@ -143,7 +169,17 @@ export default function OfficialExamShowcasePanel() {
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-stone-500">
             Saisissez les pourcentages officiels (CEPE, BEPC, BAC…). Seuls les résultats cochés
-            « publié » apparaissent sur la page publique.
+            « publié » de l’année sélectionnée apparaissent sur la page publique.
+          </p>
+          <p className="mt-2 rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-600">
+            Accueil affiche actuellement :{' '}
+            <span className="font-bold text-stone-900">{publishedYear}</span>
+            {!yearIsLive && /^\d{4}-\d{4}$/.test(year.trim()) ? (
+              <>
+                {' '}
+                — sélection : <span className="font-semibold">{year.trim()}</span>
+              </>
+            ) : null}
           </p>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -156,6 +192,18 @@ export default function OfficialExamShowcasePanel() {
                 placeholder="2025-2026"
               />
             </label>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                disabled={yearIsLive || !/^\d{4}-\d{4}$/.test(year.trim()) || publishYear.isPending}
+                isLoading={publishYear.isPending}
+                onClick={() => publishYear.mutate(year.trim())}
+              >
+                Afficher {year.trim() || '…'} sur l’accueil
+              </Button>
+            </div>
             <label className="block text-xs font-semibold text-stone-700">
               Examen
               <select
@@ -236,6 +284,7 @@ export default function OfficialExamShowcasePanel() {
                 <thead>
                   <tr className="border-b border-stone-100 text-left text-[11px] uppercase tracking-wider text-stone-500">
                     <th className="py-2 pr-3">Examen</th>
+                    <th className="py-2 pr-3">Année</th>
                     <th className="py-2 pr-3">Candidats</th>
                     <th className="py-2 pr-3">Admis</th>
                     <th className="py-2 pr-3">Taux</th>
@@ -247,6 +296,7 @@ export default function OfficialExamShowcasePanel() {
                   {stats.map((row) => (
                     <tr key={row.id} className="border-b border-stone-50">
                       <td className="py-2.5 pr-3 font-medium text-stone-900">{row.examLabel}</td>
+                      <td className="py-2.5 pr-3 tabular-nums text-stone-600">{row.academicYear}</td>
                       <td className="py-2.5 pr-3 tabular-nums">{row.candidates ?? '—'}</td>
                       <td className="py-2.5 pr-3 tabular-nums">{row.admitted ?? '—'}</td>
                       <td className="py-2.5 pr-3 font-sans font-extrabold tabular-nums tracking-tight text-tran-mauve-900">

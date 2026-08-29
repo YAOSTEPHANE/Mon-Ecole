@@ -2589,6 +2589,19 @@
   white-space: nowrap;
 }
 
+.admission-lux-chip__year,
+.admission-lux-year {
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: rgba(245, 201, 90, 0.82);
+  white-space: nowrap;
+}
+
+.admission-lux-year {
+  margin-top: -0.15rem;
+}
+
 .admission-lux-stat__slide {
   display: flex;
   min-width: 0;

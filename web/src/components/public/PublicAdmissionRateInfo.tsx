@@ -55,8 +55,11 @@ export default function PublicAdmissionRateInfo({
 
   if (!active) return null;
 
-  const summary = stats.map((stat) => `${stat.examLabel} ${formatRate(stat.passRate)} %`).join(' · ');
-  const ariaLabel = `Taux d’admission ${active.examLabel} : ${formatRate(active.passRate)} pour cent`;
+  const displayYear = active.academicYear || data?.academicYear || '';
+  const summary = stats
+    .map((stat) => `${stat.examLabel} ${formatRate(stat.passRate)} % (${stat.academicYear || displayYear})`)
+    .join(' · ');
+  const ariaLabel = `Taux d’admission ${active.examLabel} ${displayYear} : ${formatRate(active.passRate)} pour cent`;
   const others = stats.filter((_, i) => i !== index);
 
   const pauseHandlers = {
@@ -106,22 +109,22 @@ export default function PublicAdmissionRateInfo({
                 <span className="admission-lux-stat__unit font-sans font-extrabold tabular-nums">%</span>
               </span>
               <span className="admission-lux-exam">{stat.examLabel}</span>
+              {displayYear ? (
+                <span className="admission-lux-year">Session {displayYear}</span>
+              ) : null}
             </span>
           ))}
         </span>
         <span className="admission-lux-stat__meta">
-          {others.length > 0 ? (
-            <span className="admission-lux-stat__more">
-              {others
-                .slice(0, 2)
-                .map((stat) => `${stat.examLabel} ${formatRate(stat.passRate)} %`)
-                .join(' · ')}
-            </span>
-          ) : (
-            <span className="admission-lux-stat__more">
-              {data?.academicYear ? `Session ${data.academicYear}` : 'Résultats officiels'}
-            </span>
-          )}
+          <span className="admission-lux-stat__more">
+            {displayYear ? `Session ${displayYear}` : 'Résultats officiels'}
+            {others.length > 0
+              ? ` · ${others
+                  .slice(0, 2)
+                  .map((stat) => `${stat.examLabel} ${formatRate(stat.passRate)} %`)
+                  .join(' · ')}`
+              : ''}
+          </span>
           {dots}
         </span>
       </a>
@@ -152,6 +155,9 @@ export default function PublicAdmissionRateInfo({
             >
               <span className="admission-lux-chip__exam">{stat.examLabel}</span>
               <em className="font-sans font-extrabold tabular-nums tracking-tight not-italic">{formatRate(stat.passRate)} %</em>
+              {displayYear ? (
+                <span className="admission-lux-chip__year">{displayYear}</span>
+              ) : null}
             </span>
           ))}
         </span>
