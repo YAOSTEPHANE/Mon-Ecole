@@ -9,6 +9,7 @@ import { runAutomaticAbsenceReminders } from '../utils/absence-reminder.util';
 import { buildClassCouncilMinutesHtml } from '../utils/html-document.util';
 import { isObjectId } from '../utils/school-access-guard.util';
 import { getCurrentAcademicYear } from '../utils/report-card.util';
+import { ensureDefaultSchool } from '../utils/ensure-default-school.util';
 import {
   DEFAULT_EXAM_LABELS,
   OFFICIAL_EXAM_KINDS,
@@ -29,6 +30,10 @@ const router = express.Router();
 
 function schoolIdFrom(req: SchoolContextRequest): string | undefined {
   return req.schoolId || undefined;
+}
+
+async function resolveSchoolId(req: SchoolContextRequest): Promise<string> {
+  return schoolIdFrom(req) || (await ensureDefaultSchool());
 }
 
 function parseDateYmd(v: unknown): string | null {
@@ -503,19 +508,17 @@ router.get('/official-exam-stats', async (req: SchoolContextRequest, res) => {
       typeof req.query.academicYear === 'string' && req.query.academicYear.trim()
         ? req.query.academicYear.trim()
         : getCurrentAcademicYear();
-    const sid = schoolIdFrom(req);
+    const sid = await resolveSchoolId(req);
     const [rows, honorSetting] = await Promise.all([
       listExamStatsForAdmin({ academicYear, schoolId: sid }),
-      sid ? getHonorRollSetting(sid) : Promise.resolve(null),
+      getHonorRollSetting(sid),
     ]);
     const honorYear = honorSetting?.academicYear || academicYear;
-    const honorPreview = sid
-      ? await buildHonorRoll({
-          schoolId: sid,
-          academicYear: honorYear,
-          period: honorSetting?.period,
-        })
-      : null;
+    const honorPreview = await buildHonorRoll({
+      schoolId: sid,
+      academicYear: honorYear,
+      period: honorSetting?.period,
+    });
     res.json({
       academicYear,
       examKinds: OFFICIAL_EXAM_KINDS,
@@ -535,8 +538,7 @@ router.get('/official-exam-stats', async (req: SchoolContextRequest, res) => {
 
 router.put('/honor-roll-settings', async (req: SchoolContextRequest, res) => {
   try {
-    const sid = schoolIdFrom(req);
-    if (!sid) return res.status(400).json({ error: 'Établissement requis' });
+    const sid = await resolveSchoolId(req);
     const b = req.body as Record<string, unknown>;
     const academicYear =
       b.academicYear === undefined
@@ -557,7 +559,7 @@ router.put('/honor-roll-settings', async (req: SchoolContextRequest, res) => {
     });
     const preview = await buildHonorRoll({
       schoolId: sid,
-      academicYear: row.academicYear,
+      academicYear: row.academicYear || academicYear || getCurrentAcademicYear(),
       period: row.period,
     });
     res.json({ ...row, preview });

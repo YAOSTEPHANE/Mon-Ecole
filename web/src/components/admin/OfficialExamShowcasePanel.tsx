@@ -189,6 +189,12 @@ export default function OfficialExamShowcasePanel() {
                 className="mt-1.5 w-full rounded-xl border border-[#e4e8f2] px-3 py-2.5 text-sm"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
+                onBlur={() => {
+                  const next = year.trim();
+                  if (/^\d{4}-\d{4}$/.test(next) && next !== publishedYear) {
+                    publishYear.mutate(next);
+                  }
+                }}
                 placeholder="2025-2026"
               />
             </label>

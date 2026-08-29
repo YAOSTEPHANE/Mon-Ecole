@@ -45,7 +45,8 @@ export default function PublicAdmissionRateInfo({
   const { data } = useQuery({
     queryKey: ['public-academic-results', school ?? ''],
     queryFn: () => publicApi.getAcademicResults(school ? { school } : undefined),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 
@@ -55,11 +56,16 @@ export default function PublicAdmissionRateInfo({
 
   if (!active) return null;
 
-  const displayYear = active.academicYear || data?.academicYear || '';
+  const displayYear = (data?.academicYear || active.academicYear || '').trim();
   const summary = stats
-    .map((stat) => `${stat.examLabel} ${formatRate(stat.passRate)} % (${stat.academicYear || displayYear})`)
+    .map(
+      (stat) =>
+        `${stat.examLabel} ${formatRate(stat.passRate)} % (${stat.academicYear || displayYear})`,
+    )
     .join(' · ');
-  const ariaLabel = `Taux d’admission ${active.examLabel} ${displayYear} : ${formatRate(active.passRate)} pour cent`;
+  const ariaLabel = displayYear
+    ? `Taux d’admission ${active.examLabel} session ${displayYear} : ${formatRate(active.passRate)} pour cent`
+    : `Taux d’admission ${active.examLabel} : ${formatRate(active.passRate)} pour cent`;
   const others = stats.filter((_, i) => i !== index);
 
   const pauseHandlers = {
@@ -74,7 +80,7 @@ export default function PublicAdmissionRateInfo({
       <span className="admission-lux-dots" aria-hidden>
         {stats.map((stat, i) => (
           <span
-            key={`${stat.examLabel}-${i}`}
+            key={`${stat.id || stat.examLabel}-${i}`}
             className={i === index ? 'is-active' : undefined}
           />
         ))}
@@ -96,11 +102,12 @@ export default function PublicAdmissionRateInfo({
         <span className="admission-lux-kicker">
           <span className="admission-lux-live" aria-hidden />
           Taux d’admission
+          {displayYear ? <span className="admission-lux-kicker__year"> · {displayYear}</span> : null}
         </span>
         <span className="admission-lux-stat__stage" aria-live="polite">
           {stats.map((stat, i) => (
             <span
-              key={`${stat.examLabel}-${stat.passRate}`}
+              key={`${stat.id || stat.examLabel}-${stat.academicYear}-${stat.passRate}`}
               className={`admission-lux-stat__slide ${i === index ? 'is-active' : ''}`}
               aria-hidden={i !== index}
             >
@@ -109,9 +116,9 @@ export default function PublicAdmissionRateInfo({
                 <span className="admission-lux-stat__unit font-sans font-extrabold tabular-nums">%</span>
               </span>
               <span className="admission-lux-exam">{stat.examLabel}</span>
-              {displayYear ? (
-                <span className="admission-lux-year">Session {displayYear}</span>
-              ) : null}
+              <span className="admission-lux-year">
+                Session {stat.academicYear || displayYear}
+              </span>
             </span>
           ))}
         </span>
@@ -145,19 +152,21 @@ export default function PublicAdmissionRateInfo({
         <FiAward />
       </span>
       <span className="admission-lux-chip__copy">
-        <span className="admission-lux-chip__label">Taux d’admission</span>
+        <span className="admission-lux-chip__label">
+          Taux d’admission
+          {displayYear ? <span className="admission-lux-chip__year"> · {displayYear}</span> : null}
+        </span>
         <span className="admission-lux-chip__stage" aria-live="polite">
           {stats.map((stat, i) => (
             <span
-              key={`${stat.examLabel}-${stat.passRate}`}
+              key={`${stat.id || stat.examLabel}-${stat.academicYear}-${stat.passRate}`}
               className={`admission-lux-chip__slide ${i === index ? 'is-active' : ''}`}
               aria-hidden={i !== index}
             >
               <span className="admission-lux-chip__exam">{stat.examLabel}</span>
-              <em className="font-sans font-extrabold tabular-nums tracking-tight not-italic">{formatRate(stat.passRate)} %</em>
-              {displayYear ? (
-                <span className="admission-lux-chip__year">{displayYear}</span>
-              ) : null}
+              <em className="font-sans font-extrabold tabular-nums tracking-tight not-italic">
+                {formatRate(stat.passRate)} %
+              </em>
             </span>
           ))}
         </span>

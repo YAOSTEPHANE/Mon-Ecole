@@ -14,7 +14,8 @@ export default function HomeAcademicResultsSection() {
   const { data, isPending } = useQuery({
     queryKey: ['public-academic-results', ''],
     queryFn: () => publicApi.getAcademicResults(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     retry: 2,
   });
 

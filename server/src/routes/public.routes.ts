@@ -414,7 +414,10 @@ router.get('/academic-results', async (req, res) => {
     }
 
     const honorSetting = await getHonorRollSetting(schoolId);
-    const honorYear = honorSetting?.academicYear || academicYear;
+    const honorYear =
+      (honorSetting?.academicYear && /^\d{4}-\d{4}$/.test(honorSetting.academicYear)
+        ? honorSetting.academicYear
+        : null) || academicYear;
     const honorEnabled = honorSetting?.enabled ?? true;
     const [examStats, honorRoll] = await Promise.all([
       listPublishedExamStats({ schoolId, academicYear: honorYear }),
@@ -429,7 +432,10 @@ router.get('/academic-results', async (req, res) => {
 
     res.json({
       academicYear: honorYear,
-      examStats,
+      examStats: examStats.map((stat) => ({
+        ...stat,
+        academicYear: stat.academicYear || honorYear,
+      })),
       honorRoll: honorEnabled ? honorRoll : null,
     });
   } catch (error: unknown) {

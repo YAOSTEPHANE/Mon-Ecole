@@ -2440,7 +2440,7 @@
 
 .admission-lux-chip {
   display: inline-flex;
-  max-width: min(100%, 20rem);
+  max-width: min(100%, 24rem);
   align-items: center;
   gap: 0.55rem;
   overflow: hidden;
@@ -2521,6 +2521,30 @@
   color: rgba(245, 201, 90, 0.9);
 }
 
+.admission-lux-chip__year,
+.admission-lux-kicker__year {
+  letter-spacing: 0.08em;
+  color: rgba(245, 201, 90, 0.95);
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.admission-lux-chip__exam {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admission-lux-year {
+  margin-top: -0.15rem;
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: rgba(245, 201, 90, 0.82);
+  white-space: nowrap;
+}
+
 .admission-lux-chip__stage,
 .admission-lux-stat__stage {
   position: relative;
@@ -2580,26 +2604,6 @@
   font-size: 0.76rem;
   font-weight: 650;
   color: rgba(255, 255, 255, 0.94);
-}
-
-.admission-lux-chip__exam {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admission-lux-chip__year,
-.admission-lux-year {
-  font-size: 0.62rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  color: rgba(245, 201, 90, 0.82);
-  white-space: nowrap;
-}
-
-.admission-lux-year {
-  margin-top: -0.15rem;
 }
 
 .admission-lux-stat__slide {
