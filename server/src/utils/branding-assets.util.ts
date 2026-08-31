@@ -2,9 +2,12 @@ import fs from 'fs';
 import { localPathFromUploadUrl } from './upload-file-path.util';
 import { sanitizeHomePageImages, type HomePageImagesRecord } from './home-page-images.util';
 import {
+  toPublicAboutPageContent,
+  type AboutPageContentRecord,
+} from './about-page-content.util';
+import {
   parseAcademicTermDates,
   serializeAcademicTermDatesForApi,
-  type AcademicTermDatesConfig,
 } from './academic-term-dates.util';
 
 /** Vérifie qu’un fichier d’upload local existe encore sur le disque. */
@@ -54,6 +57,7 @@ export type BrandingPublicRow = {
   studiesDirectorClosing?: string | null;
   studiesDirectorFooterLine?: string | null;
   homePageImages?: HomePageImagesRecord | null;
+  aboutPageContent?: AboutPageContentRecord | null;
   academicTermDates?: unknown;
 };
 
@@ -70,6 +74,7 @@ export function toPublicBrandingShape(row: BrandingPublicRow): BrandingPublicRow
     studiesDirectorClosing: row.studiesDirectorClosing ?? null,
     studiesDirectorFooterLine: row.studiesDirectorFooterLine ?? null,
     homePageImages: sanitizeHomePageImages(row.homePageImages),
+    aboutPageContent: toPublicAboutPageContent(row.aboutPageContent),
     appTitle: row.appTitle,
     appTagline: row.appTagline,
     currentAcademicYear: row.currentAcademicYear ?? null,

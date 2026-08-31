@@ -13,6 +13,10 @@ import { publicApi } from '@/services/api/public';
 import { resolveUploadPublicUrl } from '@/lib/uploadsPublicUrl';
 import { applyBrandingToDocument } from '@/lib/applyBrandingDocument';
 import type { HomePageImagesRecord } from '@/lib/homePageImages.types';
+import {
+  parseAboutPageContent,
+  type AboutPageContentRecord,
+} from '@/lib/aboutPageContent';
 import { ACADEMIC_YEAR_OVERRIDE_STORAGE_KEY } from '@/utils/academicYear';
 import { loadCachedGetPayload } from '@/lib/offline-api';
 import { parseAcademicTermDates, type AcademicTermDatesConfig } from '@/lib/academicTermDates';
@@ -40,6 +44,7 @@ export type AppBrandingPayload = {
   studiesDirectorClosing: string | null;
   studiesDirectorFooterLine: string | null;
   homePageImages: HomePageImagesRecord;
+  aboutPageContent: AboutPageContentRecord | null;
   academicTermDates: AcademicTermDatesConfig | null;
 };
 
@@ -77,6 +82,7 @@ const DEFAULT_BRANDING: AppBrandingPayload = {
   studiesDirectorClosing: null,
   studiesDirectorFooterLine: null,
   homePageImages: {},
+  aboutPageContent: null,
   academicTermDates: null,
 };
 
@@ -117,6 +123,9 @@ export function AppBrandingProvider({ children }: { children: ReactNode }) {
           data.homePageImages && typeof data.homePageImages === 'object' && !Array.isArray(data.homePageImages)
             ? (data.homePageImages as HomePageImagesRecord)
             : {},
+        aboutPageContent: parseAboutPageContent(
+          (data as { aboutPageContent?: unknown }).aboutPageContent,
+        ),
         academicTermDates: parseAcademicTermDates(data.academicTermDates),
       });
       try {
@@ -161,6 +170,7 @@ export function AppBrandingProvider({ children }: { children: ReactNode }) {
             !Array.isArray(cached.homePageImages)
               ? cached.homePageImages
               : {},
+          aboutPageContent: parseAboutPageContent(cached.aboutPageContent),
           academicTermDates: parseAcademicTermDates(cached.academicTermDates),
         });
         setError(null);

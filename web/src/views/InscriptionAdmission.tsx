@@ -121,6 +121,7 @@ const InscriptionAdmission = () => {
     studiesDirectorClosing: null,
     studiesDirectorFooterLine: null,
     homePageImages: {},
+    aboutPageContent: null,
     academicTermDates: null,
   });
 

@@ -16,6 +16,7 @@ import Input from '../ui/Input';
 import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
 import HomePageImagesPanel from './HomePageImagesPanel';
+import AboutPageContentPanel from './AboutPageContentPanel';
 import { getCurrentAcademicYear } from '@/utils/academicYear';
 import {
   parseAcademicTermDates,
@@ -33,6 +34,12 @@ import {
   directorMessageBodyFromParagraphs,
   resolveDirectorMessageContent,
 } from '@/lib/homeDirectorMessage';
+import {
+  aboutPageContentToDraft,
+  defaultAboutPageDraft,
+  type AboutPageContentRecord,
+} from '@/lib/aboutPageContent';
+import { SCHOOL_DEFAULTS, resolveSchoolMapsUrl } from '@/data/schoolDefaults';
 import {
   FiBriefcase,
   FiBook, 
@@ -58,7 +65,6 @@ import {
   FiUpload,
   FiImage,
 } from 'react-icons/fi';
-import { resolveSchoolMapsUrl } from '@/data/schoolDefaults';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -190,6 +196,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     closing: '',
     footerLine: '',
   });
+
+  const [aboutPageDraft, setAboutPageDraft] = useState<AboutPageContentRecord>(() =>
+    defaultAboutPageDraft(SCHOOL_DEFAULTS.fullName),
+  );
+  const [aboutPageResetToNull, setAboutPageResetToNull] = useState(false);
 
   // Academic settings
   const [academicSettings, setAcademicSettings] = useState<{
@@ -352,6 +363,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 ? b.studiesDirectorFooterLine
                 : resolvedDirector.footerLine,
           });
+          const schoolNameForAbout =
+            (typeof b.schoolDisplayName === 'string' && b.schoolDisplayName.trim()) ||
+            (typeof b.appTitle === 'string' && b.appTitle.trim()) ||
+            SCHOOL_DEFAULTS.fullName;
+          const schoolShortForAbout =
+            (typeof b.appTitle === 'string' && b.appTitle.trim()) || SCHOOL_DEFAULTS.shortName;
+          setAboutPageDraft(
+            aboutPageContentToDraft(
+              b.aboutPageContent && typeof b.aboutPageContent === 'object'
+                ? (b.aboutPageContent as AboutPageContentRecord)
+                : null,
+              schoolNameForAbout,
+              schoolShortForAbout,
+            ),
+          );
+          setAboutPageResetToNull(false);
         }
       } catch {
         if (!cancelled) {
@@ -481,6 +508,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
         studiesDirectorMessage: directorMessageDraft.message.trim() || null,
         studiesDirectorClosing: directorMessageDraft.closing.trim() || null,
         studiesDirectorFooterLine: directorMessageDraft.footerLine.trim() || null,
+        aboutPageContent: aboutPageResetToNull ? null : aboutPageDraft,
       });
       if (user) {
         await authApi.updateMe({ uiPreferences: { ...userSettings, language: 'fr' } });
@@ -1288,6 +1316,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     </div>
                   </div>
 
+                </div>
+
+                <div className="border-t border-gray-200 pt-6 mt-6">
+                  <AboutPageContentPanel
+                    draft={aboutPageDraft}
+                    onChange={(next) => {
+                      setAboutPageResetToNull(false);
+                      setAboutPageDraft(next);
+                    }}
+                    onResetDefaults={() => {
+                      const name =
+                        schoolSettings.name.trim() ||
+                        appTitleDraft.trim() ||
+                        SCHOOL_DEFAULTS.fullName;
+                      const short = appTitleDraft.trim() || SCHOOL_DEFAULTS.shortName;
+                      const defaults = defaultAboutPageDraft(name);
+                      setAboutPageDraft({
+                        ...defaults,
+                        platformBadge: `Du nouveau à ${short}`,
+                      });
+                      setAboutPageResetToNull(true);
+                      toast.success(
+                        'Textes remis aux valeurs par défaut — enregistrez pour appliquer',
+                      );
+                    }}
+                  />
                 </div>
 
                 <div className="border-t border-gray-200 pt-6 mt-6">

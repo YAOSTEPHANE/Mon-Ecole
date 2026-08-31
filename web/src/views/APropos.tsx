@@ -26,16 +26,12 @@ import {
   SCHOOL_OPENING_HOURS,
 } from '@/data/schoolDefaults';
 import {
-  ABOUT_ATOUTS,
   ABOUT_CYCLES,
-  ABOUT_PLATFORM_FEATURES,
-  ABOUT_PLATFORM_GOALS,
   ABOUT_STAFF_CATEGORIES,
-  ABOUT_TAGLINE,
-  founderParagraphs,
 } from '@/data/schoolAbout';
 import { resolveSchoolContactInfo } from '@/lib/schoolContact';
 import { resolveDirectorMessageContent } from '@/lib/homeDirectorMessage';
+import { resolveAboutPageContent } from '@/lib/aboutPageContent';
 
 const PLATFORM_ICONS = [FiBarChart2, FiCalendar, FiShield, FiCreditCard, FiVolume2];
 const DEFAULT_DIRECTOR_PHOTO = '/home/directrice-etudes.jpg';
@@ -63,7 +59,12 @@ export default function APropos() {
   const bac = examStats.find((s) => s.examKind === 'BAC');
   const directorPhoto = studiesDirectorPhotoAbsolute ?? DEFAULT_DIRECTOR_PHOTO;
   const useCustomDirectorPhoto = Boolean(studiesDirectorPhotoAbsolute);
-  const founderCopy = founderParagraphs(schoolName);
+  const about = resolveAboutPageContent(
+    branding.aboutPageContent,
+    schoolName,
+    schoolShortName,
+  );
+  const founderCopy = about.founderParagraphs;
 
   const stats = [
     {
@@ -91,8 +92,8 @@ export default function APropos() {
   return (
     <AboutPageFrame
       navLabel="À propos"
-      title="À propos de nous"
-      description={`Bienvenue chez ${schoolName}. ${ABOUT_TAGLINE}`}
+      title={about.heroTitle}
+      description={`Bienvenue chez ${schoolName}. ${about.tagline}`}
       heroSlot="homeHeroPlatform"
       heroDefaultPath="/home/hero-platform.jpg"
       heroImageAlt={`Campus et communauté de ${schoolName}`}
@@ -168,16 +169,16 @@ export default function APropos() {
             slot="homePillarPedagogy"
             alt="Mission pédagogique"
             eyebrow="Notre mission"
-            title="Former avec exigence"
-            text={SCHOOL_DEFAULTS.mission}
+            title={about.missionTitle}
+            text={about.missionText}
             minHeightClass="min-h-[18rem] sm:min-h-[22rem]"
           />
           <AboutMediaCard
             src="/home/experience-familles.jpg"
             alt="Valeurs de l’établissement"
             eyebrow="Nos valeurs"
-            title="Un cadre humain"
-            text={`${SCHOOL_DEFAULTS.valuesLine} ${SCHOOL_DEFAULTS.tagline}`}
+            title={about.valuesTitle}
+            text={about.valuesText}
             minHeightClass="min-h-[18rem] sm:min-h-[22rem]"
           />
         </div>
@@ -188,10 +189,10 @@ export default function APropos() {
           <div className="overflow-hidden rounded-[2rem] bg-[#07081a] ring-1 ring-white/10">
             <div className="px-6 pt-8 text-center sm:px-10 sm:pt-10">
               <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-tran-mustard-200">
-                Quelques chiffres
+                {about.statsEyebrow}
               </span>
               <h2 className="mt-3 font-display text-[1.65rem] font-semibold tracking-tight text-white sm:text-4xl">
-                Une école tournée vers la réussite
+                {about.statsTitle}
               </h2>
             </div>
             <div className="home-stats-rail mt-2 border-0 bg-transparent">
@@ -216,14 +217,14 @@ export default function APropos() {
       <section id="atouts" className="mt-16 scroll-mt-32 sm:mt-20">
         <HomeReveal>
           <div className="max-w-2xl">
-            <span className="home-eyebrow">Nos atouts</span>
+            <span className="home-eyebrow">{about.atoutsEyebrow}</span>
             <h2 className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-              Pourquoi les familles nous font confiance
+              {about.atoutsTitle}
             </h2>
             <div className="home-section-accent mx-0 mt-4" aria-hidden />
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {ABOUT_ATOUTS.map((atout, idx) => (
+            {about.atouts.map((atout, idx) => (
               <HomeReveal key={atout.title} delayMs={idx * 70}>
                 <AboutMediaCard
                   src={atout.image}
@@ -256,19 +257,16 @@ export default function APropos() {
             </div>
             <div className="px-6 py-8 sm:px-10 sm:py-12 lg:col-span-7">
               <span className="inline-flex w-fit items-center rounded-full border border-tran-mustard-300/35 bg-tran-mustard-400/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-tran-mustard-100">
-                Du nouveau à {schoolShortName}
+                {about.platformBadge}
               </span>
               <h2 className="mt-5 font-display text-2xl font-semibold tracking-tight sm:text-4xl">
-                Une plateforme numérique moderne et sécurisée
+                {about.platformTitle}
               </h2>
               <p className="mt-4 max-w-3xl text-sm leading-relaxed text-stone-300 sm:text-base">
-                Afin de renforcer la communication entre l’école, les élèves et les parents,{' '}
-                {schoolName} a mis en place un espace en ligne. Chaque famille peut consulter en temps
-                réel les informations essentielles de la scolarité, depuis un ordinateur, une tablette
-                ou un smartphone.
+                {about.platformIntro}
               </p>
               <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-                {ABOUT_PLATFORM_FEATURES.map((feature, idx) => {
+                {about.platformFeatures.map((feature, idx) => {
                   const Icon = PLATFORM_ICONS[idx] ?? FiCheck;
                   return (
                     <li
@@ -285,7 +283,7 @@ export default function APropos() {
                 })}
               </ul>
               <ul className="mt-8 space-y-2 text-sm text-stone-200">
-                {ABOUT_PLATFORM_GOALS.map((goal) => (
+                {about.platformGoals.map((goal) => (
                   <li key={goal} className="flex items-start gap-2">
                     <FiCheck className="mt-0.5 h-4 w-4 shrink-0 text-tran-mustard-300" aria-hidden />
                     {goal}
@@ -309,13 +307,12 @@ export default function APropos() {
         <HomeReveal>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <span className="home-eyebrow">Le personnel</span>
+              <span className="home-eyebrow">{about.staffEyebrow}</span>
               <h2 className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                Une communauté éducative soudée
+                {about.staffTitle}
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-stone-600 sm:text-base">
-                La réussite de chaque élève repose sur une équipe pédagogique et administrative
-                engagée, compétente et disponible.
+                {about.staffText}
               </p>
             </div>
             <Link
@@ -346,9 +343,9 @@ export default function APropos() {
         <HomeReveal>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <span className="home-eyebrow">Nos établissements</span>
+              <span className="home-eyebrow">{about.campusesEyebrow}</span>
               <h2 className="mt-4 font-display text-[1.65rem] font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                Des cycles complets, de la maternelle au supérieur
+                {about.campusesTitle}
               </h2>
             </div>
             <Link
@@ -410,15 +407,13 @@ export default function APropos() {
             <div className="absolute inset-0 bg-[#07081a]/70" aria-hidden />
             <div className="relative z-10 flex h-full min-h-[18rem] flex-col justify-end p-6 sm:min-h-[22rem] sm:p-10">
               <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-tran-mustard-200">
-                Règlement intérieur
+                {about.reglementEyebrow}
               </span>
               <h2 className="mt-3 max-w-xl font-display text-2xl font-semibold tracking-tight text-white sm:text-4xl">
-                Un cadre clair pour toute la communauté
+                {about.reglementTitle}
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-stone-200 sm:text-base">
-                Le règlement intérieur régit l’environnement scolaire, les activités de l’école et les
-                relations entre personnels, élèves et familles. Il est lu chaque année à la réunion de
-                rentrée.
+                {about.reglementText}
               </p>
               <Link
                 href="/a-propos/reglement-interieur"

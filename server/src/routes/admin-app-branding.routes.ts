@@ -22,6 +22,7 @@ import {
   mergeHomePageImageUpdate,
   parseHomePageImages,
 } from '../utils/home-page-images.util';
+import { sanitizeAboutPageContent } from '../utils/about-page-content.util';
 
 const router = express.Router();
 
@@ -61,6 +62,7 @@ function emptyBrandingResponse() {
     studiesDirectorClosing: null,
     studiesDirectorFooterLine: null,
     homePageImages: {},
+    aboutPageContent: null,
     academicTermDates: null,
   };
 }
@@ -292,6 +294,18 @@ router.put('/app-branding', async (req: SchoolContextRequest, res) => {
         }
       }
       data.homePageImages = nextImages as Prisma.InputJsonValue;
+    }
+
+    if (body.aboutPageContent !== undefined) {
+      if (body.aboutPageContent === null) {
+        data.aboutPageContent = null;
+      } else {
+        const sanitized = sanitizeAboutPageContent(body.aboutPageContent);
+        if (!sanitized) {
+          return res.status(400).json({ error: 'Contenu « À propos » invalide' });
+        }
+        data.aboutPageContent = sanitized as Prisma.InputJsonValue;
+      }
     }
 
     if (body.academicTermDates !== undefined) {

@@ -3134,6 +3134,8 @@ model AppBranding {
   studiesDirectorFooterLine     String?
   /// Images personnalisables de la page d’accueil (clés homeHeroPlatform, homePillarPedagogy, …)
   homePageImages        Json?
+  /// Textes éditables de la page publique « À propos » (tagline, atouts, plateforme, …)
+  aboutPageContent      Json?
   /// Dates des trimestres (mois/jour réutilisables) — Paramètres → Académique
   academicTermDates     Json?
   updatedAt         DateTime @updatedAt

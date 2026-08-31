@@ -54,6 +54,7 @@ const EMPTY_PUBLIC_BRANDING = {
   studiesDirectorClosing: null,
   studiesDirectorFooterLine: null,
   homePageImages: {} as Record<string, unknown>,
+  aboutPageContent: null,
   academicTermDates: null,
 };
 
@@ -139,6 +140,7 @@ router.get('/app-branding', async (req, res) => {
         studiesDirectorFooterLine:
           (row as { studiesDirectorFooterLine?: string | null }).studiesDirectorFooterLine ?? null,
         homePageImages: (row as { homePageImages?: unknown }).homePageImages ?? null,
+        aboutPageContent: (row as { aboutPageContent?: unknown }).aboutPageContent ?? null,
         academicTermDates: (row as { academicTermDates?: unknown }).academicTermDates ?? null,
       }),
     );
