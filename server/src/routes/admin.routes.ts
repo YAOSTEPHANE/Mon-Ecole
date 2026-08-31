@@ -12,6 +12,7 @@ import prisma from '../utils/prisma';
 import { bumpUserTokenVersion } from '../utils/session-invalidation.util';
 import { deleteStoredUploadUrl } from '../utils/upload-persist.util';
 import { buildClassOfficialReportCards, computeClassBulletinRanks, getCurrentAcademicYear, getPeriodDates, getPeriodLabel, gradePeriodWhere, inferReportingPeriod, toPeriodKey } from '../utils/report-card.util';
+import { loadAcademicTermDatesForSchool } from '../utils/academic-term-dates.util';
 import {
   declarePromotionDecisions,
   previewPromotionDecisions,
@@ -1370,10 +1371,13 @@ router.post(
       } = req.body;
 
       const gradeDate = date ? new Date(date) : new Date();
+      const termDates = await loadAcademicTermDatesForSchool(
+        (req as SchoolContextRequest).schoolId,
+      );
       const resolvedReportingPeriod =
         typeof reportingPeriod === 'string' && reportingPeriod.trim()
           ? reportingPeriod.trim()
-          : inferReportingPeriod(gradeDate, getCurrentAcademicYear(gradeDate));
+          : inferReportingPeriod(gradeDate, getCurrentAcademicYear(gradeDate), termDates);
 
       const grade = await prisma.grade.create({
         data: {
@@ -2201,7 +2205,8 @@ router.get('/grades/rankings', async (req, res) => {
     const { rows, periodLabel, periodDates } = await computeClassBulletinRanks(
       classId,
       period,
-      academicYear
+      academicYear,
+      (req as SchoolContextRequest).schoolId,
     );
 
     const students = await prisma.student.findMany({

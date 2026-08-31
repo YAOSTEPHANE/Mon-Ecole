@@ -152,6 +152,10 @@ router.put('/discipline/rulebooks/:id', async (req, res) => {
 router.delete('/discipline/rulebooks/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const existing = await prisma.schoolDisciplinaryRulebook.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Document introuvable.' });
+    }
     await prisma.schoolDisciplinaryRulebook.delete({ where: { id } });
     res.json({ ok: true });
   } catch (e) {

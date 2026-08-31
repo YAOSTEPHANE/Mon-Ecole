@@ -1,5 +1,6 @@
 import express from 'express';
 import type { Prisma } from '@prisma/client';
+import prisma from '../utils/prisma';
 import { brandingUpload } from '../middleware/upload.middleware';
 import { deleteStoredUploadUrl, persistUploadedFile } from '../utils/upload-persist.util';
 import {
@@ -11,7 +12,12 @@ import type { SchoolContextRequest } from '../utils/school-context.util';
 import { brandingIdForSchool } from '../utils/school-context.util';
 import { toPublicBrandingShape } from '../utils/branding-assets.util';
 import {
+  parseAcademicTermDates,
+  serializeAcademicTermDatesForApi,
+} from '../utils/academic-term-dates.util';
+import {
   clearHomePageImageSlot,
+  HOME_PAGE_IMAGE_HIDDEN,
   isHomePageImageSlot,
   mergeHomePageImageUpdate,
   parseHomePageImages,
@@ -35,6 +41,7 @@ function emptyBrandingResponse() {
     currentAcademicYear: null,
     schoolDisplayName: null,
     schoolAddress: null,
+    schoolMapsUrl: null,
     schoolPhone: null,
     schoolEmail: null,
     schoolWebsite: null,
@@ -54,6 +61,7 @@ function emptyBrandingResponse() {
     studiesDirectorClosing: null,
     studiesDirectorFooterLine: null,
     homePageImages: {},
+    academicTermDates: null,
   };
 }
 
@@ -67,6 +75,16 @@ function trimText(v: unknown, max: number): string | null | undefined {
 
 function trimLongText(v: unknown, max: number): string | null | undefined {
   return trimText(v, max);
+}
+
+function normalizeMapsUrl(v: unknown): string | null | undefined {
+  const t = trimText(v, 1000);
+  if (t === undefined) return undefined;
+  if (t === null) return null;
+  if (!/^https:\/\//i.test(t)) {
+    throw new Error('Lien Maps invalide : utilisez une URL https (ex. lien Google Maps).');
+  }
+  return t;
 }
 
 function normalizeAcademicYearSetting(v: unknown): string | null | undefined {
@@ -144,7 +162,15 @@ router.put('/app-branding', async (req: SchoolContextRequest, res) => {
     if (currentAcademicYear !== undefined) data.currentAcademicYear = currentAcademicYear;
 
     const schoolName = trimText(body.schoolDisplayName, 200);
-    const schoolAddr = trimText(body.schoolAddress, 500);
+    const schoolAddr = trimText(body.schoolAddress, 800);
+    let schoolMapsUrl: string | null | undefined;
+    try {
+      schoolMapsUrl = normalizeMapsUrl(body.schoolMapsUrl);
+    } catch (mapsErr) {
+      return res.status(400).json({
+        error: mapsErr instanceof Error ? mapsErr.message : 'Lien Maps invalide',
+      });
+    }
     const schoolPh = trimText(body.schoolPhone, 80);
     const schoolEm = trimText(body.schoolEmail, 120);
     const schoolWeb = trimText(body.schoolWebsite, 200);
@@ -196,6 +222,7 @@ router.put('/app-branding', async (req: SchoolContextRequest, res) => {
     }
     if (schoolName !== undefined) data.schoolDisplayName = schoolName;
     if (schoolAddr !== undefined) data.schoolAddress = schoolAddr;
+    if (schoolMapsUrl !== undefined) data.schoolMapsUrl = schoolMapsUrl;
     if (schoolPh !== undefined) data.schoolPhone = schoolPh;
     if (schoolEm !== undefined) data.schoolEmail = schoolEm;
     if (schoolWeb !== undefined) data.schoolWebsite = schoolWeb;
@@ -251,12 +278,32 @@ router.put('/app-branding', async (req: SchoolContextRequest, res) => {
       );
       let nextImages = { ...prevImages };
       for (const [key, value] of Object.entries(body.homePageImages as Record<string, unknown>)) {
-        if (!isHomePageImageSlot(key) || value !== null) continue;
-        const oldUrl = prevImages[key];
-        if (oldUrl) await deleteStoredUploadUrl(oldUrl);
-        nextImages = clearHomePageImageSlot(nextImages, key);
+        if (!isHomePageImageSlot(key)) continue;
+        if (value === null) {
+          const oldUrl = prevImages[key];
+          if (oldUrl && oldUrl !== HOME_PAGE_IMAGE_HIDDEN) await deleteStoredUploadUrl(oldUrl);
+          nextImages = clearHomePageImageSlot(nextImages, key);
+          continue;
+        }
+        if (value === HOME_PAGE_IMAGE_HIDDEN) {
+          const oldUrl = prevImages[key];
+          if (oldUrl && oldUrl !== HOME_PAGE_IMAGE_HIDDEN) await deleteStoredUploadUrl(oldUrl);
+          nextImages = { ...nextImages, [key]: HOME_PAGE_IMAGE_HIDDEN };
+        }
       }
       data.homePageImages = nextImages as Prisma.InputJsonValue;
+    }
+
+    if (body.academicTermDates !== undefined) {
+      if (body.academicTermDates === null) {
+        data.academicTermDates = null;
+      } else {
+        const parsed = parseAcademicTermDates(body.academicTermDates);
+        if (!parsed) {
+          return res.status(400).json({ error: 'Dates de trimestres invalides' });
+        }
+        data.academicTermDates = serializeAcademicTermDatesForApi(parsed) as Prisma.InputJsonValue;
+      }
     }
 
     if (Object.keys(data).length === 0) {
@@ -280,6 +327,54 @@ router.put('/app-branding', async (req: SchoolContextRequest, res) => {
       },
       update: data,
     });
+
+    // Garder le nom School aligné avec le nom d’affichage (sélecteur établissement, listes publiques).
+    if (typeof schoolName === 'string' && schoolName.trim()) {
+      const schoolId = req.schoolId || (row as { schoolId?: string | null }).schoolId || brandingId;
+      try {
+        const school = await prisma.school.findUnique({
+          where: { id: schoolId },
+          select: { id: true, shortName: true },
+        });
+        if (school) {
+          await prisma.school.update({
+            where: { id: school.id },
+            data: {
+              name: schoolName.trim(),
+              ...(!school.shortName?.trim() ? { shortName: schoolName.trim() } : {}),
+            },
+          });
+        }
+      } catch (syncErr) {
+        console.warn('Sync School.name depuis schoolDisplayName:', syncErr);
+      }
+    }
+
+    // Sync adresse / téléphone / email établissement (fiche School).
+    if (
+      schoolAddr !== undefined ||
+      schoolPh !== undefined ||
+      schoolEm !== undefined ||
+      schoolWeb !== undefined
+    ) {
+      const schoolId = req.schoolId || (row as { schoolId?: string | null }).schoolId || brandingId;
+      try {
+        const school = await prisma.school.findUnique({
+          where: { id: schoolId },
+          select: { id: true },
+        });
+        if (school) {
+          const schoolPatch: Prisma.SchoolUpdateInput = {};
+          if (schoolAddr !== undefined) schoolPatch.address = schoolAddr;
+          if (schoolPh !== undefined) schoolPatch.phone = schoolPh;
+          if (schoolEm !== undefined) schoolPatch.email = schoolEm;
+          if (schoolWeb !== undefined) schoolPatch.website = schoolWeb;
+          await prisma.school.update({ where: { id: school.id }, data: schoolPatch });
+        }
+      } catch (syncErr) {
+        console.warn('Sync School.address depuis branding:', syncErr);
+      }
+    }
 
     res.json(toPublicShape(row as Parameters<typeof toPublicBrandingShape>[0]));
   } catch (error: unknown) {

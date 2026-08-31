@@ -15,6 +15,7 @@ import {
   FiUser,
 } from "react-icons/fi";
 import { adminApi } from "@/services/api";
+import { defaultRulebookJson } from "@/lib/rulebookContent";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 
@@ -161,11 +162,15 @@ export default function DisciplineAdminModule() {
 
   const deleteRb = useMutation({
     mutationFn: (id: string) => adminApi.deleteDisciplineRulebook(id),
-    onSuccess: () => {
-      toast.success("Supprimé.");
+    onSuccess: (_data, deletedId) => {
+      toast.success("Document supprimé.");
+      if (editingRbId === deletedId) resetRbForm();
       void qc.invalidateQueries({ queryKey: ["admin-discipline-rulebooks"] });
     },
-    onError: () => toast.error("Suppression impossible."),
+    onError: (e: unknown) => {
+      const ax = e as { response?: { data?: { error?: string }; status?: number } };
+      toast.error(ax.response?.data?.error || "Suppression impossible.");
+    },
   });
 
   const [recForm, setRecForm] = useState({
@@ -342,8 +347,9 @@ export default function DisciplineAdminModule() {
                   {editingRbId ? "Modifier le document" : "Publier une version du règlement"}
                 </h3>
                 <p className="text-sm text-stone-600 mt-0.5">
-                  Une seule version publiée est visible aux familles et aux élèves (la plus récente par
-                  date d’effet).
+                  Une seule version publiée est visible aux familles, aux élèves et sur la page{' '}
+                  <span className="font-medium">À propos → Règlement intérieur</span> (la plus
+                  récente par date d’effet).
                 </p>
               </div>
             </div>
@@ -358,8 +364,22 @@ export default function DisciplineAdminModule() {
                 className="w-full min-h-[200px] rounded-xl border border-stone-200 px-3 py-2 text-sm font-mono"
                 value={rbForm.content}
                 onChange={(e) => setRbForm((f) => ({ ...f, content: e.target.value }))}
-                placeholder="Contenu du règlement intérieur (texte structuré)"
+                placeholder="Texte libre ou JSON { meta, chapters } — voir « Charger le modèle »"
               />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-amber-900 hover:underline"
+                  onClick={() =>
+                    setRbForm((f) => ({
+                      ...f,
+                      content: f.content.trim() ? f.content : defaultRulebookJson(),
+                    }))
+                  }
+                >
+                  {rbForm.content.trim() ? "Remplacer par le modèle par défaut" : "Charger le modèle par défaut"}
+                </button>
+              </div>
               <div className="grid sm:grid-cols-2 gap-3">
                 <input
                   className="rounded-xl border border-stone-200 px-3 py-2 text-sm"

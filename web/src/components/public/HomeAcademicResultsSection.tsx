@@ -77,11 +77,6 @@ export default function HomeAcademicResultsSection() {
                     <span className="ml-1 text-2xl font-bold tracking-normal text-tran-mustard-200">%</span>
                   </p>
                   <p className="mt-2 text-xs font-medium text-stone-300">Taux d’admission</p>
-                  {stat.candidates != null && stat.admitted != null ? (
-                    <p className="mt-3 text-[11px] text-stone-400">
-                      {stat.admitted} admis / {stat.candidates} candidats
-                    </p>
-                  ) : null}
                 </article>
               ))}
             </div>

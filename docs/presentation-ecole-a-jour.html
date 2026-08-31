@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>École à jour — Présentation complète des fonctionnalités</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #1c1917;
+      line-height: 1.45;
+      font-size: 10.5pt;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      font-size: 22pt;
+      margin: 0 0 6pt;
+      letter-spacing: -0.02em;
+      color: #0c0a09;
+    }
+    h2 {
+      font-size: 13pt;
+      margin: 18pt 0 8pt;
+      padding-bottom: 4pt;
+      border-bottom: 1.5px solid #d6d3d1;
+      color: #1c1917;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 11pt;
+      margin: 12pt 0 4pt;
+      color: #292524;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8pt; }
+    .lead { font-size: 11pt; color: #44403c; margin-bottom: 10pt; }
+    .meta {
+      font-size: 9pt;
+      color: #78716c;
+      margin-bottom: 14pt;
+    }
+    .pills { margin: 8pt 0 14pt; }
+    .pill {
+      display: inline-block;
+      border: 1px solid #d6d3d1;
+      border-radius: 4px;
+      padding: 2pt 7pt;
+      font-size: 8.5pt;
+      margin: 0 4pt 4pt 0;
+      color: #44403c;
+    }
+    .pill.accent {
+      background: #1c1917;
+      color: #fafaf9;
+      border-color: #1c1917;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8pt;
+      margin: 12pt 0 16pt;
+    }
+    .stat {
+      border: 1px solid #e7e5e4;
+      border-radius: 6px;
+      padding: 8pt 10pt;
+    }
+    .stat strong {
+      display: block;
+      font-size: 16pt;
+      line-height: 1.1;
+    }
+    .stat span {
+      font-size: 8pt;
+      color: #78716c;
+    }
+    .callout {
+      background: #f5f5f4;
+      border-left: 3px solid #57534e;
+      padding: 8pt 10pt;
+      margin: 10pt 0 14pt;
+      font-size: 9.5pt;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6pt 0 12pt;
+      font-size: 9pt;
+    }
+    th, td {
+      border: 1px solid #e7e5e4;
+      padding: 5pt 7pt;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f5f5f4;
+      font-weight: 600;
+    }
+    ul { margin: 4pt 0 10pt; padding-left: 16pt; }
+    li { margin-bottom: 2pt; }
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10pt;
+      margin-bottom: 10pt;
+    }
+    .card {
+      border: 1px solid #e7e5e4;
+      border-radius: 6px;
+      padding: 8pt 10pt;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin-top: 0; }
+    .footer {
+      margin-top: 20pt;
+      padding-top: 8pt;
+      border-top: 1px solid #d6d3d1;
+      font-size: 8.5pt;
+      color: #78716c;
+    }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <h1>École à jour</h1>
+  <p class="lead">
+    Présentation complète des fonctionnalités et atouts — SI scolaire ENT + ERP
+    (web, API, application mobile).
+  </p>
+  <p class="meta">
+    Prod : https://manager-ecole.vercel.app · Stack : Next.js · Express + Prisma · MongoDB · Expo
+  </p>
+  <div class="pills">
+    <span class="pill accent">Présentation produit</span>
+    <span class="pill">Multi-établissement</span>
+    <span class="pill">Mobile Expo</span>
+    <span class="pill">Mobile money</span>
+    <span class="pill">2FA / SSO / RGPD</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><strong>8</strong><span>Rôles utilisateurs</span></div>
+    <div class="stat"><strong>~50</strong><span>Modules admin</span></div>
+    <div class="stat"><strong>3</strong><span>Clients (web / API / mobile)</span></div>
+    <div class="stat"><strong>10+</strong><span>Intégrations métier</span></div>
+  </div>
+
+  <div class="callout">
+    <strong>Positionnement.</strong> Plateforme tout-en-un pour collèges et lycées : scolarité,
+    vie scolaire, RH, trésorerie, e-learning, bibliothèque, admissions et site public — avec
+    droits fins par métier (secrétaire, économe, infirmier, bibliothécaire…).
+  </div>
+
+  <h2>1. Espaces par rôle</h2>
+  <table>
+    <thead>
+      <tr><th>Rôle</th><th>Espace</th><th>Capacités clés</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Super-admin</td><td>/super-admin</td><td>Plateforme multi-écoles, comptes, sauvegardes MongoDB</td></tr>
+      <tr><td>Administrateur</td><td>/admin</td><td>Pilotage complet (~50 modules filtrables par workspace)</td></tr>
+      <tr><td>Directeur</td><td>/directeur</td><td>KPIs, admissions, impayés, risque pédagogique, encaissements</td></tr>
+      <tr><td>Personnel (STAFF)</td><td>/staff</td><td>Métiers : secrétariat, économe, infirmier, biblio, IT…</td></tr>
+      <tr><td>Enseignant</td><td>/teacher</td><td>Notes, présences, devoirs, EDT ICS, examens blancs, e-learning</td></tr>
+      <tr><td>Éducateur</td><td>/educator</td><td>Vie scolaire, discipline, validations notes, remplacements</td></tr>
+      <tr><td>Élève</td><td>/student</td><td>Notes, bulletins, paiements, campus, portfolios, examens blancs</td></tr>
+      <tr><td>Parent</td><td>/parent</td><td>Multi-enfants, RDV, consentements, bulletins, paiements</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Administration — panorama des modules</h2>
+  <table>
+    <thead><tr><th>Famille</th><th>Contenu</th></tr></thead>
+    <tbody>
+      <tr><td>Tableau de bord</td><td>Pilotage, activités, notifications</td></tr>
+      <tr><td>Élèves &amp; alumni</td><td>Dossiers, historiques, CRM anciens élèves</td></tr>
+      <tr><td>Académique</td><td>Classes, filières, programmes, matières, EDT</td></tr>
+      <tr><td>Notation &amp; examens</td><td>Notes, bulletins, examens blancs &amp; officiels</td></tr>
+      <tr><td>Ressources humaines</td><td>Enseignants, éducateurs, personnel, paie, congés</td></tr>
+      <tr><td>Parents &amp; admissions</td><td>Familles, pré-inscriptions, e-signature</td></tr>
+      <tr><td>Pédagogie &amp; vie scolaire</td><td>Suivi, discipline, parascolaire, orientation</td></tr>
+      <tr><td>Campus</td><td>Cantine, transport GPS, abonnements</td></tr>
+      <tr><td>Santé</td><td>Infirmerie, vaccins, allergies, campagnes</td></tr>
+      <tr><td>Bibliothèque</td><td>Physique + numérique, emprunts, pénalités</td></tr>
+      <tr><td>E-learning</td><td>Cours, quiz, visioconférence Jitsi / BBB</td></tr>
+      <tr><td>Matériel / FabLab</td><td>Salles, stock, maintenance, réservations</td></tr>
+      <tr><td>Finance</td><td>Frais, scolarité, bourses, paiements, compta</td></tr>
+      <tr><td>Communication</td><td>Messagerie, alertes, circulaires, visiteurs</td></tr>
+      <tr><td>Présences &amp; pointage</td><td>Appels, NFC, biométrie, badges</td></tr>
+      <tr><td>Sécurité &amp; intégrations</td><td>2FA, RGPD, OAuth/SSO, mobile money</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <h2>3. Fonctionnalités détaillées</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Académique &amp; pédagogie</h3>
+      <ul>
+        <li>Classes, filières, programmes, matières, EDT (export ICS)</li>
+        <li>Notes, moyennes, bulletins PDF, validations multi-étapes</li>
+        <li>Devoirs, cahier de texte, conduite, conseils de classe</li>
+        <li>Examens blancs BEPC/BAC (QCM, V/F, texte court)</li>
+        <li>Orientation, discipline, parascolaire, portfolios élèves</li>
+        <li>Suivi pédagogique &amp; scoring de risque règles métier</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Campus &amp; santé</h3>
+      <ul>
+        <li>Présences, absences, permissions, pointage NFC / visage</li>
+        <li>Cantine (menus, abonnements, check-in)</li>
+        <li>Transport (lignes, abonnements, tracking GPS)</li>
+        <li>Infirmerie : dossiers, vaccins, allergies, urgences</li>
+        <li>Carte élève publique, contrôle d’accès (badges, visiteurs)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Finance &amp; compta</h3>
+      <ul>
+        <li>Catalogue frais (inscription, scolarité, cantine…)</li>
+        <li>Échéanciers, facturation, rappels, reçus PDF</li>
+        <li>Bourses / aides ; guichet staff</li>
+        <li>Compta : bilan, journal, grand livre, budget, caisses</li>
+        <li>Mobile money &amp; passerelles locales (webhooks)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>RH &amp; métiers</h3>
+      <ul>
+        <li>Dossiers enseignants (qualifs, carrière, docs)</li>
+        <li>Contrats, paie, avantages, évaluation, congés</li>
+        <li>Présence &amp; heures personnel</li>
+        <li>Workspaces staff : modules visibles par métier</li>
+        <li>Audit des changements de permissions</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Communication &amp; digital (ENT)</h3>
+      <ul>
+        <li>Messagerie interne, annonces, circulaires, galerie</li>
+        <li>Widgets ENT personnalisables</li>
+        <li>Push web, e-mail, SMS, WhatsApp, temps réel Socket.IO</li>
+        <li>Bibliothèque physique + numérique</li>
+        <li>E-learning : cours, quiz, Jitsi/BBB, LTI/SCORM, PIX</li>
+        <li>Assistant pédagogique (LLM + repli local)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Sécurité &amp; conformité</h3>
+      <ul>
+        <li>2FA TOTP, OAuth Google/Microsoft, SSO école</li>
+        <li>CSRF, rate limits, headers sécurité, JWT fort</li>
+        <li>RGPD : portabilité + effacement confirmé</li>
+        <li>Audit trail, logs connexion, événements sécurité</li>
+        <li>Chiffrement des champs sensibles élèves</li>
+        <li>Uploads protégés (identité, devoirs…)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>4. Atouts différenciants</h2>
+  <table>
+    <thead><tr><th>Atout</th><th>Pourquoi ça compte</th></tr></thead>
+    <tbody>
+      <tr><td>ENT + ERP scolaire</td><td>Un seul produit pour scolarité, RH, finance, campus et communication</td></tr>
+      <tr><td>Multi-établissement</td><td>Contexte école, workspaces et modules par admin / métier staff</td></tr>
+      <tr><td>Mobile natif Expo</td><td>Android/iOS avec auth, 2FA, OAuth, temps réel et parcours par rôle</td></tr>
+      <tr><td>Finance Afrique de l’Ouest</td><td>Wave, Orange Money, MTN, CinetPay, Paystack + compta et bourses</td></tr>
+      <tr><td>Campus physique</td><td>NFC, reconnaissance faciale, cantine, transport GPS, contrôle d’accès</td></tr>
+      <tr><td>Sécurité enterprise</td><td>2FA, OAuth/SSO, RGPD, CSRF, audit, chiffrement</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Site public</h2>
+  <table>
+    <thead><tr><th>Route</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td>/ </td><td>Accueil vitrine &amp; branding</td></tr>
+      <tr><td>/inscription</td><td>Pré-inscription + e-signature parent</td></tr>
+      <tr><td>/examens-blancs</td><td>Examens blancs &amp; résultats publics</td></tr>
+      <tr><td>/a-propos, /personnel…</td><td>Présentation établissement</td></tr>
+      <tr><td>/carte-etudiant/[id]</td><td>Carte élève publique</td></tr>
+      <tr><td>/privacy, /terms</td><td>RGPD &amp; CGU</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Intégrations</h2>
+  <table>
+    <thead><tr><th>Domaine</th><th>Solutions</th></tr></thead>
+    <tbody>
+      <tr><td>Paiements</td><td>Wave · Orange Money · MTN · CinetPay · Paystack</td></tr>
+      <tr><td>Messagerie</td><td>WhatsApp Cloud · SMS Twilio · SMTP</td></tr>
+      <tr><td>Visio</td><td>Jitsi (défaut) · BigBlueButton (option)</td></tr>
+      <tr><td>Edtech</td><td>LTI · SCORM · PIX</td></tr>
+      <tr><td>Identité</td><td>Google / Microsoft OAuth · SSO SAML/OIDC école</td></tr>
+      <tr><td>Physique</td><td>NFC · Face · MENA présence</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <h2>7. Application mobile (Expo)</h2>
+  <p>
+    Authentification e-mail + 2FA, SSO Google/Microsoft (deep link), notifications et parcours
+    par rôle : notes, absences, paiements, appels de présence, guichet, admissions, messages,
+    devoirs, EDT, bulletins, campus, orientation, bibliothèque, paie/congés enseignant.
+  </p>
+  <div class="pills">
+    <span class="pill accent">Android</span>
+    <span class="pill accent">iOS</span>
+    <span class="pill">Socket.IO</span>
+    <span class="pill">Assistant IA</span>
+  </div>
+
+  <h2>8. Nouveautés récentes (écarts PRD)</h2>
+  <ul>
+    <li>Export EDT ICS (élève / parent / enseignant)</li>
+    <li>E-signature des admissions (consentement + horodatage)</li>
+    <li>Portfolios / projets élèves + feedback enseignant</li>
+    <li>Examens blancs publics (page /examens-blancs)</li>
+    <li>Widgets ENT personnalisables</li>
+    <li>Effacement RGPD bout-en-bout</li>
+    <li>LTI / SCORM / PIX / visioconférence</li>
+    <li>Config SSO SAML/OIDC par école</li>
+    <li>Audit des permissions / métiers staff</li>
+  </ul>
+
+  <h2>9. Synthèse</h2>
+  <div class="callout">
+    <strong>École à jour</strong> remplace la fragmentation (notes ici, paiements là, WhatsApp ailleurs)
+    par une plateforme unifiée : portails rôles, mobile, multi-école, trésorerie locale et campus
+    connecté — avec une base de sécurité digne d’un outil d’établissement.
+  </div>
+
+  <p class="footer">
+    Document généré pour démonstration produit · Inventaire basé sur le monorepo web / server / mobile ·
+    École à jour
+  </p>
+</body>
+</html>

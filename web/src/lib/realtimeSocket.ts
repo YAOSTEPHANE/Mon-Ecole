@@ -58,6 +58,20 @@ export function getRealtimeOrigin(): string {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
+      const api = trimSlash(API_URL || '');
+      // En dev, si l'API passe par le proxy Next (`/api`), Socket.IO aussi (rewrites next.config).
+      if (!api.startsWith('http://') && !api.startsWith('https://')) {
+        return window.location.origin;
+      }
+      try {
+        const u = new URL(api);
+        if (u.hostname === host || u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+          const basePath = u.pathname.replace(/\/api\/?$/i, '').replace(/\/+$/, '');
+          return `${u.origin}${basePath}`;
+        }
+      } catch {
+        /* fallback ci-dessous */
+      }
       return 'http://localhost:5000';
     }
     return window.location.origin;

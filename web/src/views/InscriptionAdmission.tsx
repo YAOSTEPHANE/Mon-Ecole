@@ -107,6 +107,7 @@ const InscriptionAdmission = () => {
     currentAcademicYear: null,
     schoolDisplayName: null,
     schoolAddress: null,
+    schoolMapsUrl: null,
     schoolPhone: null,
     schoolEmail: null,
     schoolWebsite: null,
@@ -120,6 +121,7 @@ const InscriptionAdmission = () => {
     studiesDirectorClosing: null,
     studiesDirectorFooterLine: null,
     homePageImages: {},
+    academicTermDates: null,
   });
 
   const [trackRef, setTrackRef] = useState('');

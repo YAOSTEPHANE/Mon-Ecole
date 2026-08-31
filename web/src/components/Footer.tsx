@@ -3,6 +3,7 @@
 import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { useAppBranding } from '@/contexts/AppBrandingContext';
+import { resolveSchoolDisplayName, resolveSchoolTagline } from '@/lib/resolveSchoolBranding';
 import {
   FiBook,
   FiMail,
@@ -70,7 +71,7 @@ const SOCIAL_NETWORKS: SocialNetwork[] = [
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { branding, navigationLogoAbsolute } = useAppBranding();
-  const displayTitle = (branding.appTitle && branding.appTitle.trim()) || 'Mon Ecole';
+  const displayTitle = resolveSchoolDisplayName(branding);
   const tagline =
     (branding.appTagline && branding.appTagline.trim()) || DEFAULT_TAGLINE;
 

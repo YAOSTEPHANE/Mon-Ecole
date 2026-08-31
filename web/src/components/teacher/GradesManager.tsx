@@ -37,6 +37,8 @@ import {
 } from '@/lib/evaluationTypes';
 import { groupGradesByStudent } from '@/lib/gradeEvaluationGroups';
 import { getCurrentTrimester } from '@/lib/academicCalendar';
+import { useAppBranding } from '@/contexts/AppBrandingContext';
+import { getCurrentAcademicYear } from '@/utils/academicYear';
 
 const REPORTING_PERIOD_OPTIONS = [
   { value: 'trim1', label: 'Trimestre 1' },
@@ -436,6 +438,12 @@ interface AddGradeModalProps {
 }
 
 const AddGradeModal = ({ isOpen, onClose, courseId, courseData, grade }: AddGradeModalProps) => {
+  const { branding } = useAppBranding();
+  const defaultTrimester = getCurrentTrimester(
+    new Date(),
+    branding.currentAcademicYear || getCurrentAcademicYear(),
+    branding.academicTermDates,
+  );
   const queryClient = useQueryClient();
   const isEditMode = !!grade;
 
@@ -449,7 +457,7 @@ const AddGradeModal = ({ isOpen, onClose, courseId, courseData, grade }: AddGrad
     date: grade?.date 
       ? new Date(grade.date).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0],
-    reportingPeriod: grade?.reportingPeriod || getCurrentTrimester(),
+    reportingPeriod: grade?.reportingPeriod || defaultTrimester,
     comments: grade?.comments || '',
   });
 

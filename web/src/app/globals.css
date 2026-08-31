@@ -378,10 +378,88 @@
     white-space: nowrap;
   }
 
+  @media (min-width: 360px) {
+    .dash-mobile-tab {
+      padding: 0.5rem 0.625rem;
+    }
+  }
+
   @media (min-width: 480px) {
     .dash-mobile-tab-label {
       display: inline;
     }
+  }
+
+  /** Ligne de recherche dépliable sous la barre de commande (mobile) */
+  .dash-mobile-search-row {
+    border-top: 1px solid #f0f2f6;
+    padding-top: 0.5rem;
+    animation: dash-search-slide 0.18s ease-out;
+  }
+
+  @keyframes dash-search-slide {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /** Conteneur de tableau avec défilement horizontal tactile */
+  .dash-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  /** Sélecteur de semaine compact sur très petits écrans */
+  @media (max-width: 359px) {
+    .dash-week-day-btn {
+      height: 2rem;
+      width: 2rem;
+      font-size: 0.6875rem;
+    }
+
+    .dash-week-nav-btn {
+      height: 2rem;
+      width: 2rem;
+    }
+  }
+
+  /** En-tête empilé (parent, etc.) */
+  .dash-header-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .dash-header-stack__row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .dash-child-picker {
+    display: flex;
+    min-width: 0;
+    gap: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 0.125rem;
+  }
+
+  .dash-child-picker > button {
+    scroll-snap-align: start;
   }
 
   .dash-command-bar::after {
@@ -459,7 +537,7 @@
   }
 
   .dash-sidebar-rail {
-    position: relative;
+    isolation: isolate;
     background: linear-gradient(180deg, #0a0a0a 0%, #111111 45%, #0c0c0c 100%);
     box-shadow:
       inset -1px 0 0 rgba(255, 255, 255, 0.06),

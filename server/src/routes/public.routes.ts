@@ -23,6 +23,7 @@ import {
   listPublishedExamStats,
 } from '../utils/public-academic-showcase.util';
 import { lookupPublicMockExamBulletin } from '../utils/public-mock-exam-results.util';
+import { resourceSchoolScopeWhere } from '../utils/school-context.util';
 
 const EMPTY_PUBLIC_BRANDING = {
   navigationLogoUrl: null,
@@ -33,6 +34,7 @@ const EMPTY_PUBLIC_BRANDING = {
   currentAcademicYear: null,
   schoolDisplayName: null,
   schoolAddress: null,
+  schoolMapsUrl: null,
   schoolPhone: null,
   schoolEmail: null,
   schoolWebsite: null,
@@ -52,6 +54,7 @@ const EMPTY_PUBLIC_BRANDING = {
   studiesDirectorClosing: null,
   studiesDirectorFooterLine: null,
   homePageImages: {} as Record<string, unknown>,
+  academicTermDates: null,
 };
 
 const router = express.Router();
@@ -107,6 +110,7 @@ router.get('/app-branding', async (req, res) => {
           (row as { currentAcademicYear?: string | null }).currentAcademicYear ?? null,
         schoolDisplayName: row.schoolDisplayName ?? null,
         schoolAddress: row.schoolAddress ?? null,
+        schoolMapsUrl: (row as { schoolMapsUrl?: string | null }).schoolMapsUrl ?? null,
         schoolPhone: row.schoolPhone ?? null,
         schoolEmail: row.schoolEmail ?? null,
         schoolWebsite: row.schoolWebsite ?? null,
@@ -135,6 +139,7 @@ router.get('/app-branding', async (req, res) => {
         studiesDirectorFooterLine:
           (row as { studiesDirectorFooterLine?: string | null }).studiesDirectorFooterLine ?? null,
         homePageImages: (row as { homePageImages?: unknown }).homePageImages ?? null,
+        academicTermDates: (row as { academicTermDates?: unknown }).academicTermDates ?? null,
       }),
     );
   } catch (error: unknown) {
@@ -441,6 +446,37 @@ router.get('/academic-results', async (req, res) => {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur serveur';
     console.error('GET /public/academic-results:', error);
+    res.status(500).json({ error: message });
+  }
+});
+
+/** Règlement intérieur publié (page À propos / portail public). */
+router.get('/discipline/rulebook', async (req, res) => {
+  try {
+    const schoolId = await resolvePublicSchoolId(req);
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { isDefault: true },
+    });
+    const row = await prisma.schoolDisciplinaryRulebook.findFirst({
+      where: {
+        isPublished: true,
+        ...resourceSchoolScopeWhere(schoolId, school?.isDefault ?? true),
+      },
+      orderBy: [{ effectiveFrom: 'desc' }, { sortOrder: 'asc' }],
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        academicYear: true,
+        effectiveFrom: true,
+        updatedAt: true,
+      },
+    });
+    res.json(row);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur serveur';
+    console.error('GET /public/discipline/rulebook:', error);
     res.status(500).json({ error: message });
   }
 });

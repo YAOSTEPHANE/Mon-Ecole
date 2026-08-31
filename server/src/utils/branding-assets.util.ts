@@ -1,6 +1,11 @@
 import fs from 'fs';
 import { localPathFromUploadUrl } from './upload-file-path.util';
 import { sanitizeHomePageImages, type HomePageImagesRecord } from './home-page-images.util';
+import {
+  parseAcademicTermDates,
+  serializeAcademicTermDatesForApi,
+  type AcademicTermDatesConfig,
+} from './academic-term-dates.util';
 
 /** Vérifie qu’un fichier d’upload local existe encore sur le disque. */
 export function uploadAssetExists(publicUrl: string | null | undefined): boolean {
@@ -29,6 +34,7 @@ export type BrandingPublicRow = {
   currentAcademicYear?: string | null;
   schoolDisplayName: string | null;
   schoolAddress: string | null;
+  schoolMapsUrl?: string | null;
   schoolPhone: string | null;
   schoolEmail: string | null;
   schoolWebsite: string | null;
@@ -48,6 +54,7 @@ export type BrandingPublicRow = {
   studiesDirectorClosing?: string | null;
   studiesDirectorFooterLine?: string | null;
   homePageImages?: HomePageImagesRecord | null;
+  academicTermDates?: unknown;
 };
 
 export function toPublicBrandingShape(row: BrandingPublicRow): BrandingPublicRow {
@@ -68,6 +75,7 @@ export function toPublicBrandingShape(row: BrandingPublicRow): BrandingPublicRow
     currentAcademicYear: row.currentAcademicYear ?? null,
     schoolDisplayName: row.schoolDisplayName,
     schoolAddress: row.schoolAddress,
+    schoolMapsUrl: row.schoolMapsUrl ?? null,
     schoolPhone: row.schoolPhone,
     schoolEmail: row.schoolEmail,
     schoolWebsite: row.schoolWebsite,
@@ -79,5 +87,8 @@ export function toPublicBrandingShape(row: BrandingPublicRow): BrandingPublicRow
     schoolMilieu: row.schoolMilieu ?? null,
     schoolRegion: row.schoolRegion ?? null,
     classroomCount: row.classroomCount ?? null,
+    academicTermDates: serializeAcademicTermDatesForApi(
+      parseAcademicTermDates(row.academicTermDates),
+    ),
   };
 }

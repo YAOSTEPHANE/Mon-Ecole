@@ -16,6 +16,7 @@ import {
   FiSearch,
   FiHeart,
   FiMenu,
+  FiX,
   FiAward,
   FiAlertCircle,
   FiFileText,
@@ -115,6 +116,7 @@ const ParentDashboard = () => {
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const { data: children } = useQuery({
     queryKey: ['parent-children'],
@@ -254,7 +256,7 @@ const ParentDashboard = () => {
   return (
     <Layout user={user} onLogout={logout} role="PARENT" hideHeader>
       <PremiumPortalShell variant="parent">
-      <div className="flex dash-min-h-under-header w-full items-stretch">
+      <div className="flex dash-min-h-under-header w-full max-w-[100vw] items-stretch overflow-x-hidden">
         <ParentSidebar
           items={navItems}
           activeTab={activeTab}
@@ -267,18 +269,58 @@ const ParentDashboard = () => {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="dash-command-bar z-20 shrink-0 bg-white">
-            <div className="flex items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl text-stone-700 hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
-                aria-label="Ouvrir le menu"
-              >
-                <FiMenu className="h-4 w-4" aria-hidden />
-              </button>
+            <div className="dash-header-stack px-3 py-2 sm:px-6">
+              <div className="dash-header-stack__row">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="lg:hidden flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl text-stone-700 hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45"
+                  aria-label="Ouvrir le menu"
+                >
+                  <FiMenu className="h-4 w-4" aria-hidden />
+                </button>
+
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-stone-800 lg:hidden">
+                  {activeMeta.label}
+                </p>
+
+                <div className="relative hidden w-44 shrink-0 md:block lg:w-64">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+                    <FiSearch className="h-4 w-4" aria-hidden />
+                  </div>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher…"
+                    className="dash-search-field w-full rounded-xl py-2 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
+                    aria-label="Recherche dans l’espace parent"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileSearchOpen((open) => !open)}
+                  className={`md:hidden flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+                    mobileSearchOpen
+                      ? 'bg-amber-50 text-amber-900'
+                      : 'text-stone-700 hover:bg-stone-100/90'
+                  }`}
+                  aria-label={mobileSearchOpen ? 'Fermer la recherche' : 'Ouvrir la recherche'}
+                  aria-expanded={mobileSearchOpen}
+                >
+                  {mobileSearchOpen ? (
+                    <FiX className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <FiSearch className="h-4 w-4" aria-hidden />
+                  )}
+                </button>
+
+                <AccountHeaderControls user={user} role="PARENT" onLogout={logout} />
+              </div>
 
               {childRows.length > 0 ? (
-                <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto scrollbar-hide" role="tablist" aria-label="Enfant suivi">
+                <div className="dash-child-picker scrollbar-hide" role="tablist" aria-label="Enfant suivi">
                   {childRows.map((child) => {
                     const active = child.id === selectedChild;
                     return (
@@ -306,24 +348,27 @@ const ParentDashboard = () => {
                   })}
                 </div>
               ) : (
-                <p className="min-w-0 flex-1 truncate text-sm text-stone-500">Espace parent</p>
+                <p className="text-sm text-stone-500 lg:hidden">Espace parent</p>
               )}
 
-              <div className="relative hidden w-44 shrink-0 md:block lg:w-64">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
-                  <FiSearch className="h-4 w-4" aria-hidden />
+              {mobileSearchOpen ? (
+                <div className="dash-mobile-search-row md:hidden">
+                  <div className="relative min-w-0">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+                      <FiSearch className="h-4 w-4" aria-hidden />
+                    </div>
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Rechercher…"
+                      className="dash-search-field w-full rounded-xl py-2.5 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
+                      aria-label="Recherche dans l’espace parent"
+                      autoFocus
+                    />
+                  </div>
                 </div>
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher…"
-                  className="dash-search-field w-full rounded-xl py-2 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
-                  aria-label="Recherche dans l’espace parent"
-                />
-              </div>
-
-              <AccountHeaderControls user={user} role="PARENT" onLogout={logout} />
+              ) : null}
             </div>
 
             <div className="dash-mobile-tabs scrollbar-hide px-3 pb-2 lg:hidden">

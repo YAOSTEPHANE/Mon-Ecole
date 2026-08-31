@@ -3107,6 +3107,8 @@ model AppBranding {
   /// Fiche établissement (onglet Paramètres → Établissement)
   schoolDisplayName String?
   schoolAddress     String?
+  /// Lien Google Maps / OpenStreetMap personnalisé (sinon recherche à partir de schoolAddress)
+  schoolMapsUrl     String?
   schoolPhone       String?
   schoolEmail       String?
   schoolWebsite     String?
@@ -3132,6 +3134,8 @@ model AppBranding {
   studiesDirectorFooterLine     String?
   /// Images personnalisables de la page d’accueil (clés homeHeroPlatform, homePillarPedagogy, …)
   homePageImages        Json?
+  /// Dates des trimestres (mois/jour réutilisables) — Paramètres → Académique
+  academicTermDates     Json?
   updatedAt         DateTime @updatedAt
 
   school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)

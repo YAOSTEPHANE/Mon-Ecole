@@ -90,7 +90,7 @@ export async function ensureDefaultSchool(): Promise<string> {
     const displayName =
       legacyBranding?.schoolDisplayName?.trim() ||
       legacyBranding?.appTitle?.trim() ||
-      'Établissement principal';
+      'Mon Ecole';
 
     const slug = slugify(displayName);
     const slugTaken = await schools.findFirst({ where: { slug }, select: { id: true } });

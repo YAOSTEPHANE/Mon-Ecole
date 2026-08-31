@@ -1,3 +1,8 @@
+import {
+  applySchoolNameToText,
+  resolveSchoolDisplayName,
+} from '@/lib/resolveSchoolBranding';
+
 export const DEFAULT_DIRECTOR_NAME = '';
 export const DEFAULT_DIRECTOR_ROLE = 'Directrice des Études';
 export const DEFAULT_DIRECTOR_OCCASION = 'À l’occasion de la rentrée scolaire';
@@ -26,10 +31,20 @@ export type DirectorMessageBranding = {
   schoolDisplayName?: string | null;
 };
 
-export function directorMessageParagraphsFromBody(body: string | null | undefined): string[] {
-  if (!body?.trim()) return DEFAULT_DIRECTOR_MESSAGE_PARAGRAPHS;
+export function directorMessageParagraphsFromBody(
+  body: string | null | undefined,
+  schoolName?: string,
+): string[] {
+  if (!body?.trim()) {
+    return DEFAULT_DIRECTOR_MESSAGE_PARAGRAPHS.map((p) =>
+      schoolName ? applySchoolNameToText(p, schoolName) : p,
+    );
+  }
   const parts = body.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-  return parts.length > 0 ? parts : DEFAULT_DIRECTOR_MESSAGE_PARAGRAPHS;
+  if (parts.length > 0) return parts;
+  return DEFAULT_DIRECTOR_MESSAGE_PARAGRAPHS.map((p) =>
+    schoolName ? applySchoolNameToText(p, schoolName) : p,
+  );
 }
 
 export function directorMessageBodyFromParagraphs(paragraphs: string[]): string {
@@ -37,15 +52,14 @@ export function directorMessageBodyFromParagraphs(paragraphs: string[]): string 
 }
 
 export function resolveDirectorMessageContent(branding: DirectorMessageBranding) {
-  const schoolName =
-    branding.schoolDisplayName?.trim() || 'Mon Ecole';
+  const schoolName = resolveSchoolDisplayName(branding);
 
   return {
     name: branding.studiesDirectorName?.trim() || DEFAULT_DIRECTOR_NAME,
     role: DEFAULT_DIRECTOR_ROLE,
     occasionBadge: branding.studiesDirectorOccasionBadge?.trim() || DEFAULT_DIRECTOR_OCCASION,
     messageTitle: branding.studiesDirectorMessageTitle?.trim() || DEFAULT_DIRECTOR_MESSAGE_TITLE,
-    paragraphs: directorMessageParagraphsFromBody(branding.studiesDirectorMessage),
+    paragraphs: directorMessageParagraphsFromBody(branding.studiesDirectorMessage, schoolName),
     closing: branding.studiesDirectorClosing?.trim() || DEFAULT_DIRECTOR_CLOSING,
     footerLine:
       branding.studiesDirectorFooterLine?.trim() ||

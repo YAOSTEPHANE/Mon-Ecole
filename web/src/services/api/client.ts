@@ -35,8 +35,10 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/register',
   '/auth/forgot-password',
   '/auth/reset-password',
-  '/auth/logout',
 ];
+
+/** Déconnexion : Bearer/cookie requis, mais un 401 ne doit pas rediriger (session déjà morte). */
+const AUTH_ACTION_NO_REDIRECT_PATHS = ['/auth/logout'];
 
 /** Vérification de session — un 401 est normal si l'utilisateur n'est pas connecté. */
 const SESSION_PROBE_PATHS = ['/auth/me', '/auth/oauth/exchange'];
@@ -55,6 +57,11 @@ function isPublicAuthRequest(url: string | undefined): boolean {
 function isSessionProbeRequest(url: string | undefined): boolean {
   const normalized = normalizeRequestPath(url);
   return SESSION_PROBE_PATHS.some((p) => normalized === p || normalized.endsWith(p));
+}
+
+function isAuthActionNoRedirect(url: string | undefined): boolean {
+  const normalized = normalizeRequestPath(url);
+  return AUTH_ACTION_NO_REDIRECT_PATHS.some((p) => normalized === p || normalized.endsWith(p));
 }
 
 const api = axios.create({
@@ -155,7 +162,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const requestUrl = error.config?.url as string | undefined;
       const isSessionProbe = isSessionProbeRequest(requestUrl);
-      if (!isPublicAuthRequest(requestUrl) && !isSessionProbe) {
+      if (
+        !isPublicAuthRequest(requestUrl) &&
+        !isSessionProbe &&
+        !isAuthActionNoRedirect(requestUrl)
+      ) {
         try {
           localStorage.removeItem('token');
           delete (window as Window & { __smAccessToken?: string }).__smAccessToken;

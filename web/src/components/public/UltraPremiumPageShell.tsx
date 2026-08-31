@@ -7,6 +7,7 @@ import Footer from '../Footer';
 import HomePageImage from './HomePageImage';
 import PublicSectionsReveal from './PublicSectionsReveal';
 import { useAppBranding } from '@/contexts/AppBrandingContext';
+import { resolveSchoolDisplayName } from '@/lib/resolveSchoolBranding';
 import type { HomePageImageSlot } from '@/lib/homePageImages.types';
 
 type UltraPremiumPageShellProps = {
@@ -43,7 +44,7 @@ export default function UltraPremiumPageShell({
   bodyClassName = '',
 }: UltraPremiumPageShellProps) {
   const { branding, navigationLogoAbsolute } = useAppBranding();
-  const appTitle = (branding.appTitle && branding.appTitle.trim()) || 'Mon Ecole';
+  const appTitle = resolveSchoolDisplayName(branding);
   const cinematic = heroVariant === 'cinematic' && Boolean(heroDefaultPath);
   const heightClass =
     heroSize === 'lg'

@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
+import {
+  resolveSchoolDisplayName,
+  resolveSchoolTagline,
+} from '@/lib/resolveSchoolBranding';
 
 export type BrandingPayload = {
   appTitle?: string | null;
   appTagline?: string | null;
+  schoolDisplayName?: string | null;
   faviconUrl?: string | null;
   navigationLogoUrl?: string | null;
   loginLogoUrl?: string | null;
@@ -55,20 +60,32 @@ export async function fetchPublicAppBrandingForMetadata(): Promise<BrandingPaylo
   return null;
 }
 
-const DEFAULT_TITLE = 'Mon Ecole';
-const DEFAULT_DESCRIPTION =
-  'Mon Ecole : excellence éducative, innovation et formation de qualité.';
-
 export async function buildHomePageMetadata(): Promise<Metadata> {
   const b = await fetchPublicAppBrandingForMetadata();
-  const name = (b?.appTitle && String(b.appTitle).trim()) || DEFAULT_TITLE;
-  const desc = (b?.appTagline && String(b.appTagline).trim()) || DEFAULT_DESCRIPTION;
+  const name = resolveSchoolDisplayName(b);
+  const desc =
+    resolveSchoolTagline(b) ||
+    `${name} : excellence éducative, innovation et formation de qualité.`;
   return {
     title: `${name} · Accueil`,
     description: desc,
     openGraph: {
       title: `${name} · Accueil`,
       description: desc,
+    },
+  };
+}
+
+export async function buildAboutPageMetadata(): Promise<Metadata> {
+  const b = await fetchPublicAppBrandingForMetadata();
+  const name = resolveSchoolDisplayName(b);
+  const description = `Découvrez ${name} : identité, atouts, plateforme, personnel, établissements et règlement intérieur.`;
+  return {
+    title: `À propos · ${name}`,
+    description,
+    openGraph: {
+      title: `À propos · ${name}`,
+      description,
     },
   };
 }

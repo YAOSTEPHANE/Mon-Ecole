@@ -64,7 +64,7 @@ async function ensureDefaultSchool() {
         : null;
     const displayName = legacyBranding?.schoolDisplayName?.trim() ||
         legacyBranding?.appTitle?.trim() ||
-        'Établissement principal';
+        'Mon Ecole';
     let slug = slugify(displayName);
     const slugTaken = await schools.findUnique({ where: { slug } });
     if (slugTaken)

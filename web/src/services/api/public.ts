@@ -184,4 +184,16 @@ export const publicApi = {
       }>;
     };
   },
+  /** Règlement intérieur publié (page À propos). */
+  getDisciplineRulebook: async (): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    academicYear: string | null;
+    effectiveFrom: string;
+    updatedAt: string;
+  } | null> => {
+    const response = await api.get('/public/discipline/rulebook');
+    return response.data;
+  },
 };

@@ -18,6 +18,12 @@ import toast from 'react-hot-toast';
 import HomePageImagesPanel from './HomePageImagesPanel';
 import { getCurrentAcademicYear } from '@/utils/academicYear';
 import {
+  parseAcademicTermDates,
+  parseAcademicTermDatesFromForm,
+  trimesterFormRowsFromConfig,
+  type TrimesterFormRow,
+} from '@/lib/academicTermDates';
+import {
   DEFAULT_DIRECTOR_CLOSING,
   DEFAULT_DIRECTOR_MESSAGE_TITLE,
   DEFAULT_DIRECTOR_NAME,
@@ -41,6 +47,7 @@ import {
   FiMail,
   FiPhone,
   FiMapPin,
+  FiExternalLink,
   FiCalendar,
   FiLock,
   FiEye,
@@ -51,6 +58,7 @@ import {
   FiUpload,
   FiImage,
 } from 'react-icons/fi';
+import { resolveSchoolMapsUrl } from '@/data/schoolDefaults';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -160,6 +168,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [schoolSettings, setSchoolSettings] = useState({
     name: '',
     address: '',
+    mapsUrl: '',
     phone: '',
     email: '',
     website: '',
@@ -183,17 +192,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   });
 
   // Academic settings
-  const [academicSettings, setAcademicSettings] = useState({
-    currentYear: getCurrentAcademicYear(),
-    startDate: `${new Date().getFullYear()}-09-01`,
-    endDate: `${new Date().getFullYear() + 1}-06-30`,
-    trimesters: [
-      { name: 'Trimestre 1', start: `${new Date().getFullYear()}-09-01`, end: `${new Date().getFullYear()}-12-20` },
-      { name: 'Trimestre 2', start: `${new Date().getFullYear()}-12-21`, end: `${new Date().getFullYear() + 1}-03-20` },
-      { name: 'Trimestre 3', start: `${new Date().getFullYear() + 1}-03-21`, end: `${new Date().getFullYear() + 1}-06-30` },
-    ],
-    maxAbsences: 10,
-    passingGrade: 10,
+  const [academicSettings, setAcademicSettings] = useState<{
+    currentYear: string;
+    startDate: string;
+    endDate: string;
+    trimesters: TrimesterFormRow[];
+    maxAbsences: number;
+    passingGrade: number;
+  }>(() => {
+    const year = getCurrentAcademicYear();
+    return {
+      currentYear: year,
+      startDate: `${new Date().getFullYear()}-09-01`,
+      endDate: `${new Date().getFullYear() + 1}-06-30`,
+      trimesters: trimesterFormRowsFromConfig(null, year),
+      maxAbsences: 10,
+      passingGrade: 10,
+    };
   });
 
   // Notification settings
@@ -253,16 +268,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
         if (!cancelled) {
           setAppTitleDraft(typeof b.appTitle === 'string' ? b.appTitle : '');
           setAppTaglineDraft(typeof b.appTagline === 'string' ? b.appTagline : '');
-          setAcademicSettings((prev) => ({
-            ...prev,
-            currentYear:
+          setAcademicSettings((prev) => {
+            const currentYear =
               typeof b.currentAcademicYear === 'string' && b.currentAcademicYear.trim()
                 ? b.currentAcademicYear
-                : getCurrentAcademicYear(),
-          }));
+                : getCurrentAcademicYear();
+            const termConfig = parseAcademicTermDates(b.academicTermDates);
+            return {
+              ...prev,
+              currentYear,
+              trimesters: trimesterFormRowsFromConfig(termConfig, currentYear),
+            };
+          });
           setSchoolSettings({
             name: typeof b.schoolDisplayName === 'string' ? b.schoolDisplayName : '',
             address: typeof b.schoolAddress === 'string' ? b.schoolAddress : '',
+            mapsUrl: typeof b.schoolMapsUrl === 'string' ? b.schoolMapsUrl : '',
             phone: typeof b.schoolPhone === 'string' ? b.schoolPhone : '',
             email: typeof b.schoolEmail === 'string' ? b.schoolEmail : '',
             website: typeof b.schoolWebsite === 'string' ? b.schoolWebsite : '',
@@ -340,6 +361,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
           setSchoolSettings({
             name: '',
             address: '',
+            mapsUrl: '',
             phone: '',
             email: '',
             website: '',
@@ -427,12 +449,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
         toast.error('Année scolaire invalide : l’année de fin doit suivre l’année de début.');
         return;
       }
+      const mapsUrlDraft = schoolSettings.mapsUrl.trim();
+      if (mapsUrlDraft && !/^https:\/\//i.test(mapsUrlDraft)) {
+        toast.error('Lien Maps invalide : utilisez une URL https (lien Google Maps).');
+        return;
+      }
       await adminApi.updateAppBranding({
         appTitle: appTitleDraft.trim() || null,
         appTagline: appTaglineDraft.trim() || null,
         currentAcademicYear: academicYear,
+        academicTermDates: parseAcademicTermDatesFromForm(academicSettings.trimesters),
         schoolDisplayName: schoolSettings.name.trim() || null,
         schoolAddress: schoolSettings.address.trim() || null,
+        schoolMapsUrl: schoolSettings.mapsUrl.trim() || null,
         schoolPhone: schoolSettings.phone.trim() || null,
         schoolEmail: schoolSettings.email.trim() || null,
         schoolWebsite: schoolSettings.website.trim() || null,
@@ -658,24 +687,69 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         placeholder="Nom de l'établissement"
                       />
                     </div>
+                    <p className="mt-1.5 text-xs text-gray-500">
+                      Affiché sur la page d’accueil, le pied de page, les pages À propos, le mot de la directrice
+                      et les documents exportés. Laissez vide pour conserver « Mon Ecole » par défaut.
+                    </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Adresse
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiMapPin className="text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-blue-950 flex items-center gap-2">
+                        <FiMapPin className="shrink-0" />
+                        Localisation
+                      </h4>
+                      <p className="text-xs text-blue-900/80 mt-1">
+                        Affichée sur la page d’accueil, À propos et Contact. Le lien Maps ouvre
+                        Google Maps (ou votre URL personnalisée).
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Adresse
+                      </label>
+                      <textarea
                         value={schoolSettings.address}
-                        onChange={(e) => setSchoolSettings({ ...schoolSettings, address: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                        placeholder="Adresse complète"
+                        onChange={(e) =>
+                          setSchoolSettings({ ...schoolSettings, address: e.target.value })
+                        }
+                        rows={3}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y"
+                        placeholder="Rue, quartier, ville, pays…"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Lien Google Maps (optionnel)
+                      </label>
+                      <input
+                        type="url"
+                        value={schoolSettings.mapsUrl}
+                        onChange={(e) =>
+                          setSchoolSettings({ ...schoolSettings, mapsUrl: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        placeholder="https://maps.google.com/… ou https://maps.app.goo.gl/…"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Collez le lien « Partager » de Google Maps. Sans lien, une recherche est
+                        générée à partir de l’adresse.
+                      </p>
+                    </div>
+                    {(schoolSettings.address.trim() || schoolSettings.mapsUrl.trim()) && (
+                      <a
+                        href={resolveSchoolMapsUrl(
+                          schoolSettings.address,
+                          schoolSettings.mapsUrl || null
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900"
+                      >
+                        <FiExternalLink />
+                        Aperçu sur la carte
+                      </a>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1295,16 +1369,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-4">
-                      Trimestres
+                      Dates des trimestres
                     </label>
-                    <div className="space-y-3">
+                    <p className="mb-3 text-xs text-gray-500">
+                      Utilisées pour les bulletins, le classement du palmarès et le rattachement automatique
+                      des notes au trimestre. Les dates sont appliquées à chaque année scolaire (jour/mois).
+                    </p>
+                    <div className="space-y-4">
                       {academicSettings.trimesters.map((trimester, index) => (
-                        <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{trimester.name}</p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(trimester.start).toLocaleDateString('fr-FR')} - {new Date(trimester.end).toLocaleDateString('fr-FR')}
-                            </p>
+                        <div
+                          key={trimester.key}
+                          className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                        >
+                          <p className="mb-3 font-medium text-gray-900">{trimester.name}</p>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold text-gray-600">
+                                Date de début
+                              </label>
+                              <input
+                                type="date"
+                                value={trimester.start}
+                                onChange={(e) => {
+                                  const next = [...academicSettings.trimesters];
+                                  next[index] = { ...trimester, start: e.target.value };
+                                  setAcademicSettings({ ...academicSettings, trimesters: next });
+                                }}
+                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold text-gray-600">
+                                Date de fin
+                              </label>
+                              <input
+                                type="date"
+                                value={trimester.end}
+                                onChange={(e) => {
+                                  const next = [...academicSettings.trimesters];
+                                  next[index] = { ...trimester, end: e.target.value };
+                                  setAcademicSettings({ ...academicSettings, trimesters: next });
+                                }}
+                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
+                              />
+                            </div>
                           </div>
                         </div>
                       ))}

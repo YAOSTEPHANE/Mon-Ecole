@@ -104,12 +104,18 @@ export default function ParentSidebar({
 
       <aside
         className={`dash-sidebar-rail z-50 shrink-0 border-r border-white/10
-          transition-transform duration-300 ease-premium
-          w-[min(16rem,calc(100vw-2rem))] lg:w-64
-          fixed left-0 dash-sticky-under-header dash-h-under-header
-          max-lg:!top-0 max-lg:!h-dvh max-lg:!max-h-dvh max-lg:z-[60]
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:sticky lg:left-auto lg:translate-x-0 lg:self-start`}
+          transition-[transform,visibility] duration-300 ease-premium
+          max-lg:fixed max-lg:left-0 max-lg:top-0 max-lg:z-[60]
+          max-lg:h-dvh max-lg:max-h-dvh max-lg:w-[min(16rem,calc(100vw-2rem))]
+          max-lg:overflow-hidden
+          lg:w-64
+          dash-sticky-under-header dash-h-under-header
+          lg:sticky lg:left-auto lg:translate-x-0 lg:self-start
+          ${
+            isOpen
+              ? 'max-lg:translate-x-0 max-lg:visible'
+              : 'max-lg:-translate-x-full max-lg:invisible max-lg:pointer-events-none'
+          }`}
         aria-label="Navigation espace parent"
       >
         <div className="flex h-full min-h-0 flex-col">

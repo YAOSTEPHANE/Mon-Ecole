@@ -15,6 +15,7 @@ import { applyBrandingToDocument } from '@/lib/applyBrandingDocument';
 import type { HomePageImagesRecord } from '@/lib/homePageImages.types';
 import { ACADEMIC_YEAR_OVERRIDE_STORAGE_KEY } from '@/utils/academicYear';
 import { loadCachedGetPayload } from '@/lib/offline-api';
+import { parseAcademicTermDates, type AcademicTermDatesConfig } from '@/lib/academicTermDates';
 
 export type AppBrandingPayload = {
   navigationLogoUrl: string | null;
@@ -25,6 +26,7 @@ export type AppBrandingPayload = {
   currentAcademicYear: string | null;
   schoolDisplayName: string | null;
   schoolAddress: string | null;
+  schoolMapsUrl: string | null;
   schoolPhone: string | null;
   schoolEmail: string | null;
   schoolWebsite: string | null;
@@ -38,6 +40,7 @@ export type AppBrandingPayload = {
   studiesDirectorClosing: string | null;
   studiesDirectorFooterLine: string | null;
   homePageImages: HomePageImagesRecord;
+  academicTermDates: AcademicTermDatesConfig | null;
 };
 
 type AppBrandingContextValue = {
@@ -60,6 +63,7 @@ const DEFAULT_BRANDING: AppBrandingPayload = {
   currentAcademicYear: null,
   schoolDisplayName: null,
   schoolAddress: null,
+  schoolMapsUrl: null,
   schoolPhone: null,
   schoolEmail: null,
   schoolWebsite: null,
@@ -73,6 +77,7 @@ const DEFAULT_BRANDING: AppBrandingPayload = {
   studiesDirectorClosing: null,
   studiesDirectorFooterLine: null,
   homePageImages: {},
+  academicTermDates: null,
 };
 
 const AppBrandingContext = createContext<AppBrandingContextValue | null>(null);
@@ -95,6 +100,7 @@ export function AppBrandingProvider({ children }: { children: ReactNode }) {
         currentAcademicYear: data.currentAcademicYear ?? null,
         schoolDisplayName: data.schoolDisplayName ?? null,
         schoolAddress: data.schoolAddress ?? null,
+        schoolMapsUrl: data.schoolMapsUrl ?? null,
         schoolPhone: data.schoolPhone ?? null,
         schoolEmail: data.schoolEmail ?? null,
         schoolWebsite: data.schoolWebsite ?? null,
@@ -111,6 +117,7 @@ export function AppBrandingProvider({ children }: { children: ReactNode }) {
           data.homePageImages && typeof data.homePageImages === 'object' && !Array.isArray(data.homePageImages)
             ? (data.homePageImages as HomePageImagesRecord)
             : {},
+        academicTermDates: parseAcademicTermDates(data.academicTermDates),
       });
       try {
         if (data.currentAcademicYear) {
@@ -135,6 +142,7 @@ export function AppBrandingProvider({ children }: { children: ReactNode }) {
           currentAcademicYear: cached.currentAcademicYear ?? null,
           schoolDisplayName: cached.schoolDisplayName ?? null,
           schoolAddress: cached.schoolAddress ?? null,
+          schoolMapsUrl: cached.schoolMapsUrl ?? null,
           schoolPhone: cached.schoolPhone ?? null,
           schoolEmail: cached.schoolEmail ?? null,
           schoolWebsite: cached.schoolWebsite ?? null,
@@ -153,6 +161,7 @@ export function AppBrandingProvider({ children }: { children: ReactNode }) {
             !Array.isArray(cached.homePageImages)
               ? cached.homePageImages
               : {},
+          academicTermDates: parseAcademicTermDates(cached.academicTermDates),
         });
         setError(null);
       } else {

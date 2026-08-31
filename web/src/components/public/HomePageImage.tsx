@@ -16,9 +16,13 @@ type HomePageImageProps = {
   priority?: boolean;
 };
 
-export function useHomePageImageSrc(slot: HomePageImageSlot, defaultPath: string): string {
+export function useHomePageImageSrc(
+  slot: HomePageImageSlot,
+  defaultPath: string,
+): { src: string | null; isHidden: boolean } {
   const { branding } = useAppBranding();
-  return resolveHomePageImageSrc(branding.homePageImages, slot, defaultPath).src;
+  const resolved = resolveHomePageImageSrc(branding.homePageImages, slot, defaultPath);
+  return { src: resolved.src, isHidden: resolved.isHidden };
 }
 
 export default function HomePageImage({
@@ -30,7 +34,9 @@ export default function HomePageImage({
   sizes,
   priority,
 }: HomePageImageProps) {
-  const src = useHomePageImageSrc(slot, defaultPath);
+  const { src, isHidden } = useHomePageImageSrc(slot, defaultPath);
+  if (isHidden || !src) return null;
+
   const useNativeImg = isUploadLikeImageSrc(src);
 
   if (fill) {

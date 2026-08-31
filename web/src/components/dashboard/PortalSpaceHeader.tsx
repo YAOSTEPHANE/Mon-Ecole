@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { IconType } from 'react-icons';
-import { FiMenu, FiSearch } from 'react-icons/fi';
+import { FiMenu, FiSearch, FiX } from 'react-icons/fi';
 import AccountHeaderControls from '../AccountHeaderControls';
 import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 
@@ -48,6 +48,9 @@ export default function PortalSpaceHeader({
   activeTab,
   onTabChange,
 }: PortalSpaceHeaderProps) {
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const showMobileSearchToggle = Boolean(onSearchChange || searchSlot);
+
   return (
     <header className="dash-command-bar z-20 shrink-0 bg-white">
       <div className="flex items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
@@ -81,6 +84,22 @@ export default function PortalSpaceHeader({
             </div>
           ) : null)}
 
+        {showMobileSearchToggle ? (
+          <button
+            type="button"
+            onClick={() => setMobileSearchOpen((open) => !open)}
+            className={`md:hidden flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+              mobileSearchOpen
+                ? 'bg-amber-50 text-amber-900'
+                : 'text-stone-700 hover:bg-stone-100/90'
+            }`}
+            aria-label={mobileSearchOpen ? 'Fermer la recherche' : 'Ouvrir la recherche'}
+            aria-expanded={mobileSearchOpen}
+          >
+            {mobileSearchOpen ? <FiX className="h-4 w-4" aria-hidden /> : <FiSearch className="h-4 w-4" aria-hidden />}
+          </button>
+        ) : null}
+
         {trailing}
 
         <AccountHeaderControls
@@ -90,6 +109,27 @@ export default function PortalSpaceHeader({
           staffRoleBadgeLabel={staffRoleBadgeLabel}
         />
       </div>
+
+      {mobileSearchOpen && (searchSlot ?? onSearchChange) ? (
+        <div className="dash-mobile-search-row px-3 pb-2 md:hidden">
+          {searchSlot ?? (
+            <div className="relative min-w-0">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+                <FiSearch className="h-4 w-4" aria-hidden />
+              </div>
+              <input
+                type="search"
+                value={searchValue ?? ''}
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="dash-search-field w-full rounded-xl py-2.5 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
+                aria-label={searchAriaLabel}
+                autoFocus
+              />
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {mobileTabs && mobileTabs.length > 0 && onTabChange ? (
         <div className="dash-mobile-tabs scrollbar-hide px-3 pb-2 lg:hidden">

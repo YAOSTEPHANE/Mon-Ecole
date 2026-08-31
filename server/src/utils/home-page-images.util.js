@@ -10,6 +10,7 @@ const branding_assets_util_1 = require("./branding-assets.util");
 /** Clés des visuels de la page d’accueil publique (stockées dans AppBranding.homePageImages). */
 exports.HOME_PAGE_IMAGE_SLOTS = [
     'homeHeroPlatform',
+    'homeHeroStudents',
     'homePillarPedagogy',
     'homePillarPortals',
     'homePillarSecurity',
@@ -20,6 +21,7 @@ exports.HOME_PAGE_IMAGE_SLOTS = [
     'homeRoleParent',
     'homeSplitCampus',
 ];
+exports.HOME_PAGE_IMAGE_HIDDEN = '__hidden__';
 function isHomePageImageSlot(value) {
     return exports.HOME_PAGE_IMAGE_SLOTS.includes(value);
 }
@@ -43,6 +45,10 @@ function sanitizeHomePageImages(raw) {
         const url = parsed[key];
         if (url === null) {
             out[key] = null;
+            continue;
+        }
+        if (url === exports.HOME_PAGE_IMAGE_HIDDEN) {
+            out[key] = exports.HOME_PAGE_IMAGE_HIDDEN;
             continue;
         }
         const clean = (0, branding_assets_util_1.sanitizeBrandingAssetUrl)(url);

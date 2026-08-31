@@ -33,6 +33,16 @@ export function getSchoolMapsQuery(address?: string | null): string {
   return parts.join(', ');
 }
 
+/** Lien Maps admin si fourni, sinon recherche Google à partir de l’adresse. */
+export function resolveSchoolMapsUrl(
+  address?: string | null,
+  mapsUrl?: string | null
+): string {
+  const custom = mapsUrl?.trim();
+  if (custom && /^https:\/\//i.test(custom)) return custom;
+  return getGoogleMapsSearchUrl(getSchoolMapsQuery(address));
+}
+
 export const SCHOOL_OPENING_HOURS = [
   { day: 'Lundi', hours: '07:00 – 17:00' },
   { day: 'Mardi', hours: '07:00 – 17:00' },

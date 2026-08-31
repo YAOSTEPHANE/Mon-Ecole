@@ -226,6 +226,34 @@ router.put('/schools/:id', async (req: AuthRequest, res) => {
     if (typeof isDefault === 'boolean') data.isDefault = isDefault;
 
     const school = await prisma.school.update({ where: { id }, data });
+
+    const brandingDelegate = getAppBrandingDelegate();
+    if (brandingDelegate) {
+      const brandingData: { schoolDisplayName?: string; appTitle?: string } = {};
+      if (typeof name === 'string' && name.trim()) {
+        brandingData.schoolDisplayName = name.trim();
+      }
+      if (shortName !== undefined) {
+        const nextTitle =
+          typeof shortName === 'string' && shortName.trim()
+            ? shortName.trim()
+            : typeof name === 'string' && name.trim()
+              ? name.trim()
+              : null;
+        if (nextTitle) brandingData.appTitle = nextTitle;
+      }
+      if (Object.keys(brandingData).length > 0) {
+        try {
+          await brandingDelegate.updateMany({
+            where: { OR: [{ id }, { schoolId: id }] },
+            data: brandingData,
+          });
+        } catch (syncErr) {
+          console.warn('Sync branding depuis School:', syncErr);
+        }
+      }
+    }
+
     res.json(school);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Erreur serveur';

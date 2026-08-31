@@ -8,6 +8,10 @@ export type AppBrandingDelegate = {
     update: Record<string, unknown>;
   }) => Promise<AppBrandingRow>;
   create: (args: { data: Record<string, unknown> }) => Promise<AppBrandingRow>;
+  updateMany: (args: {
+    where: Record<string, unknown>;
+    data: Record<string, unknown>;
+  }) => Promise<{ count: number }>;
 };
 
 export type AppBrandingRow = {
@@ -19,6 +23,7 @@ export type AppBrandingRow = {
   currentAcademicYear?: string | null;
   schoolDisplayName: string | null;
   schoolAddress: string | null;
+  schoolMapsUrl?: string | null;
   schoolPhone: string | null;
   schoolEmail: string | null;
   schoolWebsite: string | null;

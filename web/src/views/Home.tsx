@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,9 +23,13 @@ import {
   SCHOOL_DEFAULTS,
   SCHOOL_STATS,
   SCHOOL_VALUES,
-  getGoogleMapsSearchUrl,
-  getSchoolMapsQuery,
+  resolveSchoolMapsUrl,
 } from '../data/schoolDefaults';
+import {
+  resolveSchoolDisplayName,
+  resolveSchoolIntro,
+  resolveSchoolTagline,
+} from '@/lib/resolveSchoolBranding';
 import {
   FiArrowRight,
   FiAward,
@@ -97,91 +101,112 @@ function HomeNavItem({
 
 const MARQUEE_ITEMS = [...SCHOOL_MARQUEE];
 
-const PILLARS = [
-  {
-    title: 'Formation de qualité',
-    text: SCHOOL_DEFAULTS.mission,
-    icon: FiBook,
-    accent: 'bg-tran-mauve-700',
-    span: 'md:col-span-2',
-    imageSlot: 'homePillarPedagogy' as const,
-    image: '/home/pillar-pedagogy.jpg',
-    imageAlt: 'Salle de classe à Mon Ecole',
-  },
-  {
-    title: 'Innovation pédagogique',
-    text: 'Une approche moderne pour préparer les leaders compétents et responsables de demain.',
-    icon: FiZap,
-    accent: 'bg-tran-mustard-600',
-    span: 'md:col-span-1',
-    imageSlot: 'homePillarPortals' as const,
-    image: '/home/pillar-portals.jpg',
-    imageAlt: 'Élèves et enseignants en activité pédagogique',
-  },
-  {
-    title: 'Vie scolaire',
-    text: 'Discipline, accompagnement et écoute pour garantir un climat de travail serein.',
-    icon: FiShield,
-    accent: 'bg-tran-mauve-600',
-    span: 'md:col-span-1',
-    imageSlot: 'homePillarSecurity' as const,
-    image: '/home/pillar-security.jpg',
-    imageAlt: 'Encadrement et discipline au quotidien',
-  },
-  {
-    title: 'Administration & familles',
-    text: 'Pré-inscriptions, suivi scolaire et lien renforcé avec les parents d’élèves.',
-    icon: FiLayers,
-    accent: 'bg-[#8a6a3d]',
-    span: 'md:col-span-2',
-    imageSlot: 'homePillarAdministration' as const,
-    image: '/home/pillar-administration.jpg',
-    imageAlt: 'Équipe éducative et administrative du collège',
-  },
-];
+function buildHomePillars(schoolName: string) {
+  return [
+    {
+      title: 'Formation de qualité',
+      text: SCHOOL_DEFAULTS.mission,
+      icon: FiBook,
+      accent: 'bg-tran-mauve-700',
+      span: 'md:col-span-2',
+      imageSlot: 'homePillarPedagogy' as const,
+      image: '/home/pillar-pedagogy.jpg',
+      imageAlt: `Salle de classe à ${schoolName}`,
+    },
+    {
+      title: 'Innovation pédagogique',
+      text: 'Une approche moderne pour préparer les leaders compétents et responsables de demain.',
+      icon: FiZap,
+      accent: 'bg-tran-mustard-600',
+      span: 'md:col-span-1',
+      imageSlot: 'homePillarPortals' as const,
+      image: '/home/pillar-portals.jpg',
+      imageAlt: 'Élèves et enseignants en activité pédagogique',
+    },
+    {
+      title: 'Vie scolaire',
+      text: 'Discipline, accompagnement et écoute pour garantir un climat de travail serein.',
+      icon: FiShield,
+      accent: 'bg-tran-mauve-600',
+      span: 'md:col-span-1',
+      imageSlot: 'homePillarSecurity' as const,
+      image: '/home/pillar-security.jpg',
+      imageAlt: 'Encadrement et discipline au quotidien',
+    },
+    {
+      title: 'Administration & familles',
+      text: 'Pré-inscriptions, suivi scolaire et lien renforcé avec les parents d’élèves.',
+      icon: FiLayers,
+      accent: 'bg-[#8a6a3d]',
+      span: 'md:col-span-2',
+      imageSlot: 'homePillarAdministration' as const,
+      image: '/home/pillar-administration.jpg',
+      imageAlt: 'Équipe éducative et administrative du collège',
+    },
+  ];
+}
 
-const ROLES = [
-  {
-    label: 'Direction',
-    desc: 'Pilotage de l’établissement, vie scolaire et orientation vers la réussite.',
-    gradient: 'bg-tran-mauve-700',
-    ring: 'ring-tran-mauve-500/25',
-    icon: FiBarChart2,
-    imageSlot: 'homeRoleAdmin' as const,
-    image: '/home/role-admin.jpg',
-    imageAlt: 'Direction de Mon Ecole',
-  },
-  {
-    label: 'Enseignant',
-    desc: 'Transmission des savoirs, évaluations et accompagnement personnalisé.',
-    gradient: 'bg-tran-mauve-600',
-    ring: 'ring-tran-mauve-400/25',
-    icon: FiBook,
-    imageSlot: 'homeRoleTeacher' as const,
-    image: '/home/role-teacher.jpg',
-    imageAlt: 'Corps enseignant de Mon Ecole',
-  },
-  {
-    label: 'Élève',
-    desc: 'Progression, motivation et révélation du plein potentiel de chaque élève.',
-    gradient: 'bg-tran-mustard-600',
-    ring: 'ring-tran-mustard-500/25',
-    icon: FiAward,
-    imageSlot: 'homeRoleStudent' as const,
-    image: '/home/role-student.jpg',
-    imageAlt: 'Élèves de Mon Ecole',
-  },
-  {
-    label: 'Parent',
-    desc: 'Partenaire essentiel : suivi, dialogue et engagement pour la réussite scolaire.',
-    gradient: 'bg-[#8a6a3d]',
-    ring: 'ring-tran-mustard-500/20',
-    icon: FiHeart,
-    imageSlot: 'homeRoleParent' as const,
-    image: '/home/role-parent.jpg',
-    imageAlt: 'Familles et parents d’élèves',
-  },
-];
+function buildHomeRoles(schoolName: string) {
+  return [
+    {
+      label: 'Direction',
+      desc: 'Pilotage de l’établissement, vie scolaire et orientation vers la réussite.',
+      gradient: 'bg-tran-mauve-700',
+      ring: 'ring-tran-mauve-500/25',
+      icon: FiBarChart2,
+      imageSlot: 'homeRoleAdmin' as const,
+      image: '/home/role-admin.jpg',
+      imageAlt: `Direction de ${schoolName}`,
+    },
+    {
+      label: 'Enseignant',
+      desc: 'Transmission des savoirs, évaluations et accompagnement personnalisé.',
+      gradient: 'bg-tran-mauve-600',
+      ring: 'ring-tran-mauve-400/25',
+      icon: FiBook,
+      imageSlot: 'homeRoleTeacher' as const,
+      image: '/home/role-teacher.jpg',
+      imageAlt: `Corps enseignant de ${schoolName}`,
+    },
+    {
+      label: 'Élève',
+      desc: 'Progression, motivation et révélation du plein potentiel de chaque élève.',
+      gradient: 'bg-tran-mustard-600',
+      ring: 'ring-tran-mustard-500/25',
+      icon: FiAward,
+      imageSlot: 'homeRoleStudent' as const,
+      image: '/home/role-student.jpg',
+      imageAlt: `Élèves de ${schoolName}`,
+    },
+    {
+      label: 'Parent',
+      desc: 'Partenaire essentiel : suivi, dialogue et engagement pour la réussite scolaire.',
+      gradient: 'bg-[#8a6a3d]',
+      ring: 'ring-tran-mustard-500/20',
+      icon: FiHeart,
+      imageSlot: 'homeRoleParent' as const,
+      image: '/home/role-parent.jpg',
+      imageAlt: 'Familles et parents d’élèves',
+    },
+  ];
+}
+
+function buildHomeTestimonials(schoolName: string) {
+  return [
+    {
+      quote:
+        'Un établissement qui associe exigence, discipline et accompagnement humain dans une vision claire de la réussite.',
+      author: 'Communauté éducative',
+      role: `Projet scolaire ${schoolName}`,
+    },
+    {
+      quote:
+        'Chaque élève doit se sentir attendu, guidé et encouragé à progresser avec sérieux et confiance.',
+      author: 'Vie scolaire',
+      role: 'Encadrement quotidien',
+    },
+  ];
+}
 
 const VALUE_ICONS = {
   award: FiAward,
@@ -284,41 +309,31 @@ const PLATFORM_FEATURES = [
   { title: 'Pilotage moderne', text: 'Une interface conçue pour accélérer les tâches et réduire les erreurs.', icon: FiCpu },
 ] as const;
 
-const TESTIMONIALS = [
-  {
-    quote:
-      'Un établissement qui associe exigence, discipline et accompagnement humain dans une vision claire de la réussite.',
-    author: 'Communauté éducative',
-    role: 'Projet scolaire Mon Ecole',
-  },
-  {
-    quote:
-      'Chaque élève doit se sentir attendu, guidé et encouragé à progresser avec sérieux et confiance.',
-    author: 'Vie scolaire',
-    role: 'Encadrement quotidien',
-  },
-] as const;
-
 export default function Home() {
   const { user } = useAuth();
   const { navigationLogoAbsolute, branding } = useAppBranding();
   const [menuOpen, setMenuOpen] = useState(false);
-  const schoolDisplayName =
-    (branding.schoolDisplayName && branding.schoolDisplayName.trim()) ||
-    (branding.appTitle && branding.appTitle.trim()) ||
-    SCHOOL_DEFAULTS.fullName;
+  const schoolDisplayName = resolveSchoolDisplayName(branding);
   const schoolShortName =
     (branding.appTitle && branding.appTitle.trim() && branding.appTitle.trim() !== schoolDisplayName)
       ? branding.appTitle.trim()
-      : SCHOOL_DEFAULTS.shortName;
+      : schoolDisplayName;
   const headerTitle = schoolDisplayName;
-  const headerTagline =
-    (branding.appTagline && branding.appTagline.trim()) || SCHOOL_DEFAULTS.tagline;
+  const headerTagline = resolveSchoolTagline(branding);
+  const schoolIntro = resolveSchoolIntro(schoolDisplayName);
+  const pillars = useMemo(() => buildHomePillars(schoolDisplayName), [schoolDisplayName]);
+  const roles = useMemo(() => buildHomeRoles(schoolDisplayName), [schoolDisplayName]);
+  const testimonials = useMemo(() => buildHomeTestimonials(schoolDisplayName), [schoolDisplayName]);
+  const schoolStats = useMemo(
+    () =>
+      SCHOOL_STATS.map((stat) =>
+        stat.l === 'établissement' ? { ...stat, d: schoolDisplayName } : stat,
+      ),
+    [schoolDisplayName],
+  );
   const schoolCode =
     (branding.schoolCode && branding.schoolCode.trim()) || SCHOOL_DEFAULTS.establishmentCode;
-  const schoolMapsUrl = getGoogleMapsSearchUrl(
-    getSchoolMapsQuery(branding.schoolAddress)
-  );
+  const schoolMapsUrl = resolveSchoolMapsUrl(branding.schoolAddress, branding.schoolMapsUrl);
   const schoolLocationLabel =
     branding.schoolAddress?.trim() ||
     [SCHOOL_DEFAULTS.city, SCHOOL_DEFAULTS.country].filter(Boolean).join(', ') ||
@@ -498,11 +513,11 @@ export default function Home() {
           />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-[8] hidden w-[min(48%,38rem)] lg:block">
             <div className="relative isolate h-full w-full mix-blend-normal">
-              <Image
-                src="/home/hero-students-cutout.png"
+              <HomePageImage
+                slot="homeHeroStudents"
+                defaultPath="/home/hero-students-cutout.png"
                 alt="Élèves en uniforme"
                 fill
-                unoptimized
                 className="object-contain object-right-bottom drop-shadow-[0_28px_40px_rgba(0,0,0,0.5)]"
                 sizes="(min-width: 1024px) 38rem, 0px"
                 priority
@@ -557,7 +572,7 @@ export default function Home() {
 
         <section className="home-stats-rail relative z-10" aria-label="Chiffres clés">
           <div className="home-stats-rail__grid mx-auto grid max-w-7xl grid-cols-1 gap-2 px-4 py-5 sm:grid-cols-2 sm:gap-5 sm:px-6 sm:py-8 lg:grid-cols-4">
-            {SCHOOL_STATS.map((s) => (
+            {schoolStats.map((s) => (
               <div
                 key={s.l}
                 className="home-stat-tile flex items-center justify-between gap-3 text-left sm:block sm:text-left"
@@ -688,7 +703,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="grid gap-5 md:grid-cols-3 md:gap-6">
-                {PILLARS.map(({ title, text, icon: Icon, accent, span, image, imageAlt, imageSlot }, idx) => (
+                {pillars.map(({ title, text, icon: Icon, accent, span, image, imageAlt, imageSlot }, idx) => (
                   <HomeReveal key={title} delayMs={idx * 70} className={span}>
                   <article
                     className="home-pillar-sheen group relative h-full overflow-hidden rounded-3xl border border-stone-200/90 bg-white shadow-[0_20px_50px_-28px_rgba(30,31,56,0.12)] transition-all duration-500 hover:-translate-y-1.5 hover:border-tran-mustard-300/60 hover:shadow-[0_28px_56px_-22px_rgba(90,91,154,0.18)]"
@@ -802,7 +817,7 @@ export default function Home() {
               </h2>
               <div className="home-section-accent mx-0 mt-3" aria-hidden />
               <p className="mt-5 text-lg leading-relaxed text-stone-600">
-                {SCHOOL_DEFAULTS.intro}
+                {schoolIntro}
               </p>
               <ul className="mt-8 space-y-3 text-stone-700">
                 {[
@@ -913,7 +928,7 @@ export default function Home() {
               Communauté
             </span>
             <h2 className="mt-4 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[3.15rem]">
-              <span className="home-title-lux">La communauté Mon Ecole</span>
+              <span className="home-title-lux">La communauté {schoolDisplayName}</span>
             </h2>
             <div className="home-section-accent mt-4" aria-hidden />
             <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-stone-600">
@@ -921,7 +936,7 @@ export default function Home() {
             </p>
           </div>
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {ROLES.map(({ label, desc, gradient, ring, icon: Icon, image, imageAlt, imageSlot }, idx) => (
+            {roles.map(({ label, desc, gradient, ring, icon: Icon, image, imageAlt, imageSlot }, idx) => (
               <HomeReveal key={label} delayMs={idx * 55}>
               <div
                 className={`home-role-card group relative overflow-hidden rounded-3xl border border-stone-200/80 bg-white shadow-lg shadow-stone-900/[0.06] ring-2 ${ring} transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl`}
@@ -1040,7 +1055,7 @@ export default function Home() {
                 Vie de l&apos;établissement
               </span>
               <h2 className="mt-4 font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]">
-                <span className="home-title-lux">Actualités de Mon Ecole</span>
+                <span className="home-title-lux">Actualités de {schoolDisplayName}</span>
               </h2>
               <div className="home-section-accent mt-4" aria-hidden />
             </div>
@@ -1149,7 +1164,7 @@ export default function Home() {
             <HomeReveal>
             <div className="text-center">
               <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.75rem]">
-                <span className="home-title-lux">Pourquoi choisir Mon Ecole ?</span>
+                <span className="home-title-lux">Pourquoi choisir {schoolDisplayName} ?</span>
               </h2>
               <div className="home-section-accent mt-4" aria-hidden />
               <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-stone-600">
@@ -1204,7 +1219,7 @@ export default function Home() {
               </div>
 
               <div className="grid gap-5 md:grid-cols-2">
-                {TESTIMONIALS.map(({ quote, author, role }, idx) => (
+                {testimonials.map(({ quote, author, role }, idx) => (
                   <HomeReveal key={author} delayMs={idx * 80}>
                     <figure className="home-testimonial-card relative h-full overflow-hidden rounded-3xl border border-stone-200/90 bg-white p-5 shadow-xl shadow-stone-900/[0.05] sm:rounded-[2rem] sm:p-7">
                       <span className="absolute -right-2 -top-8 font-display text-8xl font-black leading-none text-tran-mustard-100" aria-hidden>

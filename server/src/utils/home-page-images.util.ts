@@ -3,6 +3,7 @@ import { sanitizeBrandingAssetUrl } from './branding-assets.util';
 /** Clés des visuels de la page d’accueil publique (stockées dans AppBranding.homePageImages). */
 export const HOME_PAGE_IMAGE_SLOTS = [
   'homeHeroPlatform',
+  'homeHeroStudents',
   'homePillarPedagogy',
   'homePillarPortals',
   'homePillarSecurity',
@@ -17,6 +18,9 @@ export const HOME_PAGE_IMAGE_SLOTS = [
 export type HomePageImageSlot = (typeof HOME_PAGE_IMAGE_SLOTS)[number];
 
 export type HomePageImagesRecord = Partial<Record<HomePageImageSlot, string | null>>;
+
+/** Valeur stockée pour masquer volontairement un visuel. */
+export const HOME_PAGE_IMAGE_HIDDEN = '__hidden__';
 
 export function isHomePageImageSlot(value: string): value is HomePageImageSlot {
   return (HOME_PAGE_IMAGE_SLOTS as readonly string[]).includes(value);
@@ -40,6 +44,10 @@ export function sanitizeHomePageImages(raw: unknown): HomePageImagesRecord {
     const url = parsed[key];
     if (url === null) {
       out[key] = null;
+      continue;
+    }
+    if (url === HOME_PAGE_IMAGE_HIDDEN) {
+      out[key] = HOME_PAGE_IMAGE_HIDDEN;
       continue;
     }
     const clean = sanitizeBrandingAssetUrl(url);

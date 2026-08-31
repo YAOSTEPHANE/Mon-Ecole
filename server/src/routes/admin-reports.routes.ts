@@ -20,6 +20,11 @@ import {
   type GenderKey,
   type MoneyBucket,
 } from '../utils/financial-breakdown.util';
+import {
+  getPeriodDatesWithConfig,
+  loadAcademicTermDatesForSchool,
+} from '../utils/academic-term-dates.util';
+import { getPeriodLabel } from '../utils/report-card.util';
 import { buildInspectionExportPackage } from '../utils/inspection-export.util';
 
 const router = express.Router();
@@ -43,50 +48,26 @@ function norm20(score: number, maxScore: number): number {
 }
 
 /** Période scolaire (trimestres / semestres / année complète). */
-function getPeriodDateRange(
+async function getPeriodDateRange(
   period: string,
-  academicYear: string
-): { start: Date; end: Date; label: string } | null {
+  academicYear: string,
+  schoolId?: string,
+): Promise<{ start: Date; end: Date; label: string } | null> {
   const parts = academicYear.split('-').map((x) => parseInt(x.trim(), 10));
   if (parts.length < 2 || parts.some((n) => !Number.isFinite(n))) return null;
-  const yearStart = parts[0];
-  const yearEnd = parts[1];
-  let start: Date;
-  let end: Date;
-  let label: string;
-  switch (period) {
-    case 'trim1':
-      start = new Date(yearStart, 8, 1);
-      end = new Date(yearStart, 10, 30);
-      label = 'Trimestre 1';
-      break;
-    case 'trim2':
-      start = new Date(yearStart, 11, 1);
-      end = new Date(yearEnd, 1, 28);
-      label = 'Trimestre 2';
-      break;
-    case 'trim3':
-      start = new Date(yearEnd, 2, 1);
-      end = new Date(yearEnd, 6, 30);
-      label = 'Trimestre 3';
-      break;
-    case 'sem1':
-      start = new Date(yearStart, 8, 1);
-      end = new Date(yearEnd, 1, 28);
-      label = 'Semestre 1';
-      break;
-    case 'sem2':
-      start = new Date(yearEnd, 2, 1);
-      end = new Date(yearEnd, 6, 30);
-      label = 'Semestre 2';
-      break;
-    case 'full':
-    default:
-      start = new Date(yearStart, 8, 1);
-      end = new Date(yearEnd, 6, 30);
-      label = 'Année scolaire complète';
+
+  const termDates = await loadAcademicTermDatesForSchool(schoolId);
+  const { start, end } = getPeriodDatesWithConfig(period, academicYear, termDates);
+  const label = getPeriodLabel(period === 'full' ? 'trim1' : period);
+  if (period === 'full') {
+    const fullStart = getPeriodDatesWithConfig('trim1', academicYear, termDates).start;
+    const fullEnd = getPeriodDatesWithConfig('trim3', academicYear, termDates).end;
+    return { start: fullStart, end: fullEnd, label: 'Année scolaire complète' };
   }
-  return { start, end, label };
+  if (period === 'sem1' || period === 'sem2' || period.startsWith('trim')) {
+    return { start, end, label: getPeriodLabel(period) };
+  }
+  return { start, end, label: label || period };
 }
 
 /**
@@ -95,7 +76,7 @@ function getPeriodDateRange(
  */
 router.get('/reports/academic', async (req: SchoolContextRequest, res) => {
   try {
-    const { classWhere } = reportSchoolCtx(req);
+    const { classWhere, schoolId } = reportSchoolCtx(req);
     const academicYear = typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
     const classId = typeof req.query.classId === 'string' ? req.query.classId.trim() : '';
     const period = typeof req.query.period === 'string' ? req.query.period.trim() : 'full';
@@ -116,7 +97,7 @@ router.get('/reports/academic', async (req: SchoolContextRequest, res) => {
     let dateTo: Date | null = null;
     let periodLabel = 'Toutes périodes';
     if (academicYear) {
-      const range = getPeriodDateRange(period, academicYear);
+      const range = await getPeriodDateRange(period, academicYear, schoolId);
       if (range) {
         dateFrom = range.start;
         dateTo = range.end;
@@ -1075,7 +1056,7 @@ router.get('/reports/financial', async (req: SchoolContextRequest, res) => {
  */
 router.get('/reports/student-stats', async (req: SchoolContextRequest, res) => {
   try {
-    const { studentWhere, classWhere } = reportSchoolCtx(req);
+    const { studentWhere, classWhere, schoolId } = reportSchoolCtx(req);
     const academicYear =
       typeof req.query.academicYear === 'string' ? req.query.academicYear.trim() : '';
     const period = typeof req.query.period === 'string' ? req.query.period.trim() : 'full';
@@ -1178,7 +1159,7 @@ router.get('/reports/student-stats', async (req: SchoolContextRequest, res) => {
 
     let periodLabel = 'Toutes périodes';
     if (academicYear) {
-      const range = getPeriodDateRange(period, academicYear);
+      const range = await getPeriodDateRange(period, academicYear, schoolId);
       if (range) {
         gradeWhere.date = { gte: range.start, lte: range.end };
         periodLabel = range.label;

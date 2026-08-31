@@ -586,7 +586,7 @@ export default function AdminOpsDashboard({
   ];
 
   return (
-    <div className="min-h-full w-full bg-white p-4 sm:p-6 lg:p-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+    <div className="relative z-[1] min-h-full w-full max-w-full overflow-x-hidden bg-white p-3 sm:p-6 lg:p-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <div className="mb-6 flex min-w-0 flex-col gap-3">
         <div className="flex min-w-0 items-center justify-between gap-2.5">
           {onOpenSidebar ? (
@@ -622,7 +622,7 @@ export default function AdminOpsDashboard({
           </div>
         </div>
         <nav
-          className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-full bg-stone-100/90 p-1"
+          className="flex min-w-0 items-center gap-1 overflow-x-auto overscroll-x-contain rounded-2xl bg-stone-100 p-1 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none]"
           aria-label="Navigation du tableau de bord"
         >
           {pillNav.map((item) => {
@@ -632,10 +632,10 @@ export default function AdminOpsDashboard({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-semibold transition ${
+                className={`shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold transition sm:px-3.5 sm:py-2 sm:text-[13px] ${
                   active
-                    ? 'bg-stone-900 text-white shadow-sm'
-                    : 'text-stone-500 hover:bg-white hover:text-stone-800'
+                    ? 'bg-stone-900 text-white shadow-none ring-1 ring-stone-900/10'
+                    : 'bg-transparent text-stone-500 hover:bg-white/80 hover:text-stone-800'
                 }`}
               >
                 {item.label}
@@ -647,7 +647,7 @@ export default function AdminOpsDashboard({
 
       <div className="mb-5 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h2 className="font-display text-[1.65rem] font-bold tracking-tight text-stone-900 sm:text-[1.85rem]">
+          <h2 className="font-display text-xl font-bold tracking-tight text-stone-900 sm:text-[1.65rem] lg:text-[1.85rem]">
             Bon retour{firstName ? `, ${firstName}` : ''} !{' '}
             <span aria-hidden>☀️</span>
           </h2>
@@ -668,7 +668,7 @@ export default function AdminOpsDashboard({
           </label>
         </div>
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative min-w-0 sm:w-56">
+          <div className="relative min-w-0 w-full sm:w-56">
             <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
             <input
               type="search"
@@ -678,27 +678,30 @@ export default function AdminOpsDashboard({
               className="w-full rounded-full border border-stone-200/90 bg-white py-2.5 pl-9 pr-3 text-sm text-stone-800 shadow-sm outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-cptb-gold/35"
             />
           </div>
-          <label className="relative inline-flex">
-            <span className="sr-only">Période</span>
-            <FiCalendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as 'week' | 'month')}
-              className="appearance-none rounded-full border border-stone-200/90 bg-white py-2.5 pl-9 pr-9 text-sm font-semibold text-stone-800 shadow-sm outline-none focus:ring-2 focus:ring-cptb-gold/35"
+          <div className="flex min-w-0 gap-2">
+            <label className="relative inline-flex min-w-0 flex-1 sm:flex-none">
+              <span className="sr-only">Période</span>
+              <FiCalendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as 'week' | 'month')}
+                className="w-full appearance-none rounded-full border border-stone-200/90 bg-white py-2.5 pl-9 pr-9 text-sm font-semibold text-stone-800 shadow-sm outline-none focus:ring-2 focus:ring-cptb-gold/35 sm:w-auto"
+              >
+                <option value="week">Hebdo</option>
+                <option value="month">Mensuel</option>
+              </select>
+              <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            </label>
+            <button
+              type="button"
+              onClick={() => onExport?.()}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-cptb-blue px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cptb-blue-dark sm:px-4"
+              aria-label="Exporter les données"
             >
-              <option value="week">Hebdo</option>
-              <option value="month">Mensuel</option>
-            </select>
-            <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-          </label>
-          <button
-            type="button"
-            onClick={() => onExport?.()}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-cptb-blue px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cptb-blue-dark"
-          >
-            <FiDownload className="h-4 w-4" />
-            Exporter
-          </button>
+              <FiDownload className="h-4 w-4" />
+              <span className="hidden sm:inline">Exporter</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -784,16 +787,16 @@ export default function AdminOpsDashboard({
               Voir plus
             </button>
           </div>
-          <div className="mb-5 flex items-center gap-2">
+          <div className="mb-5 flex items-center gap-1 sm:gap-2">
             <button
               type="button"
               aria-label="Semaine précédente"
               onClick={() => setSelectedDay(addDays(selectedDay, -7))}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-stone-600 ring-1 ring-stone-200 transition hover:bg-stone-50 hover:text-stone-900"
+              className="dash-week-nav-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-stone-600 ring-1 ring-stone-200 transition hover:bg-stone-50 hover:text-stone-900 sm:h-9 sm:w-9"
             >
               <FiChevronLeft className="h-4 w-4" aria-hidden />
             </button>
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-1">
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-0.5 sm:gap-1">
               {weekDays.map((d) => {
                 const active = d.getTime() === selectedDay.getTime();
                 const hasSlots = daysWithSlots.has(d.getDay());
@@ -803,7 +806,7 @@ export default function AdminOpsDashboard({
                     key={d.toISOString()}
                     type="button"
                     onClick={() => setSelectedDay(d)}
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums transition ${
+                    className={`dash-week-day-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums transition sm:h-9 sm:w-9 sm:text-[13px] ${
                       active
                         ? 'bg-cptb-blue text-white shadow-md shadow-cptb-blue/25'
                         : unavailable
@@ -822,7 +825,7 @@ export default function AdminOpsDashboard({
               type="button"
               aria-label="Semaine suivante"
               onClick={() => setSelectedDay(addDays(selectedDay, 7))}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-stone-600 ring-1 ring-stone-200 transition hover:bg-stone-50 hover:text-stone-900"
+              className="dash-week-nav-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-stone-600 ring-1 ring-stone-200 transition hover:bg-stone-50 hover:text-stone-900 sm:h-9 sm:w-9"
             >
               <FiChevronRight className="h-4 w-4" aria-hidden />
             </button>
@@ -832,8 +835,8 @@ export default function AdminOpsDashboard({
               Aucun professeur au programme pour cette date.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
+            <div className="dash-table-scroll">
+              <table className="min-w-[540px] w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                     <th className="pb-3 pr-3 font-semibold">Enseignant</th>

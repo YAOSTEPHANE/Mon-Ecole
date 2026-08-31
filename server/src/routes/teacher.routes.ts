@@ -21,6 +21,7 @@ import {
   getCurrentAcademicYear,
   inferReportingPeriod,
 } from '../utils/report-card.util';
+import { loadAcademicTermDatesForSchool } from '../utils/academic-term-dates.util';
 import {
   createMockExamWithQuestions,
   type MockQuestionInput,
@@ -368,6 +369,10 @@ router.post(
           id: courseId,
           teacherId,
         },
+        select: {
+          classId: true,
+          class: { select: { schoolId: true } },
+        },
       });
 
       if (!course) {
@@ -389,10 +394,11 @@ router.post(
       }
 
       const gradeDate = date ? new Date(date) : new Date();
+      const termDates = await loadAcademicTermDatesForSchool(course.class?.schoolId);
       const resolvedReportingPeriod =
         typeof reportingPeriod === 'string' && reportingPeriod.trim()
           ? reportingPeriod.trim()
-          : inferReportingPeriod(gradeDate, getCurrentAcademicYear(gradeDate));
+          : inferReportingPeriod(gradeDate, getCurrentAcademicYear(gradeDate), termDates);
 
       const grade = await prisma.grade.create({
         data: {

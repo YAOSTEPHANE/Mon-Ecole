@@ -1,3 +1,9 @@
+import {
+  getPeriodDatesWithConfig,
+  inferReportingPeriodWithConfig,
+  loadAcademicTermDatesForSchool,
+  type AcademicTermDatesConfig,
+} from './academic-term-dates.util';
 import prisma from './prisma';
 import { fetchBrandingLogoDataUrl } from './image-data-url.util';
 import { reportCardClientPhotoUrl } from './report-card-photo-url.util';
@@ -48,53 +54,29 @@ export function getCurrentAcademicYear(reference = new Date()): string {
 }
 
 /** Trimestre déduit d'une date dans une année scolaire donnée. */
-export function inferReportingPeriod(date: Date, academicYear: string): string | null {
-  for (const period of TRIMESTER_KEYS) {
-    const { start, end } = getPeriodDates(period, academicYear);
-    if (date >= start && date <= end) return period;
-  }
-  return null;
+export function inferReportingPeriod(
+  date: Date,
+  academicYear: string,
+  termDates?: AcademicTermDatesConfig | null,
+): string | null {
+  return inferReportingPeriodWithConfig(date, academicYear, termDates);
 }
 
-export function getPeriodDates(period: string, academicYear: string): { start: Date; end: Date } {
-  const parts = academicYear.split('-').map(Number);
-  const yearStart = parts[0];
-  const yearEnd = parts[1] ?? yearStart + 1;
-  let start: Date;
-  let end: Date;
-
-  switch (period) {
-    case 'trim1':
-      start = new Date(yearStart, 8, 1);
-      end = endOfDay(new Date(yearStart, 10, 30));
-      break;
-    case 'trim2':
-      start = new Date(yearStart, 11, 1);
-      end = endOfDay(new Date(yearEnd, 1, 28));
-      break;
-    case 'trim3':
-      start = new Date(yearEnd, 2, 1);
-      end = endOfDay(new Date(yearEnd, 5, 30));
-      break;
-    case 'sem1':
-      start = new Date(yearStart, 8, 1);
-      end = endOfDay(new Date(yearEnd, 1, 28));
-      break;
-    case 'sem2':
-      start = new Date(yearEnd, 2, 1);
-      end = endOfDay(new Date(yearEnd, 5, 30));
-      break;
-    default:
-      start = new Date(yearStart, 8, 1);
-      end = endOfDay(new Date(yearEnd, 5, 30));
-  }
-
-  return { start, end };
+export function getPeriodDates(
+  period: string,
+  academicYear: string,
+  termDates?: AcademicTermDatesConfig | null,
+): { start: Date; end: Date } {
+  return getPeriodDatesWithConfig(period, academicYear, termDates);
 }
 
 /** Filtre Prisma : notes par dates de période OU rattachement explicite au trimestre. */
-export function gradePeriodWhere(period: string, academicYear: string) {
-  const { start, end } = getPeriodDates(period, academicYear);
+export function gradePeriodWhere(
+  period: string,
+  academicYear: string,
+  termDates?: AcademicTermDatesConfig | null,
+) {
+  const { start, end } = getPeriodDates(period, academicYear, termDates);
   if (TRIMESTER_KEYS.includes(period as (typeof TRIMESTER_KEYS)[number])) {
     return {
       OR: [{ date: { gte: start, lte: end } }, { reportingPeriod: period }],
@@ -141,12 +123,13 @@ export async function computeStudentBulletinAverage(
   classId: string,
   period: string,
   academicYear: string,
+  termDates?: AcademicTermDatesConfig | null,
 ): Promise<number> {
   const [grades, classCourses] = await Promise.all([
     prisma.grade.findMany({
       where: {
         studentId,
-        ...gradePeriodWhere(period, academicYear),
+        ...gradePeriodWhere(period, academicYear, termDates),
       },
     }),
     prisma.course.findMany({
@@ -196,9 +179,11 @@ export type ClassRankRow = { studentId: string; average: number; rank: number };
 export async function computeClassBulletinRanks(
   classId: string,
   periodKey: string,
-  academicYear: string
+  academicYear: string,
+  schoolId?: string | null,
 ): Promise<{ periodLabel: string; periodDates: { start: Date; end: Date }; rows: ClassRankRow[] }> {
-  const periodDates = getPeriodDates(periodKey, academicYear);
+  const termDates = await loadAcademicTermDatesForSchool(schoolId);
+  const periodDates = getPeriodDates(periodKey, academicYear, termDates);
   const periodLabel = getPeriodLabel(periodKey);
 
   const students = await prisma.student.findMany({
@@ -209,8 +194,14 @@ export async function computeClassBulletinRanks(
   const withAvg = await Promise.all(
     students.map(async (s) => ({
       studentId: s.id,
-      average: await computeStudentBulletinAverage(s.id, classId, periodKey, academicYear),
-    }))
+      average: await computeStudentBulletinAverage(
+        s.id,
+        classId,
+        periodKey,
+        academicYear,
+        termDates,
+      ),
+    })),
   );
 
   withAvg.sort((a, b) => b.average - a.average);
@@ -358,6 +349,7 @@ export async function enrichReportCardsWithTermHistory(
     classStats?: ReportCardClassStats;
     conduct?: { average: number; byTerm?: Record<string, number> };
   }>,
+  termDates?: AcademicTermDatesConfig | null,
 ): Promise<void> {
   if (!TRIMESTER_PERIODS.includes(activePeriod as (typeof TRIMESTER_PERIODS)[number])) {
     return;
@@ -383,14 +375,14 @@ export async function enrichReportCardsWithTermHistory(
   };
 
   for (const term of TRIMESTER_PERIODS) {
-    const periodDates = getPeriodDates(term, academicYear);
+    const periodDates = getPeriodDates(term, academicYear, termDates);
     const snapshots: Snapshot[] = [];
 
     for (const studentId of studentIds) {
       const grades = await prisma.grade.findMany({
         where: {
           studentId,
-          ...gradePeriodWhere(term, academicYear),
+          ...gradePeriodWhere(term, academicYear, termDates),
         },
         select: {
           courseId: true,
@@ -576,7 +568,8 @@ export async function buildClassOfficialReportCards(params: {
   schoolId?: string | null;
 }): Promise<OfficialReportCardPayload> {
   const periodKey = toPeriodKey(params.period);
-  const periodDates = getPeriodDates(periodKey, params.academicYear);
+  const termDates = await loadAcademicTermDatesForSchool(params.schoolId);
+  const periodDates = getPeriodDates(periodKey, params.academicYear, termDates);
 
   const students = await prisma.student.findMany({
     where: { classId: params.classId },
@@ -631,7 +624,7 @@ export async function buildClassOfficialReportCards(params: {
       const grades = await prisma.grade.findMany({
         where: {
           studentId: student.id,
-          ...gradePeriodWhere(periodKey, params.academicYear),
+          ...gradePeriodWhere(periodKey, params.academicYear, termDates),
         },
         include: {
           course: {
@@ -734,6 +727,7 @@ export async function buildClassOfficialReportCards(params: {
     params.academicYear,
     periodKey,
     reportCardData,
+    termDates,
   );
 
   await attachBulletinMentions(params.classId, periodKey, params.academicYear, reportCardData);

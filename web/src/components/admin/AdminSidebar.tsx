@@ -64,16 +64,19 @@ const AdminSidebar = ({
       )}
 
       <aside
-        className={`dash-sidebar-rail relative z-50 border-r border-white/10
-          transition-[transform,width] duration-300 ease-premium
-          max-lg:w-[min(20rem,calc(100vw-1rem))]
-          fixed left-0 dash-sticky-under-header dash-h-under-header
-          max-lg:!top-0 max-lg:!h-dvh max-lg:!max-h-dvh max-lg:z-[60]
-          max-lg:max-w-[calc(100vw-1rem)]
+        className={`dash-sidebar-rail z-50 border-r border-white/10
+          transition-[transform,visibility] duration-300 ease-premium
+          max-lg:fixed max-lg:left-0 max-lg:top-0 max-lg:z-[60]
+          max-lg:h-dvh max-lg:max-h-dvh max-lg:w-[min(20rem,calc(100vw-1rem))]
+          max-lg:max-w-[calc(100vw-1rem)] max-lg:overflow-hidden
           max-lg:shadow-[16px_0_48px_-12px_rgba(0,0,0,0.55)]
+          ${
+            isOpen
+              ? 'max-lg:translate-x-0 max-lg:visible'
+              : 'max-lg:-translate-x-full max-lg:invisible max-lg:pointer-events-none'
+          }
           ${collapsed ? 'lg:w-[4.25rem]' : 'lg:w-64'}
-          ${isOpen ? 'translate-x-0' : 'max-lg:-translate-x-full max-lg:pointer-events-none'}
-          lg:sticky lg:left-auto lg:h-dvh lg:max-h-dvh lg:translate-x-0 lg:pointer-events-auto lg:shrink-0 lg:self-stretch lg:shadow-none lg:z-50`}
+          lg:visible lg:sticky lg:left-auto lg:h-dvh lg:max-h-dvh lg:translate-x-0 lg:pointer-events-auto lg:shrink-0 lg:self-stretch lg:shadow-none lg:z-50 dash-sticky-under-header dash-h-under-header`}
         aria-label="Navigation administration"
       >
         <div className="flex h-full min-h-0 flex-col">

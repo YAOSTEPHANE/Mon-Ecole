@@ -47,6 +47,7 @@ import {
   FiMenu,
   FiChevronLeft,
   FiChevronRight,
+  FiX,
   FiGitBranch,
   FiHeart,
   FiClipboard,
@@ -68,6 +69,7 @@ import {
   filterTabsByVisibleModules,
   isAdminModuleId,
 } from '../../lib/adminModules';
+import { inactiveModuleIconClass } from '../../lib/navModuleIconClass';
 
 const StudentsList = dynamic(() => import('../../components/admin/StudentsList'), { loading: () => <DashboardTabLoading />, ssr: false });
 const ClassesList = dynamic(() => import('../../components/admin/ClassesList'), { loading: () => <DashboardTabLoading />, ssr: false });
@@ -135,6 +137,18 @@ type TabItem = {
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-dashboard-sidebar-collapsed';
 
+const ADMIN_MOBILE_PRIMARY_TABS = [
+  'dashboard',
+  'students',
+  'classes',
+  'teachers',
+  'admissions',
+  'academic',
+  'grading',
+  'communication',
+  'fees',
+] as const;
+
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const { isMultiSchool, activeSchool } = useSchool();
@@ -180,6 +194,7 @@ const AdminDashboard = () => {
   const [settingsModalTab, setSettingsModalTab] = useState<'school' | 'academic' | 'notifications' | 'security' | 'user' | 'system'>('school');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -420,7 +435,7 @@ const AdminDashboard = () => {
       hideHeader
     >
       <PremiumPortalShell variant="admin">
-      <div className="flex min-w-0 max-w-full dash-min-h-under-header w-full items-stretch overflow-x-clip">
+      <div className="flex min-w-0 w-full max-w-[100vw] dash-min-h-under-header items-stretch overflow-x-hidden">
         <AdminSidebar
           mainTabs={mainTabs}
           bottomTabs={bottomTabs}
@@ -432,7 +447,7 @@ const AdminDashboard = () => {
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
         />
 
-        <div className="flex min-w-0 max-w-full flex-1 flex-col">
+        <div className="flex min-w-0 w-full max-w-full flex-1 flex-col">
           {activeTab === 'dashboard' ? null : (
           <header className="dash-command-bar z-20 shrink-0 bg-white">
             <div className="flex items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
@@ -481,6 +496,23 @@ const AdminDashboard = () => {
                   className="dash-search-field w-full rounded-xl py-2 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen((open) => !open)}
+                className={`md:hidden flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+                  mobileSearchOpen
+                    ? 'bg-amber-50 text-amber-900'
+                    : 'text-stone-700 hover:bg-stone-100/90'
+                }`}
+                aria-label={mobileSearchOpen ? 'Fermer la recherche' : 'Ouvrir la recherche'}
+                aria-expanded={mobileSearchOpen}
+              >
+                {mobileSearchOpen ? (
+                  <FiX className="h-4 w-4" aria-hidden />
+                ) : (
+                  <FiSearch className="h-4 w-4" aria-hidden />
+                )}
+              </button>
               <SchoolSwitcher className="hidden sm:flex" />
               <AccountHeaderControls
                 user={user}
@@ -491,6 +523,64 @@ const AdminDashboard = () => {
                   setIsSettingsModalOpen(true);
                 }}
               />
+            </div>
+
+            {mobileSearchOpen ? (
+              <div className="dash-mobile-search-row px-3 pb-2 md:hidden">
+                <div className="relative min-w-0">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+                    <FiSearch className="h-4 w-4" aria-hidden />
+                  </div>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && searchQuery.trim()) {
+                        router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+                        setMobileSearchOpen(false);
+                      }
+                    }}
+                    placeholder="Rechercher…"
+                    aria-label="Recherche globale, valider avec Entrée"
+                    autoComplete="off"
+                    className="dash-search-field w-full rounded-xl py-2.5 pl-10 pr-3 text-sm text-stone-900 placeholder:text-stone-400"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="dash-mobile-tabs scrollbar-hide px-3 pb-2 lg:hidden">
+              {mainTabs
+                .filter((tab) =>
+                  (ADMIN_MOBILE_PRIMARY_TABS as readonly string[]).includes(tab.id),
+                )
+                .map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => changeTab(tab.id)}
+                      aria-label={tab.label}
+                      title={tab.label}
+                      className={`dash-mobile-tab focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 ${
+                        isActive
+                          ? `bg-gradient-to-r ${tab.color} text-white shadow-md`
+                          : 'bg-stone-100 text-stone-700'
+                      }`}
+                    >
+                      <Icon
+                        className={`h-3.5 w-3.5 shrink-0 ${
+                          isActive ? 'text-white' : inactiveModuleIconClass(tab.color)
+                        }`}
+                      />
+                      <span className="dash-mobile-tab-label">{tab.label}</span>
+                    </button>
+                  );
+                })}
             </div>
           </header>
           )}

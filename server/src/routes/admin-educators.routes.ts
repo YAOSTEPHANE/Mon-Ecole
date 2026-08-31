@@ -18,6 +18,12 @@ import {
 
 const router = express.Router();
 
+function normalizeEmail(email: string): string {
+  return String(email ?? '')
+    .trim()
+    .toLowerCase();
+}
+
 
 // Rechercher un éducateur par NFC ID
 router.get('/educators/nfc/:nfcId', async (req, res) => {
@@ -102,7 +108,7 @@ router.get('/educators', async (req: SchoolContextRequest, res) => {
 router.post(
   '/educators',
   [
-    body('email').isEmail(),
+    body('email').isEmail().normalizeEmail(),
     body('password')
       .optional({ values: 'falsy' })
       .trim()
@@ -118,11 +124,16 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        const arr = errors.array();
+        const firstMsg = arr.find((e) => typeof e.msg === 'string')?.msg;
+        return res.status(400).json({
+          error: typeof firstMsg === 'string' ? firstMsg : 'Données invalides.',
+          errors: arr,
+        });
       }
 
+      const email = normalizeEmail(String(req.body.email ?? ''));
       const {
-        email,
         password,
         firstName,
         lastName,

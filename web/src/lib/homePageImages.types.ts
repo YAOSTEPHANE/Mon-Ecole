@@ -1,5 +1,6 @@
 export const HOME_PAGE_IMAGE_SLOTS = [
   'homeHeroPlatform',
+  'homeHeroStudents',
   'homePillarPedagogy',
   'homePillarPortals',
   'homePillarSecurity',
@@ -21,7 +22,12 @@ export type HomePageImageDefinition = {
   hint: string;
   defaultPath: string;
   group: 'Hero' | 'Piliers' | 'Communauté' | 'Établissement';
+  /** Si true, « Supprimer » masque l’image au lieu de revenir au modèle. */
+  hideable?: boolean;
 };
+
+/** Valeur stockée pour masquer volontairement un visuel (pas d’URL). */
+export const HOME_PAGE_IMAGE_HIDDEN = '__hidden__';
 
 export const HOME_PAGE_IMAGE_DEFINITIONS: HomePageImageDefinition[] = [
   {
@@ -30,6 +36,14 @@ export const HOME_PAGE_IMAGE_DEFINITIONS: HomePageImageDefinition[] = [
     hint: 'Grande image à droite du titre d’accueil — format paysage recommandé.',
     defaultPath: '/home/hero-platform.jpg',
     group: 'Hero',
+  },
+  {
+    slot: 'homeHeroStudents',
+    label: 'Élèves sur l’entête (découpe)',
+    hint: 'Photo des élèves affichée à droite du hero (desktop). PNG avec fond transparent recommandé.',
+    defaultPath: '/home/hero-students-cutout.png',
+    group: 'Hero',
+    hideable: true,
   },
   {
     slot: 'homePillarPedagogy',

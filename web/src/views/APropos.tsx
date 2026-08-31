@@ -24,8 +24,6 @@ import { publicApi } from '@/services/api';
 import {
   SCHOOL_DEFAULTS,
   SCHOOL_OPENING_HOURS,
-  getGoogleMapsSearchUrl,
-  getSchoolMapsQuery,
 } from '@/data/schoolDefaults';
 import {
   ABOUT_ATOUTS,
@@ -57,7 +55,7 @@ export default function APropos() {
   const schoolName =
     branding.schoolDisplayName?.trim() || branding.appTitle?.trim() || SCHOOL_DEFAULTS.fullName;
   const schoolShortName = branding.appTitle?.trim() || SCHOOL_DEFAULTS.shortName;
-  const mapsUrl = getGoogleMapsSearchUrl(getSchoolMapsQuery(branding.schoolAddress));
+  const mapsUrl = contact.mapsUrl;
   const founderName = branding.schoolPrincipal?.trim() || director.name;
   const founderRole = branding.schoolPrincipal?.trim() ? 'Fondateur' : director.role;
   const examStats = results?.examStats ?? [];
@@ -125,17 +123,23 @@ export default function APropos() {
               />
             )}
             <div
-              className="absolute inset-0 bg-gradient-to-t from-[#07081a] via-[#07081a]/25 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-[#07081a]/80"
+              className="absolute inset-0 bg-gradient-to-t from-[#07081a] via-[#07081a]/45 to-transparent lg:bg-gradient-to-r lg:from-[#07081a]/20 lg:via-transparent lg:to-[#07081a]/85"
               aria-hidden
             />
-            <div className="absolute bottom-5 left-5 right-5 lg:bottom-8 lg:left-8">
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-tran-mustard-200">
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[min(52%,14rem)] bg-gradient-to-t from-[#07081a] via-[#07081a]/92 to-transparent"
+              aria-hidden
+            />
+            <div className="absolute bottom-5 left-5 right-5 z-10 lg:bottom-8 lg:left-8">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-tran-mustard-200 drop-shadow-[0_1px_8px_rgba(0,0,0,0.55)]">
                 Vision fondatrice
               </p>
               {founderName ? (
-                <p className="mt-2 font-display text-2xl font-semibold">{founderName}</p>
+                <p className="mt-2 font-display text-2xl font-semibold drop-shadow-[0_2px_12px_rgba(0,0,0,0.65)]">
+                  {founderName}
+                </p>
               ) : null}
-              <p className="mt-1 text-sm text-stone-300">{founderRole}</p>
+              <p className="mt-1 text-sm text-stone-200 drop-shadow-[0_1px_8px_rgba(0,0,0,0.55)]">{founderRole}</p>
             </div>
           </div>
           <div className="flex flex-col justify-center px-6 py-8 sm:px-10 sm:py-12 lg:col-span-7 lg:px-14">

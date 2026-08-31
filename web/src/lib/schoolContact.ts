@@ -2,8 +2,7 @@ import type { AppBrandingPayload } from '@/contexts/AppBrandingContext';
 import {
   SCHOOL_OPENING_HOURS,
   SCHOOL_DEFAULTS,
-  getGoogleMapsSearchUrl,
-  getSchoolMapsQuery,
+  resolveSchoolMapsUrl,
 } from '@/data/schoolDefaults';
 
 export type SchoolContactInfo = {
@@ -68,7 +67,7 @@ export function resolveSchoolContactInfo(branding: AppBrandingPayload): SchoolCo
     website: websiteRaw,
     websiteHref,
     principal,
-    mapsUrl: getGoogleMapsSearchUrl(getSchoolMapsQuery(branding.schoolAddress)),
+    mapsUrl: resolveSchoolMapsUrl(branding.schoolAddress, branding.schoolMapsUrl),
     openingHoursSummary: buildOpeningHoursSummary(),
   };
 }

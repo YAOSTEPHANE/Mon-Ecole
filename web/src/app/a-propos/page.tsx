@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
-import APropos from "@/views/APropos";
+import type { Metadata } from 'next';
+import APropos from '@/views/APropos';
+import { buildAboutPageMetadata } from '@/lib/homeMetadata';
 
-export const metadata: Metadata = {
-  title: "À propos de nous",
-  description:
-    "Découvrez Mon Ecole : identité, atouts, plateforme, personnel, établissements et règlement intérieur.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildAboutPageMetadata();
+}
 
 export default function AProposPage() {
   return <APropos />;

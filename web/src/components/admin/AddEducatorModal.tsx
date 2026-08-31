@@ -5,6 +5,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
 import EducatorClassAssignmentField from './EducatorClassAssignmentField';
+import { PASSWORD_POLICY_HINT, validatePasswordStrength } from '@/lib/passwordPolicy';
 import { 
   FiUser, 
   FiMail, 
@@ -96,14 +97,43 @@ const AddEducatorModal: React.FC<AddEducatorModalProps> = ({ isOpen, onClose }) 
       );
       handleClose();
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || 'Erreur lors de la création de l\'éducateur';
+    onError: (error: unknown) => {
+      const data = (error as {
+        response?: {
+          data?: {
+            error?: string;
+            errors?: Array<{ param?: string; path?: string | number; msg?: string }>;
+          };
+        };
+      })?.response?.data;
+
+      const validationErrors: Record<string, string> = {};
+      data?.errors?.forEach((err) => {
+        const field = String(err.path ?? err.param ?? '').trim();
+        if (field) validationErrors[field] = err.msg ?? 'Invalide';
+      });
+
+      const errorMessage =
+        data?.error ||
+        data?.errors?.[0]?.msg ||
+        'Erreur lors de la création de l\'éducateur';
       toast.error(errorMessage);
-      if (error.response?.data?.errors) {
-        const validationErrors: Record<string, string> = {};
-        error.response.data.errors.forEach((err: any) => {
-          validationErrors[err.param] = err.msg;
-        });
+
+      const lower = errorMessage.toLowerCase();
+      if (lower.includes('email') || lower.includes('e-mail')) {
+        validationErrors.email = errorMessage;
+        setCurrentStep(1);
+      }
+      if (lower.includes('mot de passe') || lower.includes('password')) {
+        validationErrors.password = errorMessage;
+        setCurrentStep(1);
+      }
+      if (lower.includes('employé') || lower.includes('matricule')) {
+        validationErrors.employeeId = errorMessage;
+        setCurrentStep(2);
+      }
+
+      if (Object.keys(validationErrors).length > 0) {
         setErrors(validationErrors);
       }
     },
@@ -139,9 +169,8 @@ const AddEducatorModal: React.FC<AddEducatorModalProps> = ({ isOpen, onClose }) 
       const pw = formData.password.trim();
       const cpw = formData.confirmPassword.trim();
       if (pw.length > 0) {
-        if (pw.length < 6) {
-          newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
-        }
+        const policyError = validatePasswordStrength(pw);
+        if (policyError) newErrors.password = policyError;
         if (pw !== cpw) {
           newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
         }
@@ -179,9 +208,10 @@ const AddEducatorModal: React.FC<AddEducatorModalProps> = ({ isOpen, onClose }) 
     }
 
     const pw = formData.password.trim();
+    const policyError = pw.length > 0 ? validatePasswordStrength(pw) : null;
     const submitData = {
-      email: formData.email,
-      ...(pw.length >= 6 ? { password: pw } : {}),
+      email: formData.email.trim().toLowerCase(),
+      ...(pw.length > 0 && !policyError ? { password: pw } : {}),
       firstName: formData.firstName,
       lastName: formData.lastName,
       phone: formData.phone || undefined,
@@ -344,10 +374,14 @@ const AddEducatorModal: React.FC<AddEducatorModalProps> = ({ isOpen, onClose }) 
                     placeholder="email@exemple.com"
                   />
                 </div>
-                {errors.email && (
+                {errors.email ? (
                   <p className="mt-1 text-xs text-red-500 flex items-center">
                     <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
                     {errors.email}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-stone-500">
+                    Chaque personne doit avoir une adresse unique (pas celle de l’administrateur connecté).
                   </p>
                 )}
               </div>
@@ -374,7 +408,8 @@ const AddEducatorModal: React.FC<AddEducatorModalProps> = ({ isOpen, onClose }) 
                     />
                   </div>
                   <p className="mt-0.5 text-[11px] text-stone-500 leading-snug">
-                    Si vide, la personne reçoit un e-mail pour définir son mot de passe (48 h).
+                    Si vide, la personne reçoit un e-mail pour définir son mot de passe (48 h). Sinon :{' '}
+                    {PASSWORD_POLICY_HINT}
                   </p>
                   {errors.password && (
                     <p className="mt-1 text-xs text-red-500 flex items-center">
