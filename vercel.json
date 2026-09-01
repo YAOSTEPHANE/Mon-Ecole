@@ -9,28 +9,28 @@
     "NEXT_PUBLIC_EXPRESS_UPLOADS_VIA_API_PREFIX": "1",
     "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1"
   },
-  "installCommand": "npm install && npm install --prefix web && npm install --prefix server",
-  "experimentalServices": {
+  "services": {
     "web": {
       "root": "web",
-      "entrypoint": ".",
-      "routePrefix": "/",
       "framework": "nextjs",
+      "installCommand": "npm install",
       "buildCommand": "npm run build"
     },
     "api": {
       "root": "server",
       "entrypoint": "index.cjs",
-      "routePrefix": "/api",
       "framework": "express",
+      "installCommand": "npm install",
       "buildCommand": "npm run build",
-      "includeFiles": [
-        "prisma/**",
-        "prisma-bridge.cjs",
-        "lambda-node_modules/**",
-        "dist/prisma-bridge.cjs",
-        "dist/lambda-node_modules/**"
-      ]
+      "functions": {
+        "index.cjs": {
+          "includeFiles": "{prisma/**,prisma-bridge.cjs,lambda-node_modules/**,dist/prisma-bridge.cjs,dist/lambda-node_modules/**}"
+        }
+      }
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
 }
