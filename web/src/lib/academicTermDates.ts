@@ -146,6 +146,17 @@ export function parseAcademicTermDatesFromForm(rows: TrimesterFormRow[]): Academ
   return Object.keys(out).length > 0 ? out : null;
 }
 
+/** Affiche une date ISO (yyyy-MM-dd) au format français jj/mm/aaaa. */
+export function formatIsoDateFr(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+export function formatTrimesterRangeFr(startIso: string, endIso: string): string {
+  return `${formatIsoDateFr(startIso)} – ${formatIsoDateFr(endIso)}`;
+}
+
 export function getCurrentTrimester(
   reference = new Date(),
   academicYear: string,

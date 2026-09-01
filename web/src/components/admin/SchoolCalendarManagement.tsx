@@ -9,6 +9,7 @@ import FilterDropdown from '../ui/FilterDropdown';
 import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
 import { FiCalendar, FiPlus, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { TrimestersEditorStandalone } from './TrimestersEditor';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -166,6 +167,8 @@ const SchoolCalendarManagement: React.FC<SchoolCalendarManagementProps> = ({ com
           Vacances, jours fériés, périodes d’examens et événements pour l’année sélectionnée.
         </p>
       </div>
+
+      <TrimestersEditorStandalone compact={compact} />
 
       <Card className="p-4 border border-gray-200 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <FilterDropdown

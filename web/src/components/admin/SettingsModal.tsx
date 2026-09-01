@@ -17,6 +17,7 @@ import Badge from '../ui/Badge';
 import toast from 'react-hot-toast';
 import HomePageImagesPanel from './HomePageImagesPanel';
 import AboutPageContentPanel from './AboutPageContentPanel';
+import TrimestersEditor from './TrimestersEditor';
 import { getCurrentAcademicYear } from '@/utils/academicYear';
 import {
   parseAcademicTermDates,
@@ -1381,7 +1382,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         <input
                           type="text"
                           value={academicSettings.currentYear}
-                          onChange={(e) => setAcademicSettings({ ...academicSettings, currentYear: e.target.value })}
+                          onChange={(e) => {
+                            const currentYear = e.target.value;
+                            const termConfig = parseAcademicTermDatesFromForm(
+                              academicSettings.trimesters,
+                            );
+                            setAcademicSettings({
+                              ...academicSettings,
+                              currentYear,
+                              trimesters: trimesterFormRowsFromConfig(termConfig, currentYear),
+                            });
+                          }}
                           className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
                           placeholder="2026-2027"
                         />
@@ -1421,57 +1432,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-4">
-                      Dates des trimestres
-                    </label>
-                    <p className="mb-3 text-xs text-gray-500">
-                      Utilisées pour les bulletins, le classement du palmarès et le rattachement automatique
-                      des notes au trimestre. Les dates sont appliquées à chaque année scolaire (jour/mois).
-                    </p>
-                    <div className="space-y-4">
-                      {academicSettings.trimesters.map((trimester, index) => (
-                        <div
-                          key={trimester.key}
-                          className="rounded-xl border border-gray-200 bg-gray-50 p-4"
-                        >
-                          <p className="mb-3 font-medium text-gray-900">{trimester.name}</p>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <div>
-                              <label className="mb-1 block text-xs font-semibold text-gray-600">
-                                Date de début
-                              </label>
-                              <input
-                                type="date"
-                                value={trimester.start}
-                                onChange={(e) => {
-                                  const next = [...academicSettings.trimesters];
-                                  next[index] = { ...trimester, start: e.target.value };
-                                  setAcademicSettings({ ...academicSettings, trimesters: next });
-                                }}
-                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-semibold text-gray-600">
-                                Date de fin
-                              </label>
-                              <input
-                                type="date"
-                                value={trimester.end}
-                                onChange={(e) => {
-                                  const next = [...academicSettings.trimesters];
-                                  next[index] = { ...trimester, end: e.target.value };
-                                  setAcademicSettings({ ...academicSettings, trimesters: next });
-                                }}
-                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <TrimestersEditor
+                    rows={academicSettings.trimesters}
+                    onRowsChange={(trimesters) =>
+                      setAcademicSettings({ ...academicSettings, trimesters })
+                    }
+                    academicYear={academicSettings.currentYear}
+                    onAcademicYearChange={(currentYear) => {
+                      const termConfig = parseAcademicTermDatesFromForm(
+                        academicSettings.trimesters,
+                      );
+                      setAcademicSettings({
+                        ...academicSettings,
+                        currentYear,
+                        trimesters: trimesterFormRowsFromConfig(termConfig, currentYear),
+                      });
+                    }}
+                    showYearField={false}
+                    embedded
+                  />
                 </div>
               </div>
             </div>

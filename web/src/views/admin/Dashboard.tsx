@@ -9,6 +9,7 @@ import DashboardTabLoading from '../../components/dashboard/DashboardTabLoading'
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import AdminTabLogoCard from '../../components/admin/AdminTabLogoCard';
+import { TrimestersEditorStandalone } from '../../components/admin/TrimestersEditor';
 import SchoolSwitcher from '../../components/admin/SchoolSwitcher';
 import AccountHeaderControls from '../../components/AccountHeaderControls';
 import type { PersonnelCategoryFilter } from '../../components/admin/staff/StaffPersonnelModule';
@@ -754,6 +755,8 @@ const AdminDashboard = () => {
                       setIsSettingsModalOpen(true);
                     }}
                   />
+
+                  <TrimestersEditorStandalone />
 
                   <Card variant="premium" className="border border-teal-200 bg-teal-50/40">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-2">

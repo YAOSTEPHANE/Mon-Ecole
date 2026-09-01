@@ -9,6 +9,7 @@ import CoursesProgramManagement from './CoursesProgramManagement';
 import SchoolCurriculaByLevelPanel from './SchoolCurriculaByLevelPanel';
 import TracksAndOptionsPanel from './TracksAndOptionsPanel';
 import SchoolCalendarManagement from './SchoolCalendarManagement';
+import { TrimestersEditorStandalone } from './TrimestersEditor';
 import {
   FiLayers,
   FiUsers,
@@ -144,6 +145,8 @@ const AcademicManagement: React.FC = () => {
               </p>
             </Card>
           </div>
+
+          <TrimestersEditorStandalone compact />
 
           <Card className="p-4 border border-indigo-100 bg-indigo-50/40">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">Par où commencer ?</h3>
