@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import type { Role } from '@prisma/client';
 import type { AuthRequest } from '../middleware/auth.middleware';
 import { createMessagingVideoRoom } from '../utils/messaging-video.util';
 import { makeDmThreadKey } from '../utils/internal-messaging.util';
@@ -23,7 +24,7 @@ export async function handleCreateMessagingVideoRoom(req: AuthRequest, res: Resp
 
     const result = await createMessagingVideoRoom({
       senderId: req.user!.id,
-      senderRole: req.user!.role,
+      senderRole: req.user!.role as Role,
       receiverId: trimmedReceiverId,
       threadKey: trimmedThreadKey,
     });
