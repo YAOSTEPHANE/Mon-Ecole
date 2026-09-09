@@ -2661,6 +2661,11 @@ router.get('/messages/contacts', async (req: AuthRequest, res) => {
   }
 });
 
+router.post('/messages/video-room', async (req: AuthRequest, res) => {
+  const { handleCreateMessagingVideoRoom } = await import('./messaging-video.handler');
+  return handleCreateMessagingVideoRoom(req, res);
+});
+
 router.post('/messages', async (req: AuthRequest, res) => {
   try {
     const {

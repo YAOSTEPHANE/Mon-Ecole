@@ -10,6 +10,8 @@ import { fr } from 'date-fns/locale';
 import { FiInbox, FiSend, FiEdit3, FiMail, FiRefreshCw } from 'react-icons/fi';
 import MessageRecipientSearch from '../messaging/MessageRecipientSearch';
 import { flattenMessagingContacts } from '../messaging/flattenMessagingContacts';
+import MessagingVideoCallButton from '../messaging/MessagingVideoCallButton';
+import MessagingMessageContent from '../messaging/MessagingMessageContent';
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: 'GENERAL', label: 'Général' },
@@ -251,11 +253,25 @@ function ParentThreadedMessaging({ contextStudentId }: { contextStudentId?: stri
               <p className="text-sm text-gray-500">Sélectionnez une conversation.</p>
             ) : (
               <>
-                <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">{selectedPeer?.peerName}</h3>
-                  <Button type="button" variant="outline" className="text-xs" onClick={startComposeReply}>
-                    Répondre
-                  </Button>
+                <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-2 gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">{selectedPeer?.peerName}</h3>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {selectedPeer && selectedThreadKey && (
+                      <MessagingVideoCallButton
+                        threadKey={selectedThreadKey}
+                        receiverId={selectedPeer.peerId}
+                        peerName={selectedPeer.peerName}
+                        createVideoRoom={parentApi.createMessagingVideoRoom}
+                        invalidateKeys={[
+                          ['parent-messaging-threads'],
+                          ['parent-messaging-thread', selectedThreadKey],
+                        ]}
+                      />
+                    )}
+                    <Button type="button" variant="outline" className="text-xs" onClick={startComposeReply}>
+                      Répondre
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                   {threadLoading ? (
@@ -279,18 +295,13 @@ function ParentThreadedMessaging({ contextStudentId }: { contextStudentId?: stri
                             {format(new Date(m.createdAt), 'd MMM yyyy HH:mm', { locale: fr })}
                           </p>
                           {m.subject && <p className="font-medium text-gray-900 mt-1">{m.subject}</p>}
-                          <p className="text-gray-800 mt-1 whitespace-pre-wrap">{m.content}</p>
-                          {Array.isArray(m.attachmentUrls) && m.attachmentUrls.length > 0 && (
-                            <ul className="mt-2 text-xs text-orange-700 space-y-1">
-                              {m.attachmentUrls.map((url: string) => (
-                                <li key={url}>
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="underline break-all">
-                                    {url}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
+                          <div className="text-gray-800 mt-1">
+                            <MessagingMessageContent
+                              content={m.content}
+                              attachmentUrls={m.attachmentUrls}
+                              linkClassName="text-orange-700 bg-orange-50 border border-orange-100"
+                            />
+                          </div>
                         </button>
                       );
                     })

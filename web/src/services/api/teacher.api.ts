@@ -196,6 +196,10 @@ export const teacherApi = {
     const response = await api.get('/teacher/messaging/contacts');
     return response.data;
   },
+  createMessagingVideoRoom: async (data: { threadKey: string; receiverId: string }) => {
+    const response = await api.post('/teacher/messaging/video-room', data);
+    return response.data as { meetingUrl: string; threadKey: string };
+  },
   sendMessagingMessage: async (data: {
     receiverId?: string;
     subject?: string;

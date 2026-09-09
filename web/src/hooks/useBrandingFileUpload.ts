@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { adminApi } from '@/services/api';
+import { extractApiErrorMessage } from '@/lib/extractApiErrorMessage';
 
 export type BrandingUploadSlot = 'navigation' | 'login' | 'favicon';
 
@@ -33,10 +34,7 @@ export function useBrandingFileUpload(onAfterChange: () => Promise<void>) {
               : 'Image enregistrée',
           );
         } catch (err: unknown) {
-          const msg =
-            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-            'Échec du téléversement';
-          toast.error(msg);
+          toast.error(extractApiErrorMessage(err, 'Échec du téléversement'));
         } finally {
           setUploading(null);
         }

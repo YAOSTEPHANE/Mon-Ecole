@@ -180,6 +180,10 @@ export const parentApi = {
     const response = await api.get('/parent/messages/contacts');
     return response.data;
   },
+  createMessagingVideoRoom: async (data: { threadKey: string; receiverId: string }) => {
+    const response = await api.post('/parent/messages/video-room', data);
+    return response.data as { meetingUrl: string; threadKey: string };
+  },
   sendSchoolMessage: async (data: {
     subject?: string;
     content: string;

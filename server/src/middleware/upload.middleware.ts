@@ -33,7 +33,11 @@ const diskStorage = multer.diskStorage({
   },
 });
 
-const storage = useBlobStorage() ? multer.memoryStorage() : diskStorage;
+const memoryStorage = multer.memoryStorage();
+const storage = useBlobStorage() ? memoryStorage : diskStorage;
+/** Branding : toujours en mémoire (serverless / Blob) — évite l’écriture disque sur Vercel. */
+const brandingStorage =
+  process.env.VERCEL === '1' || useBlobStorage() ? memoryStorage : diskStorage;
 
 const GENERAL_ALLOWED_MIMES_BY_EXT: Record<string, readonly string[]> = {
   '.jpeg': ['image/jpeg'],
@@ -138,7 +142,7 @@ const brandingFileFilter = (_req: unknown, file: Express.Multer.File, cb: multer
 
 /** Logos / favicon établissement (champ fichier `branding`, max 5 Mo). */
 export const brandingUpload = multer({
-  storage,
+  storage: brandingStorage,
   limits: {
     fileSize: 5 * 1024 * 1024,
   },

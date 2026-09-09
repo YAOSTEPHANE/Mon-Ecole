@@ -19,6 +19,7 @@ import HomePageImagesPanel from './HomePageImagesPanel';
 import AboutPageContentPanel from './AboutPageContentPanel';
 import TrimestersEditor from './TrimestersEditor';
 import { getCurrentAcademicYear } from '@/utils/academicYear';
+import { extractApiErrorMessage } from '@/lib/extractApiErrorMessage';
 import {
   parseAcademicTermDates,
   parseAcademicTermDatesFromForm,
@@ -435,14 +436,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 : 'Logo de l’onglet mis à jour'
         );
       } catch (error: unknown) {
-        const err = error as { response?: { data?: { error?: string }; status?: number }; message?: string };
-        const detail =
-          err?.response?.data?.error ||
-          (err?.response?.status === 401
-            ? 'Session expirée — reconnectez-vous.'
-            : null) ||
-          err?.message;
-        toast.error(detail || "Erreur lors de l'envoi du fichier");
+        const err = error as { response?: { status?: number } };
+        toast.error(
+          extractApiErrorMessage(
+            error,
+            err?.response?.status === 401
+              ? 'Session expirée — reconnectez-vous.'
+              : "Erreur lors de l'envoi du fichier",
+          ),
+        );
       } finally {
         setBrandingUploading(null);
       }
@@ -458,8 +460,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
       await refreshBranding();
       toast.success('Image réinitialisée');
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err?.response?.data?.error || 'Impossible de supprimer');
+      toast.error(extractApiErrorMessage(error, 'Impossible de supprimer'));
     }
   };
 

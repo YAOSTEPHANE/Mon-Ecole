@@ -12,6 +12,8 @@ import { fr } from 'date-fns/locale';
 import { FiRefreshCw, FiSend, FiUsers } from 'react-icons/fi';
 import MessageRecipientSearch from '../messaging/MessageRecipientSearch';
 import { flattenMessagingContacts } from '../messaging/flattenMessagingContacts';
+import MessagingVideoCallButton from '../messaging/MessagingVideoCallButton';
+import MessagingMessageContent from '../messaging/MessagingMessageContent';
 
 type ThreadRow = {
   threadKey: string;
@@ -323,13 +325,27 @@ const TeacherInternalMessaging: React.FC = () => {
           </div>
         ) : selectedThreadKey ? (
           <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-2 mb-2">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-2 mb-2 gap-2">
               <h3 className="text-base font-semibold text-stone-900 truncate">
                 {selectedPeer?.peerName ?? 'Discussion'}
               </h3>
-              <Button type="button" variant="outline" className="text-xs shrink-0" onClick={openReplyInThread}>
-                Répondre
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                {selectedPeer && (
+                  <MessagingVideoCallButton
+                    threadKey={selectedThreadKey}
+                    receiverId={selectedPeer.peerId}
+                    peerName={selectedPeer.peerName}
+                    createVideoRoom={teacherApi.createMessagingVideoRoom}
+                    invalidateKeys={[
+                      ['teacher-messaging-threads'],
+                      ['teacher-messaging-thread', selectedThreadKey],
+                    ]}
+                  />
+                )}
+                <Button type="button" variant="outline" className="text-xs shrink-0" onClick={openReplyInThread}>
+                  Répondre
+                </Button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-3">
               {threadLoading ? (
@@ -355,18 +371,11 @@ const TeacherInternalMessaging: React.FC = () => {
                         {format(new Date(m.createdAt), 'd MMM yyyy HH:mm', { locale: fr })}
                       </p>
                       {m.subject && <p className="font-medium text-stone-900 mb-1">{m.subject}</p>}
-                      <p className="whitespace-pre-wrap text-stone-800">{m.content}</p>
-                      {Array.isArray(m.attachmentUrls) && m.attachmentUrls.length > 0 && (
-                        <ul className="mt-2 text-xs text-emerald-700 space-y-1">
-                          {m.attachmentUrls.map((url: string) => (
-                            <li key={url}>
-                              <a href={url} target="_blank" rel="noopener noreferrer" className="underline break-all">
-                                {url}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      <MessagingMessageContent
+                        content={m.content}
+                        attachmentUrls={m.attachmentUrls}
+                        linkClassName="text-emerald-700 bg-emerald-50 border border-emerald-100"
+                      />
                     </button>
                   );
                 })

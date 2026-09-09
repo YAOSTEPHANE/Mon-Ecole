@@ -44,7 +44,8 @@ export function createApp(): express.Express {
 
   void initObservability();
 
-  const apiPrefix = process.env.VERCEL === '1' ? '' : '/api';
+  /** Vercel Services transmet le chemin complet (`/api/...`), pas un chemin déjà strippé. */
+  const apiPrefix = '/api';
   const healthJson = { status: 'OK', message: 'API École à jour opérationnelle' };
 
   /** Liveness — avant middlewares lourds (diagnostic prod / load balancer). */
@@ -203,12 +204,7 @@ export function createApp(): express.Express {
   app.use(`${apiPrefix}/digital-library`, digitalLibraryRoutes);
 
   app.get(`${apiPrefix}/health`, (req, res) => res.json(healthJson));
-  if (apiPrefix === '/api') {
-    app.get('/health', (req, res) => res.json(healthJson));
-  }
-  if (apiPrefix === '') {
-    app.get('/api/health', (req, res) => res.json(healthJson));
-  }
+  app.get('/health', (req, res) => res.json(healthJson));
 
   app.use(`${apiPrefix}/health`, healthRoutes);
   app.use(`${apiPrefix}/elearning`, elearningRoutes);

@@ -35,6 +35,7 @@ import {
   isEducationSector,
   resolveStudentEducationSector,
 } from '../utils/education-sector.util';
+import { publicServerErrorMessage } from '../utils/http-error.util';
 
 const router = express.Router();
 
@@ -438,8 +439,33 @@ router.post(
       });
     } catch (error: unknown) {
       console.error('POST /admin/students:', error);
-      const message = error instanceof Error ? error.message : 'Erreur serveur';
-      res.status(500).json({ error: message });
+      const message = error instanceof Error ? error.message : '';
+      const lower = message.toLowerCase();
+      if (
+        lower.includes('sensitive_field_encryption_key') ||
+        lower.includes('données sensibles')
+      ) {
+        return res.status(503).json({
+          error:
+            'Chiffrement des données sensibles indisponible (SENSITIVE_FIELD_ENCRYPTION_KEY). Contactez l’administrateur technique.',
+        });
+      }
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as { code?: string }).code === 'P2002'
+      ) {
+        const targets = (error as { meta?: { target?: string[] } }).meta?.target ?? [];
+        if (targets.some((t) => /email/i.test(t))) {
+          return res.status(400).json({ error: 'Cet email ou identifiant de connexion est déjà utilisé' });
+        }
+        if (targets.some((t) => /studentId/i.test(t))) {
+          return res.status(400).json({ error: "Ce numéro d'élève existe déjà" });
+        }
+        return res.status(400).json({ error: 'Une donnée unique est déjà utilisée (doublon)' });
+      }
+      res.status(500).json({ error: publicServerErrorMessage(error) });
     }
   }
 );

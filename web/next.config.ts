@@ -81,6 +81,13 @@ const PRODUCTION_SECURITY_HEADERS =
     : [];
 
 const nextConfig: NextConfig = {
+  /**
+   * Vercel Services : l’optimiseur `/_next/image` n’est pas routé correctement ;
+   * servir les fichiers statiques `/public` directement (comme sur management-ecole).
+   */
+  images: {
+    unoptimized: process.env.VERCEL === "1",
+  },
   /** Playwright et accès via 127.0.0.1 (évite le blocage HMR cross-origin en dev). */
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {

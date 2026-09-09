@@ -12,6 +12,7 @@ import {
   type HomePageImageSlot,
 } from '@/lib/homePageImages.types';
 import { resolveHomePageImageSrc } from '@/lib/homePageImages';
+import { extractApiErrorMessage } from '@/lib/extractApiErrorMessage';
 
 type Props = {
   uploadingSlot: string | null;
@@ -49,8 +50,7 @@ export default function HomePageImagesPanel({ uploadingSlot, onUploadStart, onUp
         await refreshBranding();
         toast.success('Image de la page d’accueil mise à jour');
       } catch (error: unknown) {
-        const err = error as { response?: { data?: { error?: string } } };
-        toast.error(err?.response?.data?.error || 'Échec de l’envoi');
+        toast.error(extractApiErrorMessage(error, 'Échec de l’envoi'));
       } finally {
         onUploadEnd();
       }

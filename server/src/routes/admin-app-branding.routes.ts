@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { brandingUpload } from '../middleware/upload.middleware';
 import { deleteStoredUploadUrl, persistUploadedFile } from '../utils/upload-persist.util';
+import { assertBlobConfiguredForVercel } from '../utils/blob-storage.util';
 import {
   getAppBrandingDelegate,
   APP_BRANDING_ID,
@@ -412,6 +413,18 @@ router.post('/app-branding/upload', (req, res, next) => {
     const appBranding = delegateOr503(res);
     if (!appBranding) return;
 
+    if (process.env.VERCEL === '1') {
+      try {
+        assertBlobConfiguredForVercel();
+      } catch (blobErr) {
+        const message =
+          blobErr instanceof Error
+            ? blobErr.message
+            : 'Stockage Blob non configuré sur Vercel.';
+        return res.status(503).json({ error: message });
+      }
+    }
+
     const brandingId = req.schoolId
       ? await brandingIdForSchool(req.schoolId)
       : APP_BRANDING_ID;
@@ -490,7 +503,12 @@ router.post('/app-branding/upload', (req, res, next) => {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur serveur';
     console.error('POST /admin/app-branding/upload:', error);
-    res.status(500).json({ error: message });
+    const status =
+      message.includes('BLOB_READ_WRITE_TOKEN') ||
+      message.includes('Fichier en mémoire manquant')
+        ? 503
+        : 500;
+    res.status(status).json({ error: message });
   }
 });
 

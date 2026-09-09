@@ -28,6 +28,7 @@ import {
   normalizeEducationSector,
   type EducationSectorValue,
 } from '@/lib/educationSector';
+import { extractApiErrorMessage } from '@/lib/extractApiErrorMessage';
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -35,16 +36,7 @@ interface AddStudentModalProps {
 }
 
 function formatApiError(error: unknown, fallback: string): string {
-  const data = (error as { response?: { data?: { error?: string; errors?: { param?: string; msg?: string }[] } } })
-    ?.response?.data;
-  if (data?.error) return data.error;
-  if (Array.isArray(data?.errors) && data.errors.length > 0) {
-    return data.errors
-      .map((e) => (e.param ? `${e.param}: ${e.msg}` : e.msg))
-      .filter(Boolean)
-      .join(' · ');
-  }
-  return fallback;
+  return extractApiErrorMessage(error, fallback);
 }
 
 type ClassOption = {
@@ -174,15 +166,43 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
       handleClose();
     },
     onError: (error: unknown) => {
+      const data = (error as {
+        response?: {
+          data?: {
+            error?: string;
+            errors?: Array<{ param?: string; path?: string | number; msg?: string }>;
+          };
+        };
+      })?.response?.data;
+
+      const validationErrors: Record<string, string> = {};
+      data?.errors?.forEach((err) => {
+        const field = String(err.path ?? err.param ?? '').trim();
+        if (field) validationErrors[field] = err.msg ?? 'Invalide';
+      });
+
       const errorMessage = formatApiError(error, "Erreur lors de la création de l'élève");
       toast.error(errorMessage);
-      const validationList = (error as { response?: { data?: { errors?: { param?: string; msg?: string }[] } } })
-        ?.response?.data?.errors;
-      if (validationList) {
-        const validationErrors: Record<string, string> = {};
-        validationList.forEach((err) => {
-          if (err.param) validationErrors[err.param] = err.msg ?? '';
-        });
+
+      const lower = errorMessage.toLowerCase();
+      if (lower.includes('email') || lower.includes('e-mail')) {
+        validationErrors.email = errorMessage;
+        setCurrentStep(1);
+      }
+      if (lower.includes('mot de passe') || lower.includes('password')) {
+        validationErrors.password = errorMessage;
+        setCurrentStep(1);
+      }
+      if (lower.includes("numéro d'élève") || lower.includes('matricule') || lower.includes('élève existe')) {
+        validationErrors.studentId = errorMessage;
+        setCurrentStep(2);
+      }
+      if (lower.includes('classe') || lower.includes('groupe')) {
+        validationErrors.classId = errorMessage;
+        setCurrentStep(2);
+      }
+
+      if (Object.keys(validationErrors).length > 0) {
         setErrors(validationErrors);
       }
     },
@@ -343,9 +363,10 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
     }
 
     const pw = formData.password.trim();
+    const passwordPolicyError = pw.length > 0 ? validatePasswordStrength(pw) : null;
     const submitData = {
       ...(formData.email.trim() ? { email: formData.email.trim() } : {}),
-      ...(pw.length > 0 && !validatePasswordStrength(pw) ? { password: pw } : {}),
+      ...(pw.length > 0 && !passwordPolicyError ? { password: pw } : {}),
       firstName: formData.firstName,
       lastName: formData.lastName,
       phone: formData.phone || undefined,
@@ -532,20 +553,23 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) =>
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    autoComplete="off"
                     className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/40 transition-all ${
                       errors.email ? 'border-red-500' : 'border-stone-200'
                     }`}
                     placeholder="Laisser vide = connexion par n° élève / matricule"
                   />
                 </div>
-                <p className="mt-0.5 text-[11px] text-stone-500 leading-snug">
-                  Sans e-mail, l’élève se connecte avec son n° élève ou matricule FNE. Le mot de passe est
-                  défini et réinitialisé par l’administration.
-                </p>
-                {errors.email && (
+                {errors.email ? (
                   <p className="mt-1 text-xs text-red-500 flex items-center">
                     <FiAlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
                     {errors.email}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-[11px] text-stone-500 leading-snug">
+                    Si renseigné : adresse unique (pas celle d’un parent / admin déjà inscrit). Sinon,
+                    laisser vide — connexion par n° élève / matricule FNE, mot de passe défini par
+                    l’administration.
                   </p>
                 )}
               </div>

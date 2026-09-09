@@ -49,8 +49,7 @@ function apiPublicBase(req: express.Request): string {
   if (configured) return configured.replace(/\/+$/, '');
   const proto = (req.get('x-forwarded-proto') || req.protocol || 'http').split(',')[0]?.trim();
   const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:5000';
-  const prefix = process.env.VERCEL === '1' ? '' : '/api';
-  return `${proto}://${host}${prefix}`;
+  return `${proto}://${host}/api`;
 }
 
 function oauthEnabled(provider: OAuthProvider): boolean {

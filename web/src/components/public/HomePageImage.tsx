@@ -47,7 +47,15 @@ export default function HomePageImage({
       );
     }
     return (
-      <Image src={src} alt={alt} fill className={className} sizes={sizes} priority={priority} />
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        className={className}
+        sizes={sizes}
+        priority={priority}
+        unoptimized
+      />
     );
   }
 
@@ -67,6 +75,7 @@ export default function HomePageImage({
       className={className}
       sizes={sizes}
       priority={priority}
+      unoptimized
     />
   );
 }

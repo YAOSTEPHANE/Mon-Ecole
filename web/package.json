@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "dev:turbo": "next dev --turbopack",
     "build": "node --max-old-space-size=8192 ./node_modules/next/dist/bin/next build --webpack",
     "start": "next start",
@@ -30,21 +30,21 @@
     "react-icons": "^5.7.0",
     "react-is": "^19.2.7",
     "recharts": "^3.9.2",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "@tailwindcss/postcss": "^4.3.2",
+    "postcss": "^8.5.19",
+    "tailwindcss": "^4.3.2"
   },
   "overrides": {
     "react-is": "$react-is",
     "postcss": "$postcss"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.2.10",
-    "postcss": "^8.5.19",
-    "tailwindcss": "^4.3.2",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   }

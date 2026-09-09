@@ -116,12 +116,11 @@ router.post('/resources/:id/download-grant', async (req: AuthRequest, res) => {
     });
 
     const base = `${req.protocol}://${req.get('host')}`;
-    const apiPrefix = process.env.VERCEL === '1' ? '' : '/api';
     res.status(201).json({
       grantId: grant.id,
       token: grant.token,
       expiresAt: grant.expiresAt,
-      downloadUrl: `${base}${apiPrefix}/digital-library/download/${grant.token}`,
+      downloadUrl: `${base}/api/digital-library/download/${grant.token}`,
       ttlHours,
     });
   } catch (error: unknown) {
